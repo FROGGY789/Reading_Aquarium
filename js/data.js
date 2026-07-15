@@ -65,6 +65,10 @@ const QUIZ_META = {
 // 기본(내장) 콘텐츠 — 배포된 data/content.json이 없을 때 사용되는 예시 Day
 const DEFAULT_CONTENT = {
   version: 1,
+  // 학생 명단(이름 선택 화면) — 비워두면 이름 선택 없이 단일 프로필로 동작
+  students: [],
+  // 기록 수집(Supabase) 설정 — 교사 콘텐츠 관리에서 입력 후 배포하면 모든 기기에 적용
+  supabase: { url: '', anonKey: '' },
   days: [
     {
       date: '2026-07-15',

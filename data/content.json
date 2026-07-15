@@ -1,5 +1,10 @@
 {
   "version": 1,
+  "students": [],
+  "supabase": {
+    "url": "",
+    "anonKey": ""
+  },
   "days": [
     {
       "date": "2026-07-15",

@@ -13,7 +13,7 @@ const CONTENT_URL = 'data/content.json';
 const REPO_OWNER = 'FROGGY789';
 const REPO_NAME = 'Reading_Aquarium';
 
-const STUDENT_NAME = '유림';
+const PROFILE_KEY = 'er_profile_v1';
 const XP_NEED = 120;      // 레벨업에 필요한 XP
 const EGG_PRICE = 50;     // 알 구매 비용(XP)
 const HATCH_MS = 5000;    // 부화 연출 길이
@@ -38,6 +38,51 @@ function loadJSON(key) {
 function contentSource() {
   const c = DRAFT || PUBLISHED || DEFAULT_CONTENT;
   return (c && Array.isArray(c.days) && c.days.length) ? c : DEFAULT_CONTENT;
+}
+
+/* ---------- 학생 프로필(로그인 없는 이름 선택) ---------- */
+let profile = localStorage.getItem(PROFILE_KEY) || '';
+function roster() { return contentSource().students || []; }
+function needProfile() {
+  return roster().length > 0 && (!profile || !roster().includes(profile));
+}
+function studentName() { return profile || '유림'; }
+function storeKey() { return profile ? STORE_KEY + ':' + profile : STORE_KEY; }
+
+/* ---------- 기록 수집(Supabase) ---------- */
+function sbConf() {
+  const s = contentSource().supabase;
+  return (s && s.url && s.anonKey) ? s : null;
+}
+function sbHeaders(sb) {
+  return { 'apikey': sb.anonKey, 'Authorization': 'Bearer ' + sb.anonKey, 'Content-Type': 'application/json' };
+}
+async function postRecord(rec) {
+  const sb = sbConf();
+  if (!sb) return;
+  try {
+    await fetch(sb.url.replace(/\/+$/, '') + '/rest/v1/er_records', {
+      method: 'POST',
+      headers: Object.assign({ 'Prefer': 'return=minimal' }, sbHeaders(sb)),
+      body: JSON.stringify(rec)
+    });
+  } catch (e) { /* 오프라인이면 조용히 건너뜀 */ }
+}
+async function loadRecords() {
+  const sb = sbConf();
+  if (!sb) { ui.records = null; return; }
+  ui.recLoading = true; ui.recError = '';
+  render();
+  try {
+    const res = await fetch(sb.url.replace(/\/+$/, '') + '/rest/v1/er_records?date=eq.' + todayKey() + '&select=student,task,kind,score,total,created_at&order=created_at.asc', { headers: sbHeaders(sb) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    ui.records = await res.json();
+  } catch (e) {
+    ui.recError = e.message;
+    ui.records = null;
+  }
+  ui.recLoading = false;
+  render();
 }
 // 오늘 날짜와 같거나 가장 가까운 과거 Day를 선택(모두 미래면 첫 Day)
 function activeDay() {
@@ -93,11 +138,12 @@ let hatchTimer = null;
 let introTimer = null;
 
 // 화면에만 쓰이는 임시 UI 상태(저장 안 함)
-const ui = { teacherTab: 'dash', pubMsg: '', pubBusy: false, edMsg: '' };
-let ed = null; // 콘텐츠 편집기 상태 {dayIndex, day(편집용 형태)}
+const ui = { teacherTab: 'dash', pubMsg: '', pubBusy: false, edMsg: '', records: null, recLoading: false, recError: '' };
+let ed = null;  // 콘텐츠 편집기 상태 {dayIndex, day(편집용 형태)}
+let gEd = null; // 전역 설정 편집(학생 명단·Supabase)
 
 function loadState() {
-  const saved = loadJSON(STORE_KEY);
+  const saved = loadJSON(storeKey());
   const s = Object.assign({}, DEFAULT_STATE, saved || {});
   s.intro = true;            // 앱을 열 때마다 오프닝을 보여줌
   s.introLeaving = false;
@@ -112,7 +158,7 @@ function ensureDaily(s) {
   }
 }
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* 무시 */ }
+  try { localStorage.setItem(storeKey(), JSON.stringify(state)); } catch (e) { /* 무시 */ }
 }
 function set(patch) {
   Object.assign(state, patch);
@@ -313,9 +359,24 @@ const actions = {
   },
   skipHatch() { clearTimeout(hatchTimer); set({ hatchStage: 'revealed' }); },
 
+  /* ---- 학생 프로필 ---- */
+  pickProfile(name) {
+    profile = name;
+    localStorage.setItem(PROFILE_KEY, name);
+    state = loadState();
+    render();
+  },
+  switchProfile() {
+    if (!roster().length) return;
+    profile = '';
+    localStorage.removeItem(PROFILE_KEY);
+    render();
+  },
+
   /* ---- 교사 ---- */
-  teacherTabDash() { ui.teacherTab = 'dash'; render(); },
+  teacherTabDash() { ui.teacherTab = 'dash'; render(); if (sbConf()) loadRecords(); },
   teacherTabContent() { ui.teacherTab = 'content'; ensureEditor(); render(); },
+  dashRefresh() { loadRecords(); },
 
   edSelectDay(arg) { commitDayEdit(); openDay(Number(arg)); render(); },
   edAddDay() {
@@ -352,6 +413,7 @@ const actions = {
 
   edSaveDay() {
     commitDayEdit();
+    commitGlobalEdit();
     ui.edMsg = '저장했어요! 이 기기의 학생 화면에 바로 반영됩니다.';
     render();
   },
@@ -368,6 +430,7 @@ const actions = {
     DRAFT = null;
     localStorage.removeItem(DRAFT_KEY);
     ed = null;
+    gEd = null;
     ensureEditor();
     ui.edMsg = '초안을 버리고 배포본 기준으로 되돌렸어요.';
     render();
@@ -375,6 +438,18 @@ const actions = {
 };
 
 function completeTask(t) {
+  // 기록 전송(Supabase 설정 시) — 결과가 초기화되기 전에 먼저 보냄
+  const r = state.result;
+  postRecord({
+    student: studentName(),
+    date: todayKey(),
+    task: t,
+    kind: r ? 'quiz' : 'review',
+    score: r ? r.score : null,
+    total: r ? r.total : null,
+    correct: r ? r.correct : null
+  });
+
   const tasks = Object.assign({}, state.daily.tasks);
   const wasDone = tasks[t];
   tasks[t] = true;
@@ -402,7 +477,17 @@ function hexA(h, a) {
  * ========================================================= */
 function ensureEditor() {
   if (!DRAFT) { DRAFT = clone(PUBLISHED || DEFAULT_CONTENT); saveDraft(); }
+  if (!gEd) {
+    const sb = DRAFT.supabase || {};
+    gEd = { studentsText: (DRAFT.students || []).join('\n'), sbUrl: sb.url || '', sbKey: sb.anonKey || '' };
+  }
   if (!ed) openDay(bestDayIndex());
+}
+function commitGlobalEdit() {
+  if (!gEd || !DRAFT) return;
+  DRAFT.students = gEd.studentsText.split('\n').map(s => s.trim()).filter(Boolean);
+  DRAFT.supabase = { url: gEd.sbUrl.trim(), anonKey: gEd.sbKey.trim() };
+  saveDraft();
 }
 function bestDayIndex() {
   const days = DRAFT.days, today = todayKey();
@@ -508,6 +593,7 @@ function setPath(obj, path, val) {
 async function publishContent() {
   if (ui.pubBusy) return;
   commitDayEdit();
+  commitGlobalEdit();
   const token = localStorage.getItem(TOKEN_KEY);
   if (!token) { ui.pubMsg = '⚠️ 먼저 GitHub 토큰을 입력하고 저장해 주세요.'; render(); return; }
   ui.pubBusy = true; ui.pubMsg = '배포 중...'; render();
@@ -570,6 +656,27 @@ function introHTML() {
     <div style="position:absolute;bottom:72px;text-align:center;animation:pulse 1.8s ease-in-out infinite">
       <div style="font-size:13px;font-weight:600;opacity:.95">화면을 탭하여 시작</div>
       <div style="font-size:20px;margin-top:4px">↓</div>
+    </div>
+  </div>`;
+}
+
+/* ---- 학생 이름 선택(로그인 없는 프로필) ---- */
+function profilePickerHTML() {
+  const cards = roster().map(n => `
+    <div data-act="pickProfile" data-arg="${esc(n)}" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.95);border-radius:16px;padding:14px 16px;cursor:pointer;box-shadow:0 10px 24px -12px rgba(0,0,0,.5)">
+      <div style="width:40px;height:40px;border-radius:13px;background:#2f74e6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;box-shadow:0 3px 0 #1f57c4">${esc(n.slice(0, 2))}</div>
+      <div style="flex:1;font-size:15px;font-weight:700;color:#14243f">${esc(n)}</div>
+      <div style="font-size:16px;color:#2f74e6">→</div>
+    </div>`).join('');
+  return `<div style="position:absolute;inset:0;z-index:80;overflow-y:auto;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%)">
+    <div style="position:absolute;inset:0;pointer-events:none">${introBubblesHTML()}</div>
+    <div style="position:relative;padding:80px 26px 40px">
+      <div style="text-align:center;color:#fff;margin-bottom:26px;animation:fadeup 1s ease-out">
+        <div style="font-size:11px;letter-spacing:.38em;opacity:.8;text-transform:uppercase">Fathom Aquarium</div>
+        <div style="font-size:23px;font-weight:700;margin-top:10px">누구인가요?</div>
+        <div style="font-size:12.5px;opacity:.85;margin-top:6px">이름을 고르면 나만의 아쿠아리움이 열려요 🐠</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:11px;animation:fadeup 1.2s ease-out">${cards}</div>
     </div>
   </div>`;
 }
@@ -652,10 +759,10 @@ function homeHTML() {
 
   return `<div style="${enter}"><div style="padding:52px 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:11px">
-        <div style="width:44px;height:44px;border-radius:14px;background:#2f74e6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;box-shadow:0 4px 0 #1f57c4">${esc(STUDENT_NAME.slice(0, 2))}</div>
+      <div data-act="switchProfile" style="display:flex;align-items:center;gap:11px;${roster().length ? 'cursor:pointer' : ''}" ${roster().length ? 'title="탭해서 다른 친구로 바꾸기"' : ''}>
+        <div style="width:44px;height:44px;border-radius:14px;background:#2f74e6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;box-shadow:0 4px 0 #1f57c4">${esc(studentName().slice(0, 2))}</div>
         <div>
-          <div style="font-size:16px;font-weight:700;color:#14243f">안녕하세요, ${esc(STUDENT_NAME)}님 👋</div>
+          <div style="font-size:16px;font-weight:700;color:#14243f">안녕하세요, ${esc(studentName())}님 👋</div>
           <div style="font-size:11.5px;color:#7d8aa0;margin-top:2px">${esc(todayLabel())}</div>
         </div>
       </div>
@@ -1024,10 +1131,11 @@ function teacherDashHTML() {
     </div>`;
 
   const day = activeDay();
+  if (sbConf()) return liveDashHTML(day);
   return `
     <div style="font-size:19px;font-weight:700;color:#14243f">여름 특강 A반${day.label ? ' · ' + esc(day.label) : ''}</div>
     <div style="font-size:12px;color:#7d8aa0;margin-top:2px">${esc(day.book.title)} · 학생 18명</div>
-    <div style="font-size:10.5px;color:#b8c2d2;margin-top:4px">* 아래 수치는 데모 데이터입니다</div>
+    <div style="font-size:10.5px;color:#b8c2d2;margin-top:4px">* 아래 수치는 데모 데이터입니다 — 콘텐츠 관리에서 Supabase를 설정하면 실제 기록이 표시돼요</div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px">
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:14px 15px"><div style="font-size:11.5px;color:#7d8aa0">복습 완료율</div><div style="font-size:24px;font-weight:700;color:#14243f;margin:4px 0 7px">78<span style="font-size:13px;color:#7d8aa0">%</span></div><div style="height:6px;border-radius:3px;background:#dde6f1;overflow:hidden"><div style="width:78%;height:100%;background:#2f74e6"></div></div></div>
@@ -1057,6 +1165,68 @@ function teacherDashHTML() {
         <div style="font-size:12.5px;line-height:1.6;color:#4a5a72">답을 주지 않는 게 오히려 계속 궁금하게 만드는 힘인 것 같습니다.</div>
       </div>
     </div>`;
+}
+
+/* ---- 실데이터 대시보드(Supabase 설정 시) ---- */
+function liveDashHTML(day) {
+  const req = requiredKeys();
+  const recs = ui.records || [];
+  const names = roster().slice();
+  recs.forEach(r => { if (!names.includes(r.student)) names.push(r.student); });
+
+  const byStu = {};
+  recs.forEach(r => { (byStu[r.student] = byStu[r.student] || []).push(r); });
+
+  const rows = names.map(n => {
+    const rs = byStu[n] || [];
+    const doneSet = new Set(rs.map(r => r.task));
+    const doneReq = req.filter(k => doneSet.has(k)).length;
+    const scores = rs.filter(r => r.score != null);
+    const avg = scores.length ? Math.round(scores.reduce((a, r) => a + r.score, 0) / scores.length) : null;
+    const last = rs.length ? new Date(rs[rs.length - 1].created_at) : null;
+    const lastStr = last ? `${last.getHours()}:${String(last.getMinutes()).padStart(2, '0')}` : '–';
+    const allDone = req.length > 0 && doneReq >= req.length;
+    return `<div style="display:grid;grid-template-columns:1.3fr .9fr .7fr .7fr;padding:12px 15px;border-bottom:1px solid #f4f7fb;align-items:center">
+      <div style="display:flex;align-items:center;gap:8px"><div style="width:26px;height:26px;border-radius:50%;background:${allDone ? '#2fa36b' : (rs.length ? '#2f74e6' : '#c3ceda')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc(n.slice(0, 2))}</div><span style="font-size:12.5px;font-weight:600;color:#14243f">${esc(n)}</span></div>
+      <div>${allDone
+        ? `<span style="font-size:10.5px;font-weight:600;color:#2fa36b;background:#e0f3ea;padding:3px 7px;border-radius:7px">완료 ${doneReq}/${req.length}</span>`
+        : rs.length
+          ? `<span style="font-size:10.5px;font-weight:600;color:#2f74e6;background:#e7f0fd;padding:3px 7px;border-radius:7px">진행 ${doneReq}/${req.length}</span>`
+          : `<span style="font-size:10.5px;font-weight:600;color:#e2564d;background:#fbe4e2;padding:3px 7px;border-radius:7px">시작 전</span>`}</div>
+      <div style="font-size:12.5px;${avg == null ? 'color:#b8c2d2' : 'font-weight:600;color:#14243f'}">${avg == null ? '–' : avg}</div>
+      <div style="font-size:11px;color:#7d8aa0">${lastStr}</div>
+    </div>`;
+  }).join('');
+
+  const totalDone = names.filter(n => {
+    const doneSet = new Set((byStu[n] || []).map(r => r.task));
+    return req.length > 0 && req.every(k => doneSet.has(k));
+  }).length;
+  const allScores = recs.filter(r => r.score != null);
+  const avgAll = allScores.length ? Math.round(allScores.reduce((a, r) => a + r.score, 0) / allScores.length) : null;
+
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:19px;font-weight:700;color:#14243f">오늘의 학습 현황${day.label ? ' · ' + esc(day.label) : ''}</div>
+        <div style="font-size:12px;color:#7d8aa0;margin-top:2px">${esc(day.book.title)} · ${names.length}명 · ${todayKey()}</div>
+      </div>
+      <button data-act="dashRefresh" class="ed-btn ghost" style="padding:8px 13px;font-size:11.5px">${ui.recLoading ? '⏳' : '🔄 새로고침'}</button>
+    </div>
+    ${ui.recError ? `<div style="font-size:11.5px;color:#b23a32;background:#fbe4e2;border-radius:10px;padding:9px 12px;margin-top:10px">기록을 불러오지 못했어요: ${esc(ui.recError)}</div>` : ''}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:14px">
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 다 끝낸 학생</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${totalDone}<span style="font-size:12px;color:#7d8aa0">/${names.length}명</span></div></div>
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">퀴즈 평균</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${avgAll == null ? '–' : avgAll}<span style="font-size:12px;color:#7d8aa0">점</span></div></div>
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 기록</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${recs.length}<span style="font-size:12px;color:#7d8aa0">건</span></div></div>
+    </div>
+
+    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 10px">학생별 현황</div>
+    <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:1.3fr .9fr .7fr .7fr;padding:11px 15px;border-bottom:1px solid #eef2f8;font-size:10.5px;font-weight:600;color:#7d8aa0"><div>학생</div><div>오늘 할 일</div><div>평균</div><div>최근</div></div>
+      ${rows || '<div style="padding:18px;text-align:center;font-size:12px;color:#b8c2d2">아직 기록이 없어요</div>'}
+    </div>
+    <div style="font-size:10.5px;color:#b8c2d2;margin-top:8px">아이가 할 일을 끝낼 때마다 자동으로 기록돼요. 점수는 오늘 푼 퀴즈들의 평균입니다.</div>`;
 }
 
 /* ---- 콘텐츠 편집기 ---- */
@@ -1130,6 +1300,20 @@ function editorHTML() {
         <button data-act="edPublish" class="ed-btn primary" style="flex:1;${ui.pubBusy ? 'opacity:.6' : ''}">${ui.pubBusy ? '배포 중...' : '지금 배포 🚀'}</button>
       </div>
       ${ui.pubMsg ? `<div style="font-size:11.5px;margin-top:9px;line-height:1.5;background:rgba(255,255,255,.12);border-radius:9px;padding:8px 10px">${esc(ui.pubMsg)}</div>` : ''}
+    </div>
+
+    <div class="ed-card">
+      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">👧 학생 명단</div>
+      <div class="ed-label">한 줄에 한 명씩. 입력하면 학생 화면에 "누구인가요?" 이름 선택이 생기고, 아이별로 진행이 따로 저장돼요. 비워두면 이름 선택 없이 동작합니다.</div>
+      <textarea class="ed-input" data-gbind="studentsText" rows="3" placeholder="이지민&#10;박서준&#10;최하윤">${esc(gEd.studentsText)}</textarea>
+    </div>
+
+    <div class="ed-card">
+      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">📡 기록 수집 (Supabase)</div>
+      <div class="ed-label">설정하면 아이들의 퀴즈 점수·완료 기록이 모여서 대시보드에 실제 데이터가 표시돼요. supabase.com에서 무료 프로젝트를 만들고 아래 두 값을 붙여넣은 뒤 배포하세요. (자세한 방법은 README 참고)</div>
+      <input class="ed-input" data-gbind="sbUrl" value="${esc(gEd.sbUrl)}" placeholder="프로젝트 URL (https://xxxx.supabase.co)">
+      <input class="ed-input" data-gbind="sbKey" value="${esc(gEd.sbKey)}" placeholder="anon public 키 (eyJ...)" style="margin-top:6px">
+      <div style="font-size:10.5px;color:#b8c2d2;margin-top:7px">${sbConf() ? '✅ 현재 이 기기에는 설정되어 있어요. 모든 기기에 적용하려면 배포하세요.' : '아직 설정되지 않았어요 — 설정 전에는 기록이 기기 안에만 남습니다.'}</div>
     </div>
 
     <div style="display:flex;align-items:center;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px">
@@ -1235,7 +1419,8 @@ function render() {
     html += teacherHTML();
   }
 
-  if (state.intro) html += introHTML();
+  if (state.role === 'student' && needProfile()) html += profilePickerHTML();
+  else if (state.intro) html += introHTML();
 
   document.getElementById('app').innerHTML = html;
   bindQuizInput();
@@ -1272,6 +1457,7 @@ appEl.addEventListener('click', e => {
 appEl.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'quiz-input' || el.id === 'gh-token') return;
+  if (el.dataset.gbind && gEd) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
   if (bind && ed && el.type !== 'radio' && el.tagName !== 'SELECT') {
     setPath(ed.day, bind, el.value);
