@@ -2,8 +2,8 @@
   "version": 1,
   "students": [],
   "supabase": {
-    "url": "",
-    "anonKey": ""
+    "url": "https://jhmglwmxhpsgfskuvmzg.supabase.co",
+    "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpobWdsd214aHBzZ2Zza3V2bXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMDMwMDUsImV4cCI6MjA5OTY3OTAwNX0.VxBQU-B-yn2-rNnW4TxcuInbHqLnEcIcNOngintPEEY"
   },
   "days": [
     {

@@ -67,8 +67,12 @@ const DEFAULT_CONTENT = {
   version: 1,
   // 학생 명단(이름 선택 화면) — 비워두면 이름 선택 없이 단일 프로필로 동작
   students: [],
-  // 기록 수집(Supabase) 설정 — 교사 콘텐츠 관리에서 입력 후 배포하면 모든 기기에 적용
-  supabase: { url: '', anonKey: '' },
+  // 기록 수집(Supabase) 설정 — 코드에 고정(모든 기기에서 항상 로그인).
+  // 교사 콘텐츠 관리에서 값을 넣고 배포하면 이 기본값을 덮어쓸 수 있어요.
+  supabase: {
+    url: 'https://jhmglwmxhpsgfskuvmzg.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpobWdsd214aHBzZ2Zza3V2bXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMDMwMDUsImV4cCI6MjA5OTY3OTAwNX0.VxBQU-B-yn2-rNnW4TxcuInbHqLnEcIcNOngintPEEY'
+  },
   days: [
     {
       date: '2026-07-15',
