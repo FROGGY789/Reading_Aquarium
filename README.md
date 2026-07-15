@@ -12,9 +12,18 @@ GitHub Pages로 자동 배포되어 아이들이 언제든 링크로 접속할 �
 
 **https://froggy789.github.io/Reading_Aquarium/**
 
-> 처음 한 번은 Actions 탭에서 "Deploy to GitHub Pages" 워크플로우가
-> 성공했는지 확인하세요. 실패한다면 저장소 Settings → Pages → Source를
-> **GitHub Actions**로 지정한 뒤 워크플로우를 다시 실행하면 됩니다.
+### ⚠️ 최초 1회 설정 (저장소 공개 전환)
+
+현재 이 저장소는 **비공개(private)** 인데, GitHub 무료 계정은 비공개 저장소에서
+Pages를 쓸 수 없어 배포가 실패합니다. 아래 한 번만 해주면 됩니다:
+
+1. 저장소 **Settings → General** 맨 아래 **Danger Zone → Change visibility → Public** 으로 전환
+2. **Actions 탭 → "Deploy to GitHub Pages" → Re-run all jobs** 클릭
+3. 1~2분 뒤 위 주소로 접속 확인
+
+> 저장소를 공개로 바꾸면 코드와 콘텐츠가 공개됩니다. 비공개를 유지하고 싶다면
+> GitHub Pro 요금제(비공개 저장소 Pages 지원)를 쓰거나, Netlify 등 다른 호스팅을
+> 사용해야 합니다. Pages 사이트 자체는 어느 경우든 링크를 아는 사람이 볼 수 있습니다.
 
 ## 기능
 
