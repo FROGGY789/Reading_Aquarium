@@ -58,3 +58,15 @@ button{font-family:inherit}
 @keyframes fishPop{0%,82%{transform:translate(-50%,18px) scale(0);opacity:0}100%{transform:translate(-50%,-60%) scale(1);opacity:1}}
 @keyframes popFlash{0%,83%{opacity:0}86%{opacity:.8}100%{opacity:0}}
 @keyframes labelFade{0%,78%{opacity:.9}100%{opacity:0}}
+
+/* ---- 교사 콘텐츠 편집기 ---- */
+.ed-card{background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:14px 15px;margin-bottom:12px}
+.ed-label{font-size:11px;font-weight:700;color:#7d8aa0;margin:10px 0 5px}
+.ed-input{width:100%;border:1.5px solid #e2e9f2;background:#fff;border-radius:10px;padding:9px 11px;font-family:inherit;font-size:13px;color:#14243f;outline:none;box-sizing:border-box}
+.ed-input:focus{border-color:#2f74e6}
+textarea.ed-input{resize:vertical;min-height:64px;line-height:1.6}
+.ed-btn{border:none;border-radius:12px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.ed-btn.primary{background:#2f74e6;color:#fff;box-shadow:0 4px 0 #1f57c4}
+.ed-btn.dark{background:#14243f;color:#fff;box-shadow:0 4px 0 #0a1526}
+.ed-btn.ghost{background:#eef2f8;color:#4a5a72}
+.ed-btn.danger{background:#fbe4e2;color:#b23a32}

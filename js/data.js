@@ -52,57 +52,85 @@ const RARITY = {
   unique:    {label:'✦ UNIQUE ✦', color:'#ffce4d', weight:1}
 };
 
-// 퀴즈 세트
-const QUIZ = {
-  preview: {name:'지문 예습', tag:'예습', questions:[
-    {type:'mc', prompt:'이 글은 주로 무엇에 관한 글일까요?', options:['바다에 대한 인간의 호기심','항해 기술의 발전','어업의 역사','해양 날씨 예보'], answer:0, explain:'바다의 수평선과 침묵을 통해 인간의 끝없는 호기심을 그리고 있어요.'},
-    {type:'mc', prompt:'"restless horizon"에서 느껴지는 분위기로 가장 알맞은 것은?', options:['가만히 있지 않고 계속 멀어지는 느낌','평온하고 고요한 느낌','위험하고 공포스러운 느낌','따뜻하고 포근한 느낌'], answer:0, explain:'restless는 "가만히 있지 못하는"이라는 뜻이에요.'}
-  ]},
-  vocab: {name:'어휘 복습', tag:'어휘', questions:[
-    {type:'mc', prompt:'restless의 뜻으로 알맞은 것은?', options:['가만히 있지 못하는','아주 조용한','매우 깊은','환하게 빛나는'], answer:0, explain:'restless = 가만히 있지 못하는, 끊임없이 움직이는.'},
-    {type:'mc', prompt:'빈칸에 알맞은 단어는? "The sailors watched the ___ far away." (멀리 있는 수평선을 보았다)', options:['horizon','silence','edge','mile'], answer:0, explain:'horizon = 수평선.'},
-    {type:'input', prompt:'"물러나다, 후퇴하다"에 해당하는 영단어를 쓰세요.', accept:['retreat'], explain:'retreat = 물러나다, 후퇴하다. 스펠링에 유의하세요.'}
-  ]},
-  vocabPrep: {name:'어휘 예습', tag:'예습', questions:[
-    {type:'mc', prompt:'다음 수업에 나올 단어 horizon의 뜻은?', options:['수평선','파도','조류','해안'], answer:0, explain:'horizon = 수평선.'},
-    {type:'mc', prompt:'silence의 뜻으로 알맞은 것은?', options:['침묵','속삭임','폭풍','비밀'], answer:0, explain:'silence = 침묵, 고요.'}
-  ]},
-  sentPrep: {name:'문장 예습', tag:'예습', questions:[
-    {type:'mc', prompt:'다음 문장의 의미로 가장 알맞은 것은?', sentence:'The water kept its silence.', options:['물은 침묵을 지켰다','물이 소리쳤다','물이 사라졌다','물이 넘쳤다'], answer:0, explain:'kept its silence = 침묵을 지켰다.'},
-    {type:'input', prompt:'"toward its edge"를 우리말로 해석하면?', accept:['가장자리로','가장자리를 향해','끝을 향해','가장자리 쪽으로'], explain:'toward its edge = 그 가장자리를 향해.'}
-  ]},
-  grammar: {name:'어법 퀴즈', tag:'어법', questions:[
-    {type:'mc', prompt:'빈칸에 알맞은 것은? "The sea has always ___ people."', options:['drawn','draw','drawing','draws'], answer:0, explain:'have/has + 과거분사(drawn) → 현재완료.'},
-    {type:'mc', prompt:'밑줄 친 that의 역할은? "a horizon that seemed to retreat"', options:['주격 관계대명사','목적격 관계대명사','접속사','지시대명사'], answer:0, explain:'선행사 horizon을 수식하는 주격 관계대명사.'},
-    {type:'input', prompt:'"seemed to retreat"에서 seem 뒤에 오는 형태는? (to + ___)', accept:['동사원형','원형','retreat','동사'], explain:'seem to + 동사원형.'}
-  ]},
-  sentence: {name:'문장 복습', tag:'문장', questions:[
-    {type:'mc', prompt:'이 문장의 주어는?', sentence:'Sailors spoke of a restless horizon.', options:['Sailors','a restless horizon','spoke'], answer:0, explain:'문장의 주어는 Sailors(선원들)입니다.'},
-    {type:'mc', prompt:'이 문장의 동사는?', sentence:'Sailors spoke of a restless horizon.', options:['spoke','Sailors','horizon'], answer:0, explain:'동사는 spoke(speak의 과거형)입니다.'},
-    {type:'input', prompt:'"kept its silence"를 우리말로 해석하면?', accept:['침묵을 지켰다','침묵했다','조용히 있었다','침묵'], explain:'kept its silence = 침묵을 지켰다.'}
-  ]}
+// 퀴즈 카테고리 메타(이름/태그는 고정, 문항만 날짜별 콘텐츠에서 제공)
+const QUIZ_META = {
+  preview:   {name:'지문 예습', tag:'예습'},
+  vocab:     {name:'어휘 복습', tag:'어휘'},
+  sentence:  {name:'문장 복습', tag:'문장'},
+  vocabPrep: {name:'어휘 예습', tag:'예습'},
+  sentPrep:  {name:'문장 예습', tag:'예습'},
+  grammar:   {name:'어법 퀴즈', tag:'어법'}
 };
 
-// e-북 본문
-const BOOK = {
-  title:'The Curiosity of the Sea',
-  author:'E. M. Hartwell',
-  chapter:'Chapter 3 · The Silent Horizon',
-  pages:[
-    ["The sea has always drawn people toward its edge, whispering of places no map has ever named.",
-     "For centuries, sailors spoke of a restless horizon — a line that seemed to retreat with every mile they gained, as if the ocean itself were guarding a secret.",
-     "They rowed and sailed and drifted, yet the water kept its silence, offering neither answer nor apology."],
-    ["Young Mira had heard these stories all her life. Her grandfather, a fisherman with salt in his beard and storms in his memory, would trace maps in the sand at low tide.",
-     "\"The deeper you go,\" he told her, \"the more the sea asks of you. And the less it explains.\"",
-     "She had not understood him then. But standing now at the bow of the little boat, watching the shoreline dissolve into haze, she began to."],
-    ["The morning light broke across the swells in long silver ribbons. Somewhere beneath her, in water darker than any night, creatures moved that no human eye had witnessed.",
-     "Mira leaned over the rail and let her fingers trail through the cold. The sea did not answer. But for the first time, she felt it listening.",
-     "And that, she decided, was enough to begin."]
+// 기본(내장) 콘텐츠 — 배포된 data/content.json이 없을 때 사용되는 예시 Day
+const DEFAULT_CONTENT = {
+  version: 1,
+  days: [
+    {
+      date: '2026-07-15',
+      label: 'A반 Day 3',
+      quote: {
+        en: 'Yet the deeper they went, the more the water kept its silence.',
+        ko: '그러나 더 깊이 들어갈수록, 바다는 더욱 침묵을 지켰다.',
+        teacher: '김선생님',
+        comment: '침묵의 의미를 생각하며 읽어보세요'
+      },
+      book: {
+        title: 'The Curiosity of the Sea',
+        author: 'E. M. Hartwell',
+        chapter: 'Chapter 3 · The Silent Horizon',
+        pages: [
+          ["The sea has always drawn people toward its edge, whispering of places no map has ever named.",
+           "For centuries, sailors spoke of a restless horizon — a line that seemed to retreat with every mile they gained, as if the ocean itself were guarding a secret.",
+           "They rowed and sailed and drifted, yet the water kept its silence, offering neither answer nor apology."],
+          ["Young Mira had heard these stories all her life. Her grandfather, a fisherman with salt in his beard and storms in his memory, would trace maps in the sand at low tide.",
+           "\"The deeper you go,\" he told her, \"the more the sea asks of you. And the less it explains.\"",
+           "She had not understood him then. But standing now at the bow of the little boat, watching the shoreline dissolve into haze, she began to."],
+          ["The morning light broke across the swells in long silver ribbons. Somewhere beneath her, in water darker than any night, creatures moved that no human eye had witnessed.",
+           "Mira leaned over the rail and let her fingers trail through the cold. The sea did not answer. But for the first time, she felt it listening.",
+           "And that, she decided, was enough to begin."]
+        ]
+      },
+      review: {
+        paragraphs: [
+          'The sea has always drawn people toward its edge.',
+          'Sailors spoke of a [restless] horizon that seemed to [retreat] with every mile.',
+          'Yet the deeper they went, the more the water kept its silence.'
+        ],
+        words: {
+          restless: {pos:'형용사', def:'가만히 있지 못하는, 끊임없이 움직이는', ex:'"a restless horizon"'},
+          retreat:  {pos:'동사',   def:'물러나다, 후퇴하다',                 ex:'"seemed to retreat"'}
+        }
+      },
+      quiz: {
+        preview: [
+          {type:'mc', prompt:'이 글은 주로 무엇에 관한 글일까요?', options:['바다에 대한 인간의 호기심','항해 기술의 발전','어업의 역사','해양 날씨 예보'], answer:0, explain:'바다의 수평선과 침묵을 통해 인간의 끝없는 호기심을 그리고 있어요.'},
+          {type:'mc', prompt:'"restless horizon"에서 느껴지는 분위기로 가장 알맞은 것은?', options:['가만히 있지 않고 계속 멀어지는 느낌','평온하고 고요한 느낌','위험하고 공포스러운 느낌','따뜻하고 포근한 느낌'], answer:0, explain:'restless는 "가만히 있지 못하는"이라는 뜻이에요.'}
+        ],
+        vocab: [
+          {type:'mc', prompt:'restless의 뜻으로 알맞은 것은?', options:['가만히 있지 못하는','아주 조용한','매우 깊은','환하게 빛나는'], answer:0, explain:'restless = 가만히 있지 못하는, 끊임없이 움직이는.'},
+          {type:'mc', prompt:'빈칸에 알맞은 단어는? "The sailors watched the ___ far away." (멀리 있는 수평선을 보았다)', options:['horizon','silence','edge','mile'], answer:0, explain:'horizon = 수평선.'},
+          {type:'input', prompt:'"물러나다, 후퇴하다"에 해당하는 영단어를 쓰세요.', accept:['retreat'], explain:'retreat = 물러나다, 후퇴하다. 스펠링에 유의하세요.'}
+        ],
+        sentence: [
+          {type:'mc', prompt:'이 문장의 주어는?', sentence:'Sailors spoke of a restless horizon.', options:['Sailors','a restless horizon','spoke'], answer:0, explain:'문장의 주어는 Sailors(선원들)입니다.'},
+          {type:'mc', prompt:'이 문장의 동사는?', sentence:'Sailors spoke of a restless horizon.', options:['spoke','Sailors','horizon'], answer:0, explain:'동사는 spoke(speak의 과거형)입니다.'},
+          {type:'input', prompt:'"kept its silence"를 우리말로 해석하면?', accept:['침묵을 지켰다','침묵했다','조용히 있었다','침묵'], explain:'kept its silence = 침묵을 지켰다.'}
+        ],
+        vocabPrep: [
+          {type:'mc', prompt:'다음 수업에 나올 단어 horizon의 뜻은?', options:['수평선','파도','조류','해안'], answer:0, explain:'horizon = 수평선.'},
+          {type:'mc', prompt:'silence의 뜻으로 알맞은 것은?', options:['침묵','속삭임','폭풍','비밀'], answer:0, explain:'silence = 침묵, 고요.'}
+        ],
+        sentPrep: [
+          {type:'mc', prompt:'다음 문장의 의미로 가장 알맞은 것은?', sentence:'The water kept its silence.', options:['물은 침묵을 지켰다','물이 소리쳤다','물이 사라졌다','물이 넘쳤다'], answer:0, explain:'kept its silence = 침묵을 지켰다.'},
+          {type:'input', prompt:'"toward its edge"를 우리말로 해석하면?', accept:['가장자리로','가장자리를 향해','끝을 향해','가장자리 쪽으로'], explain:'toward its edge = 그 가장자리를 향해.'}
+        ],
+        grammar: [
+          {type:'mc', prompt:'빈칸에 알맞은 것은? "The sea has always ___ people."', options:['drawn','draw','drawing','draws'], answer:0, explain:'have/has + 과거분사(drawn) → 현재완료.'},
+          {type:'mc', prompt:'밑줄 친 that의 역할은? "a horizon that seemed to retreat"', options:['주격 관계대명사','목적격 관계대명사','접속사','지시대명사'], answer:0, explain:'선행사 horizon을 수식하는 주격 관계대명사.'},
+          {type:'input', prompt:'"seemed to retreat"에서 seem 뒤에 오는 형태는? (to + ___)', accept:['동사원형','원형','retreat','동사'], explain:'seem to + 동사원형.'}
+        ]
+      }
+    }
   ]
-};
-
-// 지문 복습 단어 팝오버
-const POP = {
-  restless:{word:'restless', pos:'형용사', def:'가만히 있지 못하는, 끊임없이 움직이는', ex:'"a restless horizon"'},
-  retreat: {word:'retreat',  pos:'동사',   def:'물러나다, 후퇴하다',                 ex:'"seemed to retreat"'}
 };
