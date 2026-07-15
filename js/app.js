@@ -40,43 +40,211 @@ function contentSource() {
   return (c && Array.isArray(c.days) && c.days.length) ? c : DEFAULT_CONTENT;
 }
 
-/* ---------- 학생 프로필(로그인 없는 이름 선택) ---------- */
+/* ---------- 학생 프로필(로그인 없는 이름 선택 — Supabase 미설정 시) ---------- */
 let profile = localStorage.getItem(PROFILE_KEY) || '';
 function roster() { return contentSource().students || []; }
 function needProfile() {
-  return roster().length > 0 && (!profile || !roster().includes(profile));
+  return !authMode() && roster().length > 0 && (!profile || !roster().includes(profile));
 }
-function studentName() { return profile || '유림'; }
-function storeKey() { return profile ? STORE_KEY + ':' + profile : STORE_KEY; }
+function studentName() {
+  if (auth && auth.user) return auth.user.name || auth.user.username;
+  return profile || '유림';
+}
+function storeKey() {
+  if (auth && auth.user) return STORE_KEY + ':u:' + auth.user.id;
+  return profile ? STORE_KEY + ':' + profile : STORE_KEY;
+}
+
+/* ---------- 계정(Supabase Auth — 아이디/비밀번호) ---------- */
+const AUTH_KEY = 'er_auth_v1';
+let auth = loadJSON(AUTH_KEY); // {access_token, refresh_token, user:{id, username, name, is_teacher}}
+function authMode() { return !!sbConf(); }
+function needLogin() { return authMode() && !auth; }
+function isTeacherUser() { return !!(auth && auth.user && auth.user.is_teacher); }
+function saveAuth() {
+  try {
+    if (auth) localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+    else localStorage.removeItem(AUTH_KEY);
+  } catch (e) { /* 무시 */ }
+}
+// 아이디를 가짜 이메일로 변환(Supabase Auth는 이메일 형식을 요구)
+function idToEmail(id) { return id.toLowerCase() + '@fathom-aquarium.app'; }
+function sbUrl() { return sbConf().url.replace(/\/+$/, ''); }
+
+// 인증 포함 REST 호출(401이면 토큰 갱신 후 1회 재시도)
+async function sbFetch(path, opts, retried) {
+  const sb = sbConf();
+  const headers = Object.assign(
+    { 'apikey': sb.anonKey, 'Content-Type': 'application/json' },
+    (opts && opts.headers) || {}
+  );
+  headers['Authorization'] = 'Bearer ' + (auth ? auth.access_token : sb.anonKey);
+  const res = await fetch(sbUrl() + path, Object.assign({}, opts, { headers }));
+  if (res.status === 401 && auth && !retried) {
+    if (await refreshAuth()) return sbFetch(path, opts, true);
+  }
+  return res;
+}
+async function refreshAuth() {
+  const sb = sbConf();
+  if (!sb || !auth || !auth.refresh_token) return false;
+  try {
+    const res = await fetch(sbUrl() + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'apikey': sb.anonKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: auth.refresh_token })
+    });
+    if (!res.ok) { doLogout(false); return false; }
+    const j = await res.json();
+    auth.access_token = j.access_token;
+    auth.refresh_token = j.refresh_token || auth.refresh_token;
+    saveAuth();
+    return true;
+  } catch (e) { return false; }
+}
+function doLogout(rerender) {
+  const role = state.role; // 보고 있던 화면(학생/교사)은 유지
+  clearTimeout(syncTimer);
+  auth = null;
+  saveAuth();
+  state = loadState();
+  state.role = role;
+  state.intro = false; // 세션 중 로그아웃 → 스플래시 생략
+  if (rerender !== false) render();
+}
+// 가입 직후 프로필 행 생성 / 로그인 시 이름·교사 여부 동기화
+async function ensureProfile() {
+  try {
+    const res = await sbFetch('/rest/v1/er_profiles?id=eq.' + auth.user.id + '&select=name,username,is_teacher');
+    if (!res.ok) return;
+    const rows = await res.json();
+    if (rows.length) {
+      auth.user.name = rows[0].name || auth.user.name;
+      auth.user.is_teacher = !!rows[0].is_teacher;
+    } else {
+      await sbFetch('/rest/v1/er_profiles', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ id: auth.user.id, username: auth.user.username, name: auth.user.name })
+      });
+    }
+    saveAuth();
+  } catch (e) { /* 무시 */ }
+}
+// 클라우드에 저장된 진행 상황 내려받기(있으면 이 기기 상태를 덮어씀)
+async function pullProgress() {
+  try {
+    const res = await sbFetch('/rest/v1/er_progress?user_id=eq.' + auth.user.id + '&select=state');
+    if (!res.ok) return;
+    const rows = await res.json();
+    if (rows.length && rows[0].state) {
+      localStorage.setItem(storeKey(), JSON.stringify(rows[0].state));
+    }
+  } catch (e) { /* 무시 */ }
+}
+// 로그인/가입 실행
+async function runAuth(isSignup) {
+  if (ui.authBusy) return;
+  const sb = sbConf();
+  if (!sb) return;
+  const id = ui.li.id.trim(), pw = ui.li.pw, name = ui.li.name.trim();
+  if (!/^[a-zA-Z0-9_-]{3,20}$/.test(id)) { ui.authMsg = '아이디는 영문/숫자 3~20자로 입력해주세요'; render(); return; }
+  if (!pw || pw.length < 6) { ui.authMsg = '비밀번호는 6자 이상이어야 해요'; render(); return; }
+  if (isSignup && !name) { ui.authMsg = '이름을 입력해주세요'; render(); return; }
+  ui.authBusy = true;
+  ui.authMsg = isSignup ? '가입하는 중...' : '로그인 중...';
+  render();
+  try {
+    let res, j;
+    if (isSignup) {
+      res = await fetch(sbUrl() + '/auth/v1/signup', {
+        method: 'POST',
+        headers: { 'apikey': sb.anonKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: idToEmail(id), password: pw, data: { username: id, name } })
+      });
+      j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const m = j.msg || j.error_description || j.message || '';
+        throw new Error(/already|registered/i.test(m) ? '이미 있는 아이디예요' : (m || '가입에 실패했어요'));
+      }
+      if (!j.access_token) throw new Error('관리자 설정 필요: Supabase → Authentication → Sign In/Providers → Email에서 "Confirm email"을 꺼주세요');
+    } else {
+      res = await fetch(sbUrl() + '/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        headers: { 'apikey': sb.anonKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: idToEmail(id), password: pw })
+      });
+      j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error('아이디 또는 비밀번호가 맞지 않아요');
+    }
+    const meta = (j.user && j.user.user_metadata) || {};
+    auth = {
+      access_token: j.access_token,
+      refresh_token: j.refresh_token,
+      user: { id: j.user.id, username: meta.username || id, name: meta.name || name || id, is_teacher: false }
+    };
+    saveAuth();
+    await ensureProfile();   // 프로필 행 생성/동기화(교사 여부 포함)
+    await pullProgress();    // 클라우드 진행 상황 내려받기
+    const role = state.role; // 보고 있던 화면(학생/교사)은 유지
+    state = loadState();
+    state.role = role;
+    state.intro = false; // 로그인 직후에는 스플래시 없이 바로 홈
+    ui.authMsg = '';
+    ui.li.pw = '';
+    ui.signupMode = false;
+    if (state.role === 'teacher' && isTeacherUser()) loadRecords();
+  } catch (e) {
+    ui.authMsg = '❌ ' + e.message;
+  }
+  ui.authBusy = false;
+  render();
+}
+
+// 진행 상황을 클라우드로 올리기(저장 후 1.5초 묶어서 전송)
+let syncTimer = null;
+function scheduleSync() {
+  if (!auth || !sbConf()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    if (!auth || !sbConf()) return; // 발화 시점에 로그아웃했을 수 있음
+    sbFetch('/rest/v1/er_progress', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ user_id: auth.user.id, state, updated_at: new Date().toISOString() })
+    }).catch(() => {});
+  }, 1500);
+}
 
 /* ---------- 기록 수집(Supabase) ---------- */
 function sbConf() {
   const s = contentSource().supabase;
   return (s && s.url && s.anonKey) ? s : null;
 }
-function sbHeaders(sb) {
-  return { 'apikey': sb.anonKey, 'Authorization': 'Bearer ' + sb.anonKey, 'Content-Type': 'application/json' };
-}
 async function postRecord(rec) {
-  const sb = sbConf();
-  if (!sb) return;
+  if (!sbConf()) return;
+  if (!auth) return; // 계정 기반: 로그인한 상태에서만 기록
+  rec.student = studentName();
   try {
-    await fetch(sb.url.replace(/\/+$/, '') + '/rest/v1/er_records', {
+    await sbFetch('/rest/v1/er_records', {
       method: 'POST',
-      headers: Object.assign({ 'Prefer': 'return=minimal' }, sbHeaders(sb)),
+      headers: { 'Prefer': 'return=minimal' },
       body: JSON.stringify(rec)
     });
   } catch (e) { /* 오프라인이면 조용히 건너뜀 */ }
 }
 async function loadRecords() {
-  const sb = sbConf();
-  if (!sb) { ui.records = null; return; }
+  if (!sbConf() || !isTeacherUser()) { ui.records = null; return; }
   ui.recLoading = true; ui.recError = '';
   render();
   try {
-    const res = await fetch(sb.url.replace(/\/+$/, '') + '/rest/v1/er_records?date=eq.' + todayKey() + '&select=student,task,kind,score,total,created_at&order=created_at.asc', { headers: sbHeaders(sb) });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    ui.records = await res.json();
+    const [r1, r2] = await Promise.all([
+      sbFetch('/rest/v1/er_records?date=eq.' + todayKey() + '&select=student,task,kind,score,total,created_at&order=created_at.asc'),
+      sbFetch('/rest/v1/er_profiles?is_teacher=eq.false&select=name,username&order=name.asc')
+    ]);
+    if (!r1.ok) throw new Error('HTTP ' + r1.status);
+    ui.records = await r1.json();
+    ui.profiles = r2.ok ? await r2.json() : [];
   } catch (e) {
     ui.recError = e.message;
     ui.records = null;
@@ -138,7 +306,12 @@ let hatchTimer = null;
 let introTimer = null;
 
 // 화면에만 쓰이는 임시 UI 상태(저장 안 함)
-const ui = { teacherTab: 'dash', pubMsg: '', pubBusy: false, edMsg: '', records: null, recLoading: false, recError: '' };
+const ui = {
+  teacherTab: 'dash', pubMsg: '', pubBusy: false, edMsg: '',
+  records: null, recLoading: false, recError: '', profiles: [],
+  signupMode: false, authMsg: '', authBusy: false,
+  li: { id: '', pw: '', name: '' }   // 로그인 폼 입력값(리렌더에도 유지)
+};
 let ed = null;  // 콘텐츠 편집기 상태 {dayIndex, day(편집용 형태)}
 let gEd = null; // 전역 설정 편집(학생 명단·Supabase)
 
@@ -159,6 +332,7 @@ function ensureDaily(s) {
 }
 function save() {
   try { localStorage.setItem(storeKey(), JSON.stringify(state)); } catch (e) { /* 무시 */ }
+  scheduleSync(); // 로그인 상태면 클라우드에도 동기화
 }
 function set(patch) {
   Object.assign(state, patch);
@@ -359,7 +533,7 @@ const actions = {
   },
   skipHatch() { clearTimeout(hatchTimer); set({ hatchStage: 'revealed' }); },
 
-  /* ---- 학생 프로필 ---- */
+  /* ---- 학생 프로필(Supabase 미설정 시) ---- */
   pickProfile(name) {
     profile = name;
     localStorage.setItem(PROFILE_KEY, name);
@@ -367,14 +541,21 @@ const actions = {
     render();
   },
   switchProfile() {
+    if (authMode()) { actions.doLogout(); return; }
     if (!roster().length) return;
     profile = '';
     localStorage.removeItem(PROFILE_KEY);
     render();
   },
 
+  /* ---- 계정(로그인/가입/로그아웃) ---- */
+  toggleSignup() { ui.signupMode = !ui.signupMode; ui.authMsg = ''; render(); },
+  doLogout() { doLogout(); },
+  async doLogin() { await runAuth(false); },
+  async doSignup() { await runAuth(true); },
+
   /* ---- 교사 ---- */
-  teacherTabDash() { ui.teacherTab = 'dash'; render(); if (sbConf()) loadRecords(); },
+  teacherTabDash() { ui.teacherTab = 'dash'; render(); if (sbConf() && isTeacherUser()) loadRecords(); },
   teacherTabContent() { ui.teacherTab = 'content'; ensureEditor(); render(); },
   dashRefresh() { loadRecords(); },
 
@@ -660,6 +841,35 @@ function introHTML() {
   </div>`;
 }
 
+/* ---- 로그인/가입 폼(학생 풀스크린 + 교사 대시보드 공용) ---- */
+function loginFormHTML(compact) {
+  const s = ui.signupMode;
+  return `
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <input id="li-id" class="ed-input" value="${esc(ui.li.id)}" placeholder="아이디 (영문/숫자 3~20자)" autocomplete="username" style="padding:12px 14px;font-size:14px">
+      <input id="li-pw" class="ed-input" type="password" value="${esc(ui.li.pw)}" placeholder="비밀번호 (6자 이상)" autocomplete="${s ? 'new-password' : 'current-password'}" style="padding:12px 14px;font-size:14px">
+      ${s ? `<input id="li-name" class="ed-input" value="${esc(ui.li.name)}" placeholder="이름 (예: 이지민)" style="padding:12px 14px;font-size:14px">` : ''}
+      <button data-act="${s ? 'doSignup' : 'doLogin'}" class="ed-btn primary" style="padding:13px;font-size:14px;${ui.authBusy ? 'opacity:.6' : ''}">${ui.authBusy ? '잠시만요...' : (s ? '가입하고 시작하기 🐠' : '로그인')}</button>
+      ${ui.authMsg ? `<div style="font-size:12px;line-height:1.5;color:${ui.authMsg.startsWith('❌') ? '#ffb4ad' : '#dbe6f5'};background:rgba(0,0,0,${compact ? '.06' : '.25'});border-radius:10px;padding:9px 11px;${compact ? 'color:#b23a32;background:#fbe4e2' : ''}">${esc(ui.authMsg)}</div>` : ''}
+      <div data-act="toggleSignup" style="text-align:center;font-size:12.5px;font-weight:600;cursor:pointer;padding:6px;${compact ? 'color:#2f74e6' : 'color:#cfe3ff;text-decoration:underline'}">${s ? '이미 계정이 있어요 → 로그인' : '처음이에요 → 가입하기'}</div>
+    </div>`;
+}
+
+/* ---- 학생 로그인 화면(풀스크린) ---- */
+function loginScreenHTML() {
+  return `<div style="position:absolute;inset:0;z-index:58;overflow-y:auto;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%)">
+    <div style="position:absolute;inset:0;pointer-events:none">${introBubblesHTML()}</div>
+    <div style="position:relative;padding:72px 30px 40px">
+      <div style="text-align:center;color:#fff;margin-bottom:24px;animation:fadeup 1s ease-out">
+        <div style="font-size:11px;letter-spacing:.38em;opacity:.8;text-transform:uppercase">Extensive Reading</div>
+        <div style="font-family:'Lora',serif;font-size:34px;font-weight:600;margin-top:10px;text-shadow:0 4px 18px rgba(0,0,0,.4)">Fathom Aquarium</div>
+        <div style="font-size:12.5px;opacity:.85;margin-top:8px">${ui.signupMode ? '아이디를 만들면 나만의 아쿠아리움이 생겨요' : '내 계정으로 이어서 키워요'}</div>
+      </div>
+      <div style="animation:fadeup 1.2s ease-out">${loginFormHTML(false)}</div>
+    </div>
+  </div>`;
+}
+
 /* ---- 학생 이름 선택(로그인 없는 프로필) ---- */
 function profilePickerHTML() {
   const cards = roster().map(n => `
@@ -668,7 +878,7 @@ function profilePickerHTML() {
       <div style="flex:1;font-size:15px;font-weight:700;color:#14243f">${esc(n)}</div>
       <div style="font-size:16px;color:#2f74e6">→</div>
     </div>`).join('');
-  return `<div style="position:absolute;inset:0;z-index:80;overflow-y:auto;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%)">
+  return `<div style="position:absolute;inset:0;z-index:58;overflow-y:auto;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%)">
     <div style="position:absolute;inset:0;pointer-events:none">${introBubblesHTML()}</div>
     <div style="position:relative;padding:80px 26px 40px">
       <div style="text-align:center;color:#fff;margin-bottom:26px;animation:fadeup 1s ease-out">
@@ -759,7 +969,7 @@ function homeHTML() {
 
   return `<div style="${enter}"><div style="padding:52px 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div data-act="switchProfile" style="display:flex;align-items:center;gap:11px;${roster().length ? 'cursor:pointer' : ''}" ${roster().length ? 'title="탭해서 다른 친구로 바꾸기"' : ''}>
+      <div data-act="switchProfile" style="display:flex;align-items:center;gap:11px;${(authMode() || roster().length) ? 'cursor:pointer' : ''}" ${authMode() ? 'title="탭해서 로그아웃"' : (roster().length ? 'title="탭해서 다른 친구로 바꾸기"' : '')}>
         <div style="width:44px;height:44px;border-radius:14px;background:#2f74e6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;box-shadow:0 4px 0 #1f57c4">${esc(studentName().slice(0, 2))}</div>
         <div>
           <div style="font-size:16px;font-weight:700;color:#14243f">안녕하세요, ${esc(studentName())}님 👋</div>
@@ -1131,7 +1341,21 @@ function teacherDashHTML() {
     </div>`;
 
   const day = activeDay();
-  if (sbConf()) return liveDashHTML(day);
+  if (sbConf()) {
+    if (!auth) return `
+      <div class="ed-card" style="margin-top:4px">
+        <div style="font-size:14px;font-weight:700;color:#14243f">🔐 교사 로그인</div>
+        <div style="font-size:11.5px;color:#7d8aa0;margin:6px 0 12px;line-height:1.6">학생 기록을 보려면 교사 계정으로 로그인하세요.<br>처음이라면 가입 후, Supabase SQL Editor에서 교사로 지정해야 해요 (README 참고).</div>
+        ${loginFormHTML(true)}
+      </div>`;
+    if (!isTeacherUser()) return `
+      <div class="ed-card" style="margin-top:4px">
+        <div style="font-size:14px;font-weight:700;color:#14243f">🔐 교사 권한이 없어요</div>
+        <div style="font-size:12px;color:#5f7794;margin:8px 0;line-height:1.7">지금 <b>${esc(studentName())}</b>(${esc(auth.user.username)}) 계정으로 로그인되어 있어요.<br>이 계정을 교사로 지정하려면 Supabase → SQL Editor에서 실행:<br><code style="font-size:11px;background:#f4f8fd;padding:2px 6px;border-radius:5px">update public.er_profiles set is_teacher = true where username = '${esc(auth.user.username)}';</code><br>실행 후 로그아웃했다가 다시 로그인하면 적용돼요.</div>
+        <button data-act="doLogout" class="ed-btn ghost" style="width:100%">로그아웃</button>
+      </div>`;
+    return liveDashHTML(day);
+  }
   return `
     <div style="font-size:19px;font-weight:700;color:#14243f">여름 특강 A반${day.label ? ' · ' + esc(day.label) : ''}</div>
     <div style="font-size:12px;color:#7d8aa0;margin-top:2px">${esc(day.book.title)} · 학생 18명</div>
@@ -1171,7 +1395,9 @@ function teacherDashHTML() {
 function liveDashHTML(day) {
   const req = requiredKeys();
   const recs = ui.records || [];
-  const names = roster().slice();
+  // 학생 목록: 가입된 계정(프로필) 기준, 기록에만 있는 이름도 포함
+  const names = (ui.profiles || []).map(p => p.name);
+  roster().forEach(n => { if (!names.includes(n)) names.push(n); });
   recs.forEach(r => { if (!names.includes(r.student)) names.push(r.student); });
 
   const byStu = {};
@@ -1211,7 +1437,10 @@ function liveDashHTML(day) {
         <div style="font-size:19px;font-weight:700;color:#14243f">오늘의 학습 현황${day.label ? ' · ' + esc(day.label) : ''}</div>
         <div style="font-size:12px;color:#7d8aa0;margin-top:2px">${esc(day.book.title)} · ${names.length}명 · ${todayKey()}</div>
       </div>
-      <button data-act="dashRefresh" class="ed-btn ghost" style="padding:8px 13px;font-size:11.5px">${ui.recLoading ? '⏳' : '🔄 새로고침'}</button>
+      <div style="display:flex;gap:6px">
+        <button data-act="dashRefresh" class="ed-btn ghost" style="padding:8px 13px;font-size:11.5px">${ui.recLoading ? '⏳' : '🔄 새로고침'}</button>
+        <button data-act="doLogout" class="ed-btn ghost" style="padding:8px 11px;font-size:11.5px" title="교사 계정 로그아웃">↩︎</button>
+      </div>
     </div>
     ${ui.recError ? `<div style="font-size:11.5px;color:#b23a32;background:#fbe4e2;border-radius:10px;padding:9px 12px;margin-top:10px">기록을 불러오지 못했어요: ${esc(ui.recError)}</div>` : ''}
 
@@ -1303,14 +1532,14 @@ function editorHTML() {
     </div>
 
     <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">👧 학생 명단</div>
-      <div class="ed-label">한 줄에 한 명씩. 입력하면 학생 화면에 "누구인가요?" 이름 선택이 생기고, 아이별로 진행이 따로 저장돼요. 비워두면 이름 선택 없이 동작합니다.</div>
+      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">👧 학생 명단 (Supabase 미사용 시)</div>
+      <div class="ed-label">한 줄에 한 명씩. 입력하면 학생 화면에 "누구인가요?" 이름 선택이 생기고, 아이별로 진행이 따로 저장돼요. ${sbConf() ? '⚠️ 지금은 아래 Supabase가 설정되어 있어 아이디/비밀번호 로그인이 대신 사용됩니다 — 이 명단은 무시돼요.' : '비워두면 이름 선택 없이 동작합니다.'}</div>
       <textarea class="ed-input" data-gbind="studentsText" rows="3" placeholder="이지민&#10;박서준&#10;최하윤">${esc(gEd.studentsText)}</textarea>
     </div>
 
     <div class="ed-card">
       <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">📡 기록 수집 (Supabase)</div>
-      <div class="ed-label">설정하면 아이들의 퀴즈 점수·완료 기록이 모여서 대시보드에 실제 데이터가 표시돼요. supabase.com에서 무료 프로젝트를 만들고 아래 두 값을 붙여넣은 뒤 배포하세요. (자세한 방법은 README 참고)</div>
+      <div class="ed-label">설정하면 ① 학생 화면이 아이디/비밀번호 로그인으로 바뀌고(어느 기기서든 자기 아쿠아리움 유지) ② 점수·완료 기록이 모여 대시보드에 실제 데이터가 표시돼요. supabase.com 무료 프로젝트의 두 값을 붙여넣고 배포하세요. (설정 순서는 README 참고)</div>
       <input class="ed-input" data-gbind="sbUrl" value="${esc(gEd.sbUrl)}" placeholder="프로젝트 URL (https://xxxx.supabase.co)">
       <input class="ed-input" data-gbind="sbKey" value="${esc(gEd.sbKey)}" placeholder="anon public 키 (eyJ...)" style="margin-top:6px">
       <div style="font-size:10.5px;color:#b8c2d2;margin-top:7px">${sbConf() ? '✅ 현재 이 기기에는 설정되어 있어요. 모든 기기에 적용하려면 배포하세요.' : '아직 설정되지 않았어요 — 설정 전에는 기록이 기기 안에만 남습니다.'}</div>
@@ -1419,7 +1648,8 @@ function render() {
     html += teacherHTML();
   }
 
-  if (state.role === 'student' && needProfile()) html += profilePickerHTML();
+  if (state.role === 'student' && needLogin()) html += loginScreenHTML();
+  else if (state.role === 'student' && needProfile()) html += profilePickerHTML();
   else if (state.intro) html += introHTML();
 
   document.getElementById('app').innerHTML = html;
@@ -1453,10 +1683,20 @@ appEl.addEventListener('click', e => {
   const fn = actions[el.dataset.act];
   if (fn) fn(el.dataset.arg);
 });
+// 로그인 폼에서 Enter로 제출
+appEl.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (['li-id', 'li-pw', 'li-name'].includes(e.target.id)) {
+    actions[ui.signupMode ? 'doSignup' : 'doLogin']();
+  }
+});
 // 편집기 입력 바인딩(리렌더 없이 편집 객체에 즉시 반영)
 appEl.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'quiz-input' || el.id === 'gh-token') return;
+  if (el.id === 'li-id') { ui.li.id = el.value; return; }
+  if (el.id === 'li-pw') { ui.li.pw = el.value; return; }
+  if (el.id === 'li-name') { ui.li.name = el.value; return; }
   if (el.dataset.gbind && gEd) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
   if (bind && ed && el.type !== 'radio' && el.tagName !== 'SELECT') {
