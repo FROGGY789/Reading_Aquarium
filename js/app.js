@@ -1637,7 +1637,10 @@ function render() {
   ensureDaily(state);
   if (before !== state.daily.date) save();
 
-  let html = roleToggleHTML();
+  // 역할은 계정으로 자동 결정 (교사 계정이면 교사 화면, 그 외 학생 화면)
+  if (authMode()) state.role = isTeacherUser() ? 'teacher' : 'student';
+
+  let html = '';
 
   if (state.hatchStage === 'cracking') html += hatchCinematicHTML();
 
