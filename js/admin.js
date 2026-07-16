@@ -143,6 +143,7 @@ function render() {
 
   let panel = '';
   if (ui.tab === 'passage') panel = passageTab(d);
+  else if (ui.tab === 'preview') panel = previewTab(d);
   else if (ui.tab === 'quiz') panel = quizTab(d);
   else panel = settingsTab();
 
@@ -158,10 +159,9 @@ function render() {
 
     <div class="daybar" style="margin-bottom:16px">
       ${tabBtn('passage', '📖 지문 · 책')}
+      ${tabBtn('preview', '👀 예습 (살살·보통·버닝)')}
       ${tabBtn('quiz', '📝 복습 · 퀴즈')}
       ${tabBtn('settings', '⚙️ 학생 · 설정')}
-      <div style="flex:1"></div>
-      <span style="font-size:12px;color:#9aa8bd">예습 3단계(살살·보통·버닝)는 다음 업데이트에서 추가돼요</span>
     </div>
 
     ${panel}
@@ -249,7 +249,33 @@ function passageTab(d) {
   </div>`;
 }
 
-/* ---- 탭 2: 복습 · 퀴즈 ---- */
+/* ---- 탭 2: 지문 예습 (살살·보통·버닝) ---- */
+function previewTab(d) {
+  const coreN = (d.previewCoreText || '').split('\n').map(s => s.trim()).filter(Boolean).length;
+  return `<div class="card" style="background:#f4faf6;border-color:#cfe9da">
+    <h2>지문 예습 3단계 안내</h2>
+    <div class="hint" style="margin:0">
+      학생은 예습할 때 난이도를 골라요. 아래에서 각 단계에 쓸 내용을 준비하세요.<br>
+      🟢 <b>살살</b> — <b>지문의 [단어] 어휘 카드</b>로 자동 구성돼요 (지문 탭에서 단어 뜻만 채우면 끝).<br>
+      🟡 <b>보통</b> — 아래 <b>핵심 문장</b>을 읽어요.<br>
+      🔴 <b>버닝</b> — 지문 전체를 읽고 아래 <b>이해도 확인</b> 문항을 풀어요.
+    </div>
+  </div>
+  <div class="cols">
+    <div class="card">
+      <h2>🟡 보통 · 핵심 문장 <span style="font-size:12px;color:#7d8aa0;font-weight:600">${coreN}문장</span></h2>
+      <div class="hint">한 줄에 한 문장씩. 비워두면 지문 앞부분 문장 6개가 자동으로 쓰여요.</div>
+      <textarea class="inp" data-bind="previewCoreText" rows="8" placeholder="The sea has always drawn people toward its edge.&#10;Sailors spoke of a restless horizon.">${esc(d.previewCoreText)}</textarea>
+    </div>
+    <div class="card">
+      <h2>🔴 버닝 · 이해도 확인 (comprehension)</h2>
+      <div class="hint">지문 전체를 읽은 뒤 풀 문항이에요. 비워두면 읽기만으로 완료돼요.</div>
+      ${qcat('preview')}
+    </div>
+  </div>`;
+}
+
+/* ---- 탭 3: 복습 · 퀴즈 ---- */
 function quizTab(d) {
   return `<div class="card">
     <h2>오늘 선생님이 고른 문장</h2>
@@ -263,11 +289,11 @@ function quizTab(d) {
     </div>
   </div>
   <div class="card">
-    <h2>퀴즈 문항</h2>
+    <h2>복습 · 보조 퀴즈</h2>
     <div class="hint">문제를 비워두면 그 문항은 출제되지 않아요. 문항이 하나도 없는 카테고리는 학생 홈에서 숨겨집니다.</div>
     <div class="cols">
-      <div>${['preview', 'vocab', 'sentence'].map(qcat).join('')}</div>
-      <div>${['vocabPrep', 'sentPrep', 'grammar'].map(qcat).join('')}</div>
+      <div>${['vocab', 'sentence'].map(qcat).join('')}</div>
+      <div>${['grammar', 'vocabPrep', 'sentPrep'].map(qcat).join('')}</div>
     </div>
   </div>`;
 }

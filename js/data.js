@@ -207,6 +207,7 @@ function dayToEdit(day) {
     book: Object.assign({ title: '', author: '', chapter: '', cover: '' }, day.book || {}),
     passageText,
     words,
+    previewCoreText: ((day.previewCore) || []).join('\n'),  // 보통 난이도: 핵심 문장(줄바꿈 구분)
     quiz
   };
 }
@@ -234,6 +235,7 @@ function editToDay(e) {
       })
       .filter(q => q.type === 'mc' ? q.options.length >= 2 : q.accept.length >= 1);
   });
+  const previewCore = (e.previewCoreText || '').split('\n').map(t => t.trim()).filter(Boolean);
   return {
     date: e.date || _todayKey(),
     label: (e.label || '').trim(),
@@ -241,6 +243,21 @@ function editToDay(e) {
     book: { title: e.book.title.trim(), author: e.book.author.trim(), chapter: e.book.chapter.trim(), cover: (e.book.cover || '').trim() },
     passage: (e.passageText || '').trim(),
     vocab,
+    previewCore,
     quiz
   };
+}
+
+/* ---- 지문 예습 3단계 헬퍼 ---- */
+// 보통 난이도 핵심 문장: previewCore가 있으면 그걸, 없으면 지문 앞부분 문장 6개
+function dayCoreSentences(day) {
+  if (day && Array.isArray(day.previewCore) && day.previewCore.length) return day.previewCore;
+  const plain = stripBrackets(passageToReview(dayPassage(day)).join(' '));
+  const sents = plain.match(/[^.!?]+[.!?]+/g) || (plain ? [plain] : []);
+  return sents.map(s => s.trim()).filter(Boolean).slice(0, 6);
+}
+// 살살 난이도 어휘 카드: [{word,pos,def,ex}]
+function dayVocabCards(day) {
+  const v = dayVocab(day);
+  return Object.keys(v).map(w => Object.assign({ word: w }, v[w]));
 }

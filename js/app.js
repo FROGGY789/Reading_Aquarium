@@ -263,7 +263,7 @@ function dayQuiz(cat) { return (activeDay().quiz && activeDay().quiz[cat]) || []
 
 // 오늘 할 일 구성(문항이 있는 카테고리만 노출)
 const MAIN_TASKS = [
-  { key: 'preview',  icon: '👀',  bg: '#e7f0fd', sub: n => `수업 전 미리보기 · 퀴즈 ${n}문항` },
+  { key: 'preview',  icon: '👀',  bg: '#e7f0fd', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` },
   { key: 'review',   icon: '📖',  bg: '#e0f3ea', sub: () => '단어 팝오버로 다시 읽기' },
   { key: 'vocab',    icon: '🔤',  bg: '#fdeede', sub: n => `뜻·빈칸·스펠링 ${n}문항` },
   { key: 'sentence', icon: '🧩',  bg: '#efe7fd', sub: n => `구조 분석 + 해석 ${n}문항` }
@@ -275,6 +275,11 @@ const BONUS_TASKS = [
 ];
 function taskAvailable(key) {
   if (key === 'review') return passageToReview(dayPassage(activeDay())).length > 0;
+  if (key === 'preview') {
+    // 세 난이도 중 하나라도 가능하면 노출 (어휘/핵심문장/지문+이해도)
+    const d = activeDay();
+    return dayVocabCards(d).length > 0 || dayCoreSentences(d).length > 0 || dayPassage(d).trim().length > 0 || dayQuiz('preview').length > 0;
+  }
   return dayQuiz(key).length > 0;
 }
 function requiredKeys() { return MAIN_TASKS.map(t => t.key).filter(taskAvailable); }
@@ -306,9 +311,11 @@ let introTimer = null;
 const ui = {
   teacherTab: 'dash', pubMsg: '', pubBusy: false, edMsg: '',
   records: null, recLoading: false, recError: '', profiles: [],
-  signupMode: false, authMsg: '', authBusy: false,
-  li: { id: '', pw: '', name: '' }   // 로그인 폼 입력값(리렌더에도 유지)
+  signupMode: false, authMsg: '', authBusy: false, asStudent: false,
+  li: { id: '', pw: '', name: '', studentNo: '', classId: '' }   // 로그인 폼 입력값(리렌더에도 유지)
 };
+// 학생 화면 상단 여백: 교사 미리보기(토글 있음)일 때만 넉넉히, 실제 학생은 좁게
+function topPad() { return isTeacherUser() ? '52px' : '28px'; }
 let ed = null;  // 콘텐츠 편집기 상태 {dayIndex, day(편집용 형태)}
 let gEd = null; // 전역 설정 편집(학생 명단·Supabase)
 
@@ -452,8 +459,8 @@ function canCheck() {
  * 액션
  * ========================================================= */
 const actions = {
-  setRoleStudent() { set({ role: 'student' }); },
-  setRoleTeacher() { set({ role: 'teacher' }); },
+  setRoleStudent() { ui.asStudent = true; render(); },   // 교사: 학생 화면 미리보기
+  setRoleTeacher() { ui.asStudent = false; render(); },
 
   startApp() {
     if (state.introLeaving) return;
@@ -469,14 +476,32 @@ const actions = {
   openDex() { set({ dexOpen: true }); },
   closeDex() { set({ dexOpen: false }); },
 
-  openReader() { set({ screen: 'reader' }); },
+  openReader() { set({ screen: 'reader', readerBurning: false, readerPage: 0 }); },
   readerPrev() { if (state.readerPage > 0) set({ readerPage: state.readerPage - 1 }); },
   readerNext() { if (state.readerPage < readerPages().length - 1) set({ readerPage: state.readerPage + 1 }); },
 
   startTask(t) {
     if (!taskAvailable(t)) return;
     if (t === 'review') set({ screen: 'review', pop: null });
+    else if (t === 'preview') set({ screen: 'preview', pop: null });   // 3단계 난이도 선택
     else set({ screen: 'quiz', quizTask: t, quizQi: 0, picks: {}, inputs: {}, checked: {} });
+  },
+  // 지문 예습 난이도 선택
+  previewEasy() { if (dayVocabCards(activeDay()).length) set({ screen: 'previewVocab', pvIndex: 0 }); },
+  previewMedium() { set({ screen: 'previewRead' }); },
+  previewHard() { set({ screen: 'reader', readerBurning: true, readerPage: 0 }); },
+  pvNext() {
+    const cards = dayVocabCards(activeDay());
+    if (state.pvIndex < cards.length - 1) set({ pvIndex: state.pvIndex + 1 });
+    else completeTask('preview');   // 마지막 카드 → 완료
+  },
+  pvPrev() { if (state.pvIndex > 0) set({ pvIndex: state.pvIndex - 1 }); },
+  previewReadDone() { completeTask('preview'); },
+  goPreview() { set({ screen: 'preview' }); },
+  // 버닝: 리더 끝까지 읽고 → comprehension check(quiz.preview) → 없으면 바로 완료
+  burnToComprehension() {
+    if (dayQuiz('preview').length) set({ screen: 'quiz', quizTask: 'preview', quizQi: 0, picks: {}, inputs: {}, checked: {}, readerBurning: false });
+    else completeTask('preview');
   },
   tapWord(w) { set({ pop: state.pop === w ? null : w }); },
   reviewDone() { completeTask('review'); },
@@ -747,11 +772,12 @@ function todayLabel() {
   return `${now.getMonth() + 1}월 ${now.getDate()}일 ${days[now.getDay()]}요일${label ? ' · ' + label : ''}`;
 }
 
+// 교사 계정 전용: 학생 화면 미리보기 토글
 function roleToggleHTML() {
   const tab = on => `font-size:12px;font-weight:600;padding:6px 16px;border-radius:999px;cursor:pointer;color:${on ? '#14243f' : '#cfe0f5'};background:${on ? '#fff' : 'transparent'}`;
-  return `<div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:3px;background:rgba(11,33,64,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:999px;padding:3px">
-    <div data-act="setRoleStudent" style="${tab(state.role === 'student')}">학생</div>
-    <div data-act="setRoleTeacher" style="${tab(state.role === 'teacher')}">교사</div>
+  return `<div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:3px;background:rgba(11,33,64,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:999px;padding:3px;box-shadow:0 4px 14px -6px rgba(0,0,0,.5)">
+    <div data-act="setRoleStudent" style="${tab(ui.asStudent)}">학생</div>
+    <div data-act="setRoleTeacher" style="${tab(!ui.asStudent)}">교사</div>
   </div>`;
 }
 
@@ -902,7 +928,7 @@ function homeHTML() {
 
   const bonusRows = BONUS_TASKS.map(taskRow).join('');
 
-  return `<div style="${enter}"><div style="padding:52px 20px 96px">
+  return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div ${!authMode() && roster().length ? 'data-act="switchProfile"' : ''} style="display:flex;align-items:center;gap:11px;${!authMode() && roster().length ? 'cursor:pointer' : ''}" ${!authMode() && roster().length ? 'title="탭해서 다른 친구로 바꾸기"' : ''}>
         <div style="width:44px;height:44px;border-radius:14px;background:#2f74e6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;box-shadow:0 4px 0 #1f57c4">${esc(studentName().slice(0, 2))}</div>
@@ -1012,7 +1038,7 @@ function aquariumHTML() {
     <div style="position:absolute;top:-6%;right:16%;width:26%;height:52%;background:linear-gradient(180deg,rgba(255,255,255,.14),transparent);transform:skewX(10deg);filter:blur(14px);pointer-events:none"></div>
     <div style="position:absolute;left:0;right:0;bottom:0;height:96px;background:linear-gradient(180deg,rgba(216,193,132,0),#d8c184 80%);pointer-events:none"></div>
 
-    <div style="position:relative;padding:52px 20px 0;color:#fff;pointer-events:none">
+    <div style="position:relative;padding:${topPad()} 20px 0;color:#fff;pointer-events:none">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div>
           <div style="font-size:19px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.4)">나의 아쿠아리움</div>
@@ -1067,7 +1093,7 @@ function reviewHTML() {
     if (hasActive) paras += popHTML;
   });
 
-  return `<div style="padding:52px 0 40px">
+  return `<div style="padding:${topPad()} 0 40px">
     <div style="padding:0 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <div data-act="goHome" style="display:flex;align-items:center;gap:8px;cursor:pointer"><div style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center">←</div><span style="font-size:13px;font-weight:600;color:#14243f">지문 복습</span></div>
       <div style="font-size:11px;color:#7d8aa0">단어를 탭해보세요</div>
@@ -1124,7 +1150,7 @@ function quizHTML() {
     ? `<button data-act="quizNext" style="width:100%;border:none;background:#14243f;color:#fff;font-size:14px;font-weight:600;padding:14px;border-radius:15px;box-shadow:0 5px 0 #0a1526;cursor:pointer">${qi >= qs.length - 1 ? '결과 보기' : '다음 →'}</button>`
     : `<button id="check-btn" data-act="quizCheck" class="btn-check ${canCheck() ? 'on' : ''}">확인</button>`;
 
-  return `<div style="padding:52px 20px 40px">
+  return `<div style="padding:${topPad()} 20px 40px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       <div style="flex:1;margin:0 12px"><div style="height:8px;border-radius:4px;background:#dde6f1;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:4px;width:${pct}%"></div></div></div>
@@ -1151,7 +1177,7 @@ function resultHTML() {
       <div style="font-size:12px;line-height:1.55;color:#5f7794;background:#f4f8fd;border-radius:9px;padding:8px 10px;margin-top:9px">${esc(w.explain)}</div>
     </div>`).join('');
 
-  return `<div style="padding:52px 0 40px">
+  return `<div style="padding:${topPad()} 0 40px">
     <div style="text-align:center;padding:20px 24px 22px;margin:0 16px;background:linear-gradient(160deg,#e7f0fd,#dff3f6);border-radius:22px">
       <div style="font-size:12px;font-weight:600;color:#2f74e6">${esc(r.name)} 완료 🎉</div>
       <div style="font-size:46px;font-weight:700;color:#14243f;line-height:1.1;margin:6px 0 2px">${r.score}<span style="font-size:17px;color:#7d8aa0;font-weight:600">점</span></div>
@@ -1195,9 +1221,91 @@ function readerHTML() {
       <div style="display:flex;align-items:center;justify-content:space-between">
         <button data-act="readerPrev" style="border:1.5px solid #dccfb7;background:#fff;color:#7a6b52;font-size:13px;font-weight:600;white-space:nowrap;padding:10px 18px;border-radius:12px;cursor:pointer">← 이전</button>
         <span style="font-size:12px;font-weight:600;color:#9c8f76">${page + 1} / ${pages.length}</span>
-        <button data-act="readerNext" style="border:none;background:#c08a3a;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding:10px 18px;border-radius:12px;box-shadow:0 4px 0 #a06f28;cursor:pointer">다음 →</button>
+        ${page < pages.length - 1
+          ? `<button data-act="readerNext" style="border:none;background:#c08a3a;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding:10px 18px;border-radius:12px;box-shadow:0 4px 0 #a06f28;cursor:pointer">다음 →</button>`
+          : state.readerBurning
+            ? `<button data-act="burnToComprehension" style="border:none;background:#e2564d;color:#fff;font-size:13px;font-weight:700;white-space:nowrap;padding:10px 18px;border-radius:12px;box-shadow:0 4px 0 #b23a32;cursor:pointer">이해도 확인 🔥</button>`
+            : `<button data-act="goHome" style="border:none;background:#2fa36b;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding:10px 18px;border-radius:12px;box-shadow:0 4px 0 #1f7a4d;cursor:pointer">다 읽었어요 ✓</button>`}
       </div>
     </div>
+  </div>`;
+}
+
+/* ---- 지문 예습: 난이도 선택 ---- */
+function previewLevelsHTML() {
+  const d = activeDay();
+  const vocabN = dayVocabCards(d).length;
+  const coreN = dayCoreSentences(d).length;
+  const compN = dayQuiz('preview').length;
+  const card = (act, emoji, color, name, en, desc, disabled) => `
+    <div ${disabled ? '' : `data-act="${act}"`} style="display:flex;align-items:center;gap:14px;background:#fff;border:1.5px solid ${disabled ? '#eef2f7' : '#e2e9f2'};border-left:5px solid ${color};border-radius:16px;padding:15px 16px;cursor:${disabled ? 'default' : 'pointer'};opacity:${disabled ? '.5' : '1'};box-shadow:0 6px 16px -12px rgba(20,50,90,.5)">
+      <div style="font-size:30px">${emoji}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:16px;font-weight:700;color:#14243f">${name}</span><span style="font-size:11px;font-weight:700;color:${color}">${en}</span></div>
+        <div style="font-size:12px;color:#7d8aa0;margin-top:3px;line-height:1.5">${desc}</div>
+      </div>
+      <div style="font-size:16px;color:${disabled ? '#c8d2e0' : color}">${disabled ? '—' : '→'}</div>
+    </div>`;
+  return `<div style="padding:${topPad()} 20px 40px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <span style="font-size:15px;font-weight:700;color:#14243f">지문 예습</span>
+    </div>
+    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 16px;line-height:1.6">오늘 난이도를 골라 예습해요. 하나만 완료해도 오늘 할 일에 체크돼요 🐠</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${card('previewEasy', '🟢', '#2fa36b', '살살', 'EASY', vocabN ? `핵심 어휘 ${vocabN}개만 가볍게 훑기` : '오늘은 어휘가 없어요', vocabN === 0)}
+      ${card('previewMedium', '🟡', '#e0a41a', '보통', 'MEDIUM', coreN ? `핵심 문장 ${coreN}개 읽기` : '읽을 문장이 없어요', coreN === 0)}
+      ${card('previewHard', '🔴', '#e2564d', '버닝', 'BURNING', `지문 전체 읽기${compN ? ` + 이해도 확인 ${compN}문항` : ''}`, dayPassage(d).trim() === '')}
+    </div>
+  </div>`;
+}
+
+/* ---- 지문 예습: 살살(어휘 카드) ---- */
+function previewVocabHTML() {
+  const cards = dayVocabCards(activeDay());
+  const i = Math.min(state.pvIndex || 0, cards.length - 1);
+  const c = cards[i] || { word: '', pos: '', def: '', ex: '' };
+  const last = i >= cards.length - 1;
+  return `<div style="padding:${topPad()} 20px 40px;min-height:100%;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div data-act="goPreview" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#e0f3ea;color:#1f7a4d;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🟢 살살 · 어휘</span>
+      <span style="font-size:12px;font-weight:700;color:#14243f">${i + 1}/${cards.length}</span>
+    </div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:10px 0">
+      <div style="width:100%;background:#fff;border:1px solid #e2e9f2;border-radius:22px;padding:34px 22px;text-align:center;box-shadow:0 16px 36px -20px rgba(20,50,90,.6)">
+        <div style="font-family:'Lora',serif;font-size:34px;font-weight:600;color:#14243f">${esc(c.word)}</div>
+        ${c.pos ? `<div style="font-size:12px;color:#7fb0d8;font-weight:700;margin-top:6px">${esc(c.pos)}</div>` : ''}
+        <div style="height:1px;background:#eef2f8;margin:18px 0"></div>
+        <div style="font-size:17px;color:#26303f;line-height:1.6">${esc(c.def)}</div>
+        ${c.ex ? `<div style="font-size:14px;color:#93a6c2;margin-top:12px;font-style:italic;font-family:'Lora',serif">${esc(c.ex)}</div>` : ''}
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button data-act="pvPrev" ${i === 0 ? 'disabled' : ''} style="flex:none;border:1.5px solid #dbe4ef;background:#fff;color:#5f7794;font-size:14px;font-weight:600;padding:14px 20px;border-radius:15px;cursor:pointer;${i === 0 ? 'opacity:.4' : ''}">←</button>
+      <button data-act="pvNext" style="flex:1;border:none;background:${last ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${last ? '예습 완료 ✓' : '다음 카드 →'}</button>
+    </div>
+  </div>`;
+}
+
+/* ---- 지문 예습: 보통(핵심 문장 읽기) ---- */
+function previewReadHTML() {
+  const sents = dayCoreSentences(activeDay());
+  return `<div style="padding:${topPad()} 20px 40px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div data-act="goPreview" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#fdf3dd;color:#a5760f;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🟡 보통 · 핵심 문장</span>
+      <span style="width:30px"></span>
+    </div>
+    <div style="font-size:12.5px;color:#7d8aa0;margin:0 2px 14px">오늘의 핵심 문장을 소리 내어 읽어보세요.</div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      ${sents.map((s, i) => `
+        <div style="display:flex;gap:11px;background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:14px 15px">
+          <div style="width:22px;height:22px;flex:none;border-radius:50%;background:#fdf3dd;color:#a5760f;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${i + 1}</div>
+          <div style="font-family:'Lora',serif;font-size:16px;line-height:1.6;color:#26303f">${esc(stripBrackets(s))}</div>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:22px"><button data-act="previewReadDone" style="width:100%;border:none;background:#2fa36b;color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f7a4d;cursor:pointer">다 읽었어요 · 예습 완료 ✓</button></div>
   </div>`;
 }
 
@@ -1234,7 +1342,7 @@ function hatcheryHTML() {
       </div>`;
   }
 
-  return `<div style="min-height:100%;background:linear-gradient(180deg,#2a6bb0 0%,#123f74 55%,#0b2a52 100%);position:relative;padding:52px 20px 92px">
+  return `<div style="min-height:100%;background:linear-gradient(180deg,#2a6bb0 0%,#123f74 55%,#0b2a52 100%);position:relative;padding:${topPad()} 20px 92px">
     <div style="text-align:center;color:#fff">
       <div style="font-size:20px;font-weight:700;text-shadow:0 2px 6px rgba(0,0,0,.3)">부화장</div>
       <div style="font-size:12px;opacity:.85;margin-top:3px">알을 부화시켜 새 친구를 만나요</div>
@@ -1567,10 +1675,11 @@ function render() {
   ensureDaily(state);
   if (before !== state.daily.date) save();
 
-  // 역할은 계정으로 자동 결정 (교사 계정이면 교사 화면, 그 외 학생 화면)
-  if (authMode()) state.role = isTeacherUser() ? 'teacher' : 'student';
+  // 역할은 계정으로 자동 결정. 교사는 '학생' 토글로 학생 화면을 미리 볼 수 있음.
+  if (authMode()) state.role = (isTeacherUser() && !ui.asStudent) ? 'teacher' : 'student';
 
   let html = '';
+  if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
 
   if (state.hatchStage === 'cracking') html += hatchCinematicHTML();
 
@@ -1580,6 +1689,9 @@ function render() {
       case 'home': screen = homeHTML(); break;
       case 'aquarium': screen = aquariumHTML(); break;
       case 'review': screen = reviewHTML(); break;
+      case 'preview': screen = previewLevelsHTML(); break;
+      case 'previewVocab': screen = previewVocabHTML(); break;
+      case 'previewRead': screen = previewReadHTML(); break;
       case 'quiz': screen = quizHTML(); break;
       case 'result': screen = resultHTML(); break;
       case 'reader': screen = readerHTML(); break;
@@ -1593,7 +1705,7 @@ function render() {
 
   if (state.role === 'student' && needLogin()) html += loginScreenHTML();
   else if (state.role === 'student' && needProfile()) html += profilePickerHTML();
-  else if (state.intro) html += introHTML();
+  else if (state.intro && state.role === 'student') html += introHTML();
 
   document.getElementById('app').innerHTML = html;
   bindQuizInput();
