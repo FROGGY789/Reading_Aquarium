@@ -830,14 +830,15 @@ function introHTML() {
     <div style="position:absolute;inset:0">${introBubblesHTML()}</div>
     <div style="position:absolute;top:-10%;left:18%;width:60%;height:80%;background:linear-gradient(180deg,rgba(255,255,255,.22),transparent);transform:skewX(-13deg);filter:blur(10px)"></div>
     <div style="position:relative;text-align:center;animation:fadeup 1.3s ease-out">
-      <div style="font-size:12px;letter-spacing:.42em;opacity:.8;text-transform:uppercase">Extensive Reading</div>
-      <div style="font-family:'Lora',serif;font-size:47px;font-weight:600;line-height:1.03;margin:14px 0 0;text-shadow:0 6px 26px rgba(0,0,0,.45)">Fathom<br>Aquarium</div>
-      <div style="font-size:12.5px;opacity:.85;margin-top:14px;font-style:italic;font-family:'Lora',serif">깊이 읽고, 깊이 이해하다</div>
+      <div style="font-size:12px;letter-spacing:.38em;opacity:.8;text-transform:uppercase">Reading Companion</div>
+      <div style="font-family:'Lora',serif;font-size:47px;font-weight:600;line-height:1.03;margin:14px 0 0;text-shadow:0 6px 26px rgba(0,0,0,.45)">Reading<br>Aquarium</div>
+      <div style="font-size:12.5px;opacity:.85;margin-top:14px;font-style:italic;font-family:'Lora',serif">나와 함께 성장하는 아쿠아리움</div>
     </div>
-    <div style="position:absolute;bottom:72px;text-align:center;animation:pulse 1.8s ease-in-out infinite">
+    <div style="position:absolute;bottom:96px;text-align:center;animation:pulse 1.8s ease-in-out infinite">
       <div style="font-size:13px;font-weight:600;opacity:.95">화면을 탭하여 시작</div>
       <div style="font-size:20px;margin-top:4px">↓</div>
     </div>
+    <div style="position:absolute;bottom:34px;text-align:center;opacity:.6;font-size:11px;letter-spacing:.02em">신당고등학교 · 최유림T</div>
   </div>`;
 }
 
@@ -855,17 +856,19 @@ function loginFormHTML(compact) {
     </div>`;
 }
 
-/* ---- 학생 로그인 화면(풀스크린) ---- */
+/* ---- 학생 로그인 화면(풀스크린, 세로 중앙 배치) ---- */
 function loginScreenHTML() {
   return `<div style="position:absolute;inset:0;z-index:58;overflow-y:auto;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%)">
     <div style="position:absolute;inset:0;pointer-events:none">${introBubblesHTML()}</div>
-    <div style="position:relative;padding:72px 30px 40px">
-      <div style="text-align:center;color:#fff;margin-bottom:24px;animation:fadeup 1s ease-out">
-        <div style="font-size:11px;letter-spacing:.38em;opacity:.8;text-transform:uppercase">Extensive Reading</div>
-        <div style="font-family:'Lora',serif;font-size:34px;font-weight:600;margin-top:10px;text-shadow:0 4px 18px rgba(0,0,0,.4)">Fathom Aquarium</div>
-        <div style="font-size:12.5px;opacity:.85;margin-top:8px">${ui.signupMode ? '아이디를 만들면 나만의 아쿠아리움이 생겨요' : '내 계정으로 이어서 키워요'}</div>
+    <div style="position:relative;min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:44px 30px 20px">
+      <div style="text-align:center;color:#fff;margin-bottom:26px;animation:fadeup 1s ease-out">
+        <div style="font-size:11px;letter-spacing:.34em;opacity:.8;text-transform:uppercase">Reading Companion</div>
+        <div style="font-family:'Lora',serif;font-size:38px;font-weight:600;line-height:1.05;margin-top:12px;text-shadow:0 4px 18px rgba(0,0,0,.4)">Reading<br>Aquarium</div>
+        <div style="font-size:12.5px;opacity:.9;margin-top:12px;font-style:italic;font-family:'Lora',serif">나와 함께 성장하는 아쿠아리움</div>
+        <div style="font-size:12px;opacity:.8;margin-top:16px">${ui.signupMode ? '아이디를 만들면 나만의 아쿠아리움이 생겨요 🐠' : '내 계정으로 이어서 키워요'}</div>
       </div>
       <div style="animation:fadeup 1.2s ease-out">${loginFormHTML(false)}</div>
+      <div style="text-align:center;color:#fff;opacity:.6;font-size:11px;margin-top:26px;letter-spacing:.02em">신당고등학교 · 최유림T</div>
     </div>
   </div>`;
 }
@@ -882,11 +885,12 @@ function profilePickerHTML() {
     <div style="position:absolute;inset:0;pointer-events:none">${introBubblesHTML()}</div>
     <div style="position:relative;padding:80px 26px 40px">
       <div style="text-align:center;color:#fff;margin-bottom:26px;animation:fadeup 1s ease-out">
-        <div style="font-size:11px;letter-spacing:.38em;opacity:.8;text-transform:uppercase">Fathom Aquarium</div>
+        <div style="font-size:11px;letter-spacing:.34em;opacity:.8;text-transform:uppercase">Reading Aquarium</div>
         <div style="font-size:23px;font-weight:700;margin-top:10px">누구인가요?</div>
         <div style="font-size:12.5px;opacity:.85;margin-top:6px">이름을 고르면 나만의 아쿠아리움이 열려요 🐠</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:11px;animation:fadeup 1.2s ease-out">${cards}</div>
+      <div style="text-align:center;color:#fff;opacity:.6;font-size:11px;margin-top:26px">신당고등학교 · 최유림T</div>
     </div>
   </div>`;
 }
