@@ -973,7 +973,7 @@ function homeHTML() {
 
   return `<div style="${enter}"><div style="padding:52px 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div data-act="switchProfile" style="display:flex;align-items:center;gap:11px;${(authMode() || roster().length) ? 'cursor:pointer' : ''}" ${authMode() ? 'title="탭해서 로그아웃"' : (roster().length ? 'title="탭해서 다른 친구로 바꾸기"' : '')}>
+      <div ${!authMode() && roster().length ? 'data-act="switchProfile"' : ''} style="display:flex;align-items:center;gap:11px;${!authMode() && roster().length ? 'cursor:pointer' : ''}" ${!authMode() && roster().length ? 'title="탭해서 다른 친구로 바꾸기"' : ''}>
         <div style="width:44px;height:44px;border-radius:14px;background:#2f74e6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;box-shadow:0 4px 0 #1f57c4">${esc(studentName().slice(0, 2))}</div>
         <div>
           <div style="font-size:16px;font-weight:700;color:#14243f">안녕하세요, ${esc(studentName())}님 👋</div>
@@ -1036,6 +1036,11 @@ function homeHTML() {
     <div style="font-size:13px;font-weight:700;color:#14243f;margin:20px 0 4px">더 해보기</div>
     <div style="font-size:11px;color:#7d8aa0;margin-bottom:11px">보너스 학습 · 원할 때 자유롭게</div>
     <div style="display:flex;flex-direction:column;gap:10px">${bonusRows}</div>` : ''}
+
+    ${authMode() ? `
+    <div style="margin-top:26px;text-align:center">
+      <div data-act="doLogout" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#7d8aa0;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">↩︎ 로그아웃</div>
+    </div>` : ''}
 
   </div></div>`;
 }
@@ -1525,6 +1530,7 @@ function editorHTML() {
     <div class="ed-card" style="background:linear-gradient(150deg,#14243f,#1f3a63);border:none;color:#fff">
       <div style="font-size:13.5px;font-weight:700">🚀 배포</div>
       <div style="font-size:11.5px;opacity:.85;line-height:1.6;margin-top:5px">저장은 이 기기에서만 보여요(미리보기용).<br>배포하면 1~2분 뒤 <b>모든 기기</b>의 학생 화면에 반영됩니다.</div>
+      <a href="admin.html" style="display:block;margin-top:10px;text-align:center;background:rgba(255,255,255,.16);color:#fff;font-size:12px;font-weight:700;padding:10px;border-radius:10px;text-decoration:none">🖥️ 컴퓨터에서 편하게 편집하기 (콘텐츠 관리 페이지)</a>
       <div style="display:flex;gap:6px;margin-top:10px">
         <input id="gh-token" type="password" class="ed-input" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경하려면 입력)' : 'GitHub 토큰 (github_pat_...)'}" style="flex:1;background:rgba(255,255,255,.95)">
         <button data-act="edSaveToken" class="ed-btn ghost" style="flex:none">토큰 저장</button>
