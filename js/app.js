@@ -274,10 +274,7 @@ const BONUS_TASKS = [
   { key: 'grammar',   icon: '📐', bg: '#fdeede', sub: n => `시제·관계사 등 어법 ${n}문항` }
 ];
 function taskAvailable(key) {
-  if (key === 'review') {
-    const r = activeDay().review;
-    return !!(r && r.paragraphs && r.paragraphs.length);
-  }
+  if (key === 'review') return passageToReview(dayPassage(activeDay())).length > 0;
   return dayQuiz(key).length > 0;
 }
 function requiredKeys() { return MAIN_TASKS.map(t => t.key).filter(taskAvailable); }
@@ -474,7 +471,7 @@ const actions = {
 
   openReader() { set({ screen: 'reader' }); },
   readerPrev() { if (state.readerPage > 0) set({ readerPage: state.readerPage - 1 }); },
-  readerNext() { if (state.readerPage < activeDay().book.pages.length - 1) set({ readerPage: state.readerPage + 1 }); },
+  readerNext() { if (state.readerPage < readerPages().length - 1) set({ readerPage: state.readerPage + 1 }); },
 
   startTask(t) {
     if (!taskAvailable(t)) return;
@@ -680,73 +677,7 @@ function saveDraft() {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(DRAFT)); } catch (e) { /* 무시 */ }
 }
 
-// 저장된 Day → 편집용(텍스트 필드 중심) 형태
-function dayToEdit(day) {
-  const d = clone(day);
-  const quiz = {};
-  Object.keys(QUIZ_META).forEach(cat => {
-    quiz[cat] = ((d.quiz && d.quiz[cat]) || []).map(q => ({
-      type: q.type || 'mc',
-      prompt: q.prompt || '',
-      sentence: q.sentence || '',
-      options: (q.options || []).concat(['', '', '', '']).slice(0, 4),
-      answer: q.answer || 0,
-      accept: (q.accept || []).join(', '),
-      explain: q.explain || ''
-    }));
-  });
-  return {
-    date: d.date || todayKey(),
-    label: d.label || '',
-    quote: Object.assign({ en: '', ko: '', teacher: '', comment: '' }, d.quote || {}),
-    book: Object.assign({ title: '', author: '', chapter: '' }, d.book || {}),
-    pagesText: ((d.book && d.book.pages) || []).map(pg => pg.join('\n\n')).join('\n---\n'),
-    reviewText: ((d.review && d.review.paragraphs) || []).join('\n\n'),
-    words: Object.entries((d.review && d.review.words) || {}).map(([word, w]) => ({ word, pos: w.pos || '', def: w.def || '', ex: w.ex || '' })),
-    quiz
-  };
-}
-
-// 편집용 형태 → 저장용 Day
-function editToDay(e) {
-  const pages = (e.pagesText || '')
-    .split(/\n\s*-{3,}\s*\n/)
-    .map(pg => pg.split(/\n\s*\n/).map(p => p.trim().replace(/\s*\n\s*/g, ' ')).filter(Boolean))
-    .filter(pg => pg.length);
-  const paragraphs = (e.reviewText || '')
-    .split(/\n\s*\n/).map(p => p.trim().replace(/\s*\n\s*/g, ' ')).filter(Boolean);
-  const words = {};
-  (e.words || []).forEach(w => {
-    const key = (w.word || '').trim();
-    if (key) words[key] = { pos: (w.pos || '').trim(), def: (w.def || '').trim(), ex: (w.ex || '').trim() };
-  });
-  const quiz = {};
-  Object.keys(QUIZ_META).forEach(cat => {
-    quiz[cat] = (e.quiz[cat] || [])
-      .filter(q => (q.prompt || '').trim())
-      .map(q => {
-        const base = { type: q.type, prompt: q.prompt.trim(), explain: (q.explain || '').trim() };
-        if ((q.sentence || '').trim()) base.sentence = q.sentence.trim();
-        if (q.type === 'mc') {
-          base.options = q.options.map(o => (o || '').trim()).filter(Boolean);
-          base.answer = Math.min(Math.max(0, Number(q.answer) || 0), Math.max(0, base.options.length - 1));
-        } else {
-          base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
-        }
-        return base;
-      })
-      // 객관식은 보기 2개 이상, 주관식은 정답 1개 이상이어야 출제
-      .filter(q => q.type === 'mc' ? q.options.length >= 2 : q.accept.length >= 1);
-  });
-  return {
-    date: e.date || todayKey(),
-    label: (e.label || '').trim(),
-    quote: { en: e.quote.en.trim(), ko: e.quote.ko.trim(), teacher: e.quote.teacher.trim(), comment: e.quote.comment.trim() },
-    book: { title: e.book.title.trim(), author: e.book.author.trim(), chapter: e.book.chapter.trim(), pages },
-    review: { paragraphs, words },
-    quiz
-  };
-}
+// dayToEdit / editToDay 는 data.js(공용)에 정의되어 있습니다.
 
 function openDay(i) {
   ed = { dayIndex: i, day: dayToEdit(DRAFT.days[i]) };
@@ -1001,13 +932,15 @@ function homeHTML() {
       </div>
     </div>` : ''}
 
-    ${day.book && day.book.pages && day.book.pages.length ? `
+    ${dayPassage(day).trim() ? `
     <div style="font-size:12px;font-weight:700;color:#7d8aa0;letter-spacing:.02em;margin-bottom:9px">지금 읽는 책</div>
     <div data-act="openReader" style="display:flex;gap:14px;background:#fff;border:1px solid #e2e9f2;border-radius:18px;padding:14px;margin-bottom:20px;cursor:pointer;box-shadow:0 8px 20px -14px rgba(20,50,90,.5)">
-      <div style="width:58px;height:80px;border-radius:8px;flex:none;background:linear-gradient(150deg,#1f57c4,#17b0c4);box-shadow:0 4px 10px -4px rgba(31,87,196,.7);position:relative;overflow:hidden">
+      ${dayCover(day)
+        ? `<img src="${esc(dayCover(day))}" alt="" style="width:58px;height:80px;border-radius:8px;flex:none;object-fit:cover;box-shadow:0 4px 10px -4px rgba(31,87,196,.5)">`
+        : `<div style="width:58px;height:80px;border-radius:8px;flex:none;background:linear-gradient(150deg,#1f57c4,#17b0c4);box-shadow:0 4px 10px -4px rgba(31,87,196,.7);position:relative;overflow:hidden">
         <div style="position:absolute;top:0;left:8px;bottom:0;width:2px;background:rgba(255,255,255,.35)"></div>
-        <div style="position:absolute;bottom:9px;left:12px;right:8px;font-family:'Lora',serif;font-size:9px;line-height:1.2;color:#fff;font-style:italic">${esc(day.book.title.split(' ').slice(-2).join(' ').toLowerCase())}</div>
-      </div>
+        <div style="position:absolute;bottom:9px;left:12px;right:8px;font-family:'Lora',serif;font-size:9px;line-height:1.2;color:#fff;font-style:italic">${esc((day.book.title || '').split(' ').slice(-2).join(' ').toLowerCase())}</div>
+      </div>`}
       <div style="flex:1;display:flex;flex-direction:column">
         <div style="font-family:'Lora',serif;font-size:15px;font-weight:600;color:#14243f;line-height:1.3">${esc(day.book.title)}</div>
         <div style="font-size:11.5px;color:#7d8aa0;margin-top:2px">${esc(day.book.author)}</div>
@@ -1111,7 +1044,7 @@ function aquariumHTML() {
 
 /* ---- 지문 복습 ---- */
 function reviewHTML() {
-  const rev = activeDay().review || { paragraphs: [], words: {} };
+  const rev = { paragraphs: passageToReview(dayPassage(activeDay())), words: dayVocab(activeDay()) };
   const wordStyle = active => `background:${active ? '#2f74e6' : '#e7f0fd'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #2f74e6;border-radius:3px;padding:0 3px;cursor:pointer`;
   const pop = state.pop && rev.words[state.pop] ? Object.assign({ word: state.pop }, rev.words[state.pop]) : null;
   const popHTML = pop ? `
@@ -1235,14 +1168,16 @@ function resultHTML() {
 }
 
 /* ---- e-북 리더 ---- */
+function readerPages() { return passageToPages(dayPassage(activeDay())); }
 function readerProgress() {
-  const total = activeDay().book.pages.length || 1;
+  const total = readerPages().length || 1;
   return Math.round((Math.min(state.readerPage, total - 1) + 1) / total * 100) + '%';
 }
 function readerHTML() {
-  const book = activeDay().book;
-  const page = Math.min(state.readerPage, book.pages.length - 1);
-  const paras = book.pages[page] || [];
+  const book = activeDay().book || {};
+  const pages = readerPages();
+  const page = Math.min(state.readerPage, Math.max(0, pages.length - 1));
+  const paras = pages[page] || [];
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#f5f0e6">
     <div style="padding:48px 22px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e7dfce">
       <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#ece3d2;color:#7a6b52;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
@@ -1259,7 +1194,7 @@ function readerHTML() {
       <div style="height:5px;border-radius:3px;background:#e3d9c6;overflow:hidden;margin-bottom:12px"><div style="height:100%;width:${readerProgress()};background:#c08a3a;border-radius:3px"></div></div>
       <div style="display:flex;align-items:center;justify-content:space-between">
         <button data-act="readerPrev" style="border:1.5px solid #dccfb7;background:#fff;color:#7a6b52;font-size:13px;font-weight:600;white-space:nowrap;padding:10px 18px;border-radius:12px;cursor:pointer">← 이전</button>
-        <span style="font-size:12px;font-weight:600;color:#9c8f76">${page + 1} / ${book.pages.length}</span>
+        <span style="font-size:12px;font-weight:600;color:#9c8f76">${page + 1} / ${pages.length}</span>
         <button data-act="readerNext" style="border:none;background:#c08a3a;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding:10px 18px;border-radius:12px;box-shadow:0 4px 0 #a06f28;cursor:pointer">다음 →</button>
       </div>
     </div>
@@ -1583,26 +1518,21 @@ function editorHTML() {
     </div>
 
     <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">책 · e-북 본문</div>
+      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">책 정보</div>
       <div class="ed-label">제목 / 저자 / 챕터</div>
       <input class="ed-input" data-bind="book.title" value="${esc(d.book.title)}" placeholder="책 제목">
       <div style="display:flex;gap:6px;margin-top:6px">
         <input class="ed-input" data-bind="book.author" value="${esc(d.book.author)}" placeholder="저자" style="flex:1">
         <input class="ed-input" data-bind="book.chapter" value="${esc(d.book.chapter)}" placeholder="챕터" style="flex:1.4">
       </div>
-      <div class="ed-label">본문 — 문단은 빈 줄로, 페이지는 <b>---</b> 한 줄로 구분</div>
-      <textarea class="ed-input" data-bind="pagesText" rows="10">${esc(d.pagesText)}</textarea>
     </div>
 
-    <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">지문 복습</div>
-      <div class="ed-label">복습 지문 — 문단은 빈 줄로 구분, 탭할 단어는 <b>[대괄호]</b>로 표시</div>
-      <textarea class="ed-input" data-bind="reviewText" rows="6">${esc(d.reviewText)}</textarea>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
-        <div style="font-size:12px;font-weight:700;color:#14243f">단어 카드 <span style="font-size:11px;color:#7d8aa0;font-weight:600">${d.words.length}개</span></div>
-        <button data-act="edAddWord" class="ed-btn ghost" style="padding:6px 11px;font-size:11.5px">＋ 단어 추가</button>
-      </div>
-      ${wordRows}
+    <div class="ed-card" style="background:#f4f8fd;border-color:#cfe0f5">
+      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">📖 지문 · 표지 · 팝오버 어휘</div>
+      <div class="ed-label" style="margin-top:2px">긴 지문과 표지, 단어 팝오버는 <b>컴퓨터에서</b> 편집하는 게 편해요.
+      ${d.passageText && d.passageText.trim() ? `지금 지문 <b>${passageToReview(d.passageText).length}문단</b> · 팝오버 단어 <b>${d.words.length}개</b>가 저장돼 있어요.` : '아직 지문이 비어 있어요.'}
+      (이 화면에서 저장·배포해도 지문은 그대로 유지됩니다.)</div>
+      <a href="admin.html" style="display:block;margin-top:8px;text-align:center;background:#2f74e6;color:#fff;font-size:12.5px;font-weight:700;padding:11px;border-radius:11px;text-decoration:none">🖥️ 컴퓨터에서 지문 편집하기</a>
     </div>
 
     <div style="font-size:14px;font-weight:700;color:#14243f;margin:18px 0 10px">퀴즈 문항</div>

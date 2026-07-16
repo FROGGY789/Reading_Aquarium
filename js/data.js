@@ -87,28 +87,25 @@ const DEFAULT_CONTENT = {
         title: 'The Curiosity of the Sea',
         author: 'E. M. Hartwell',
         chapter: 'Chapter 3 · The Silent Horizon',
-        pages: [
-          ["The sea has always drawn people toward its edge, whispering of places no map has ever named.",
-           "For centuries, sailors spoke of a restless horizon — a line that seemed to retreat with every mile they gained, as if the ocean itself were guarding a secret.",
-           "They rowed and sailed and drifted, yet the water kept its silence, offering neither answer nor apology."],
-          ["Young Mira had heard these stories all her life. Her grandfather, a fisherman with salt in his beard and storms in his memory, would trace maps in the sand at low tide.",
-           "\"The deeper you go,\" he told her, \"the more the sea asks of you. And the less it explains.\"",
-           "She had not understood him then. But standing now at the bow of the little boat, watching the shoreline dissolve into haze, she began to."],
-          ["The morning light broke across the swells in long silver ribbons. Somewhere beneath her, in water darker than any night, creatures moved that no human eye had witnessed.",
-           "Mira leaned over the rail and let her fingers trail through the cold. The sea did not answer. But for the first time, she felt it listening.",
-           "And that, she decided, was enough to begin."]
-        ]
+        cover: ''
       },
-      review: {
-        paragraphs: [
-          'The sea has always drawn people toward its edge.',
-          'Sailors spoke of a [restless] horizon that seemed to [retreat] with every mile.',
-          'Yet the deeper they went, the more the water kept its silence.'
-        ],
-        words: {
-          restless: {pos:'형용사', def:'가만히 있지 못하는, 끊임없이 움직이는', ex:'"a restless horizon"'},
-          retreat:  {pos:'동사',   def:'물러나다, 후퇴하다',                 ex:'"seemed to retreat"'}
-        }
+      // 지문(그날 읽을 전체 텍스트) — 문단은 빈 줄, 페이지는 --- , 팝오버 단어는 [대괄호].
+      // e-북 리더와 지문 복습이 모두 이 하나의 지문에서 나옵니다.
+      passage:
+        "The sea has always drawn people toward its edge, whispering of places no map has ever named.\n\n" +
+        "For centuries, sailors spoke of a [restless] horizon — a line that seemed to [retreat] with every mile they gained, as if the ocean itself were guarding a secret.\n\n" +
+        "They rowed and sailed and drifted, yet the water kept its silence, offering neither answer nor apology.\n" +
+        "---\n" +
+        "Young Mira had heard these stories all her life. Her grandfather, a fisherman with salt in his beard and storms in his memory, would trace maps in the sand at low tide.\n\n" +
+        "\"The deeper you go,\" he told her, \"the more the sea asks of you. And the less it explains.\"\n\n" +
+        "She had not understood him then. But standing now at the bow of the little boat, watching the shoreline dissolve into haze, she began to.\n" +
+        "---\n" +
+        "The morning light broke across the swells in long silver ribbons. Somewhere beneath her, in water darker than any night, creatures moved that no human eye had witnessed.\n\n" +
+        "Mira leaned over the rail and let her fingers trail through the cold. The sea did not answer. But for the first time, she felt it listening.\n\n" +
+        "And that, she decided, was enough to begin.",
+      vocab: {
+        restless: {pos:'형용사', def:'가만히 있지 못하는, 끊임없이 움직이는', ex:'"a restless horizon"'},
+        retreat:  {pos:'동사',   def:'물러나다, 후퇴하다',                 ex:'"seemed to retreat"'}
       },
       quiz: {
         preview: [
@@ -142,3 +139,108 @@ const DEFAULT_CONTENT = {
     }
   ]
 };
+
+/* =========================================================
+ * 콘텐츠 모델 공용 헬퍼 (app.js · admin.js 공유)
+ * 지문(passage) 중심: 지문 하나 + 팝오버 어휘(vocab) + 표지(cover)에서
+ * e-북 리더/지문 복습/단어 카드가 모두 파생됩니다.
+ * ========================================================= */
+function _todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function dayCover(day) { return (day && day.book && day.book.cover) || ''; }
+// 지문 원문(대괄호 포함). 구버전(book.pages) 콘텐츠도 자동 변환.
+function dayPassage(day) {
+  if (day && typeof day.passage === 'string' && day.passage.trim()) return day.passage;
+  const pages = (day && day.book && day.book.pages) || [];
+  if (pages.length) return pages.map(p => Array.isArray(p) ? p.join('\n\n') : p).join('\n---\n');
+  // 아주 구버전: review.paragraphs만 있던 경우
+  const rp = (day && day.review && day.review.paragraphs) || [];
+  return rp.join('\n\n');
+}
+function dayVocab(day) { return (day && day.vocab) || (day && day.review && day.review.words) || {}; }
+function stripBrackets(s) { return (s || '').replace(/\[([^\]]+)\]/g, '$1'); }
+// 지문에서 [단어] 토큰을 순서대로(중복 제거) 뽑기
+function scanVocab(text) {
+  const out = []; const re = /\[([^\]]+)\]/g; let m;
+  while ((m = re.exec(text || '')) !== null) { const w = m[1].trim(); if (w && !out.includes(w)) out.push(w); }
+  return out;
+}
+// 지문 → 리더 페이지 [[문단,...], ...] (대괄호 제거)
+function passageToPages(passage) {
+  return (passage || '')
+    .split(/\n\s*-{3,}\s*\n/)
+    .map(pg => pg.split(/\n\s*\n/).map(p => stripBrackets(p.trim().replace(/\s*\n\s*/g, ' '))).filter(Boolean))
+    .filter(pg => pg.length);
+}
+// 지문 → 복습 문단 [문단(대괄호 유지), ...] (페이지 구분 무시, 전체)
+function passageToReview(passage) {
+  return (passage || '')
+    .replace(/\n\s*-{3,}\s*\n/g, '\n\n')
+    .split(/\n\s*\n/).map(p => p.trim().replace(/\s*\n\s*/g, ' ')).filter(Boolean);
+}
+
+/* ---- 편집 모델 변환 (교사 편집기 공용) ---- */
+// 저장형 Day → 편집형(폼)
+function dayToEdit(day) {
+  day = JSON.parse(JSON.stringify(day || {}));
+  const quiz = {};
+  Object.keys(QUIZ_META).forEach(cat => {
+    quiz[cat] = ((day.quiz && day.quiz[cat]) || []).map(q => ({
+      type: q.type || 'mc',
+      prompt: q.prompt || '',
+      sentence: q.sentence || '',
+      options: (q.options || []).concat(['', '', '', '']).slice(0, 4),
+      answer: q.answer || 0,
+      accept: (q.accept || []).join(', '),
+      explain: q.explain || ''
+    }));
+  });
+  const passageText = dayPassage(day);
+  const vdict = dayVocab(day);
+  const words = scanVocab(passageText).map(w => ({ word: w, pos: (vdict[w] || {}).pos || '', def: (vdict[w] || {}).def || '', ex: (vdict[w] || {}).ex || '' }));
+  return {
+    date: day.date || _todayKey(),
+    label: day.label || '',
+    quote: Object.assign({ en: '', ko: '', teacher: '', comment: '' }, day.quote || {}),
+    book: Object.assign({ title: '', author: '', chapter: '', cover: '' }, day.book || {}),
+    passageText,
+    words,
+    quiz
+  };
+}
+// 편집형(폼) → 저장형 Day
+function editToDay(e) {
+  const vocab = {};
+  scanVocab(e.passageText).forEach(w => {
+    const row = (e.words || []).find(x => x.word === w) || {};
+    vocab[w] = { pos: (row.pos || '').trim(), def: (row.def || '').trim(), ex: (row.ex || '').trim() };
+  });
+  const quiz = {};
+  Object.keys(QUIZ_META).forEach(cat => {
+    quiz[cat] = (e.quiz[cat] || [])
+      .filter(q => (q.prompt || '').trim())
+      .map(q => {
+        const base = { type: q.type, prompt: q.prompt.trim(), explain: (q.explain || '').trim() };
+        if ((q.sentence || '').trim()) base.sentence = q.sentence.trim();
+        if (q.type === 'mc') {
+          base.options = q.options.map(o => (o || '').trim()).filter(Boolean);
+          base.answer = Math.min(Math.max(0, Number(q.answer) || 0), Math.max(0, base.options.length - 1));
+        } else {
+          base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
+        }
+        return base;
+      })
+      .filter(q => q.type === 'mc' ? q.options.length >= 2 : q.accept.length >= 1);
+  });
+  return {
+    date: e.date || _todayKey(),
+    label: (e.label || '').trim(),
+    quote: { en: e.quote.en.trim(), ko: e.quote.ko.trim(), teacher: e.quote.teacher.trim(), comment: e.quote.comment.trim() },
+    book: { title: e.book.title.trim(), author: e.book.author.trim(), chapter: e.book.chapter.trim(), cover: (e.book.cover || '').trim() },
+    passage: (e.passageText || '').trim(),
+    vocab,
+    quiz
+  };
+}
