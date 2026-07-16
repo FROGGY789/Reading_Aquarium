@@ -27,9 +27,10 @@ async function boot() {
   } catch (e) { /* 무시 */ }
   if (!content) content = clone(typeof DEFAULT_CONTENT !== 'undefined' ? DEFAULT_CONTENT : { version: 1, students: [], supabase: { url: '', anonKey: '' }, days: [] });
   content.students = content.students || [];
+  content.classes = content.classes || [];
   content.supabase = content.supabase || { url: '', anonKey: '' };
   if (!content.days.length) content.days = [{ date: _todayKey(), label: '', quote: {}, book: {}, passage: '', vocab: {}, quiz: {} }];
-  gEd = { studentsText: content.students.join('\n'), sbUrl: content.supabase.url || '', sbKey: content.supabase.anonKey || '' };
+  gEd = { studentsText: content.students.join('\n'), classesText: content.classes.join('\n'), sbUrl: content.supabase.url || '', sbKey: content.supabase.anonKey || '' };
   openDay(bestDayIndex());
   ui.loaded = true;
   render();
@@ -53,6 +54,7 @@ function commit() {
   }
   if (gEd) {
     content.students = gEd.studentsText.split('\n').map(s => s.trim()).filter(Boolean);
+    content.classes = gEd.classesText.split('\n').map(s => s.trim()).filter(Boolean);
     content.supabase = { url: gEd.sbUrl.trim(), anonKey: gEd.sbKey.trim() };
   }
 }
@@ -337,10 +339,17 @@ function qcat(cat) {
 /* ---- 탭 3: 학생 · 설정 ---- */
 function settingsTab() {
   return `<div class="cols">
-    <div class="card">
-      <h2>👧 학생 명단 <span style="font-size:12px;color:#7d8aa0;font-weight:600">(Supabase 미사용 시)</span></h2>
-      <div class="hint">한 줄에 한 명씩. Supabase(오른쪽)가 설정돼 있으면 아이디/비밀번호 로그인이 대신 사용돼 이 명단은 무시됩니다.</div>
-      <textarea class="inp" data-gbind="studentsText" rows="8" placeholder="이지민&#10;박서준&#10;최하윤">${esc(gEd.studentsText)}</textarea>
+    <div>
+      <div class="card">
+        <h2>🏫 반 목록</h2>
+        <div class="hint">한 줄에 한 반씩. 학생이 가입할 때 여기서 반을 골라요. (예: A반, B반, 3학년 2반)</div>
+        <textarea class="inp" data-gbind="classesText" rows="5" placeholder="A반&#10;B반&#10;C반">${esc(gEd.classesText)}</textarea>
+      </div>
+      <div class="card">
+        <h2>👧 학생 명단 <span style="font-size:12px;color:#7d8aa0;font-weight:600">(Supabase 미사용 시)</span></h2>
+        <div class="hint">한 줄에 한 명씩. Supabase(오른쪽)가 설정돼 있으면 아이디/비밀번호 로그인이 대신 사용돼 이 명단은 무시됩니다.</div>
+        <textarea class="inp" data-gbind="studentsText" rows="6" placeholder="이지민&#10;박서준&#10;최하윤">${esc(gEd.studentsText)}</textarea>
+      </div>
     </div>
     <div class="card">
       <h2>📡 기록 수집 (Supabase)</h2>

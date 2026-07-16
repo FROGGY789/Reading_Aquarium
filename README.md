@@ -84,9 +84,19 @@ Supabase를 연결하면 **아이디/비밀번호 계정** 방식으로 동작�
 1. 앱에서 선생님도 학생처럼 가입 (예: 아이디 `teacher`)
 2. Supabase SQL Editor에서 실행:
    ```sql
-   update public.er_profiles set is_teacher = true where username = 'teacher';
+   update public.er_profiles set is_teacher = true, approved = true where username = 'teacher';
    ```
 3. 앱에서 로그아웃 후 다시 로그인 → 교사 대시보드 활성화
+
+### 반 · 가입 승인 · 보상 (v3)
+
+- **반 만들기** — admin.html → ⚙️ 학생·설정 → 「반 목록」에 반 이름을 한 줄씩 넣고 배포하면, 학생 가입 화면에 반 선택이 생겨요.
+- **가입 승인** — 학생은 아이디/비번/이름/**학번**/**반**으로 가입하면 "승인 대기" 상태가 돼요. 교사 대시보드 상단 「가입 대기」에서 **승인/거절**하면 학생이 시작할 수 있어요.
+- **알·경험치 주기** — 대시보드의 학생별 현황에서 **경험치 +10/+30/+50**, **알 +1/+3/+5** 버튼으로 보상을 줘요. 학생이 다음에 접속하면 자동 반영됩니다.
+
+> ⚠️ v3 스키마를 처음 적용하면 **기존 학생 계정도 "미승인"이 됩니다.**
+> 이미 쓰던 학생들이 있다면 SQL Editor에서 한 번만:
+> `update public.er_profiles set approved = true;` (현재 계정 모두 승인)
 
 > Vercel은 필요 없습니다 — Supabase는 브라우저에서 직접 호출하며,
 > 호스팅은 GitHub Pages를 그대로 사용합니다. anon 키는 공개용 키이고,

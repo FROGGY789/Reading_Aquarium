@@ -61,6 +61,9 @@ let auth = loadJSON(AUTH_KEY); // {access_token, refresh_token, user:{id, userna
 function authMode() { return !!sbConf(); }
 function needLogin() { return authMode() && !auth; }
 function isTeacherUser() { return !!(auth && auth.user && auth.user.is_teacher); }
+function classes() { return contentSource().classes || []; }
+// 로그인했지만 아직 교사 승인 전인 학생
+function needApproval() { return authMode() && auth && !isTeacherUser() && auth.user && auth.user.approved === false; }
 function saveAuth() {
   try {
     if (auth) localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
@@ -112,23 +115,69 @@ function doLogout(rerender) {
   state.intro = false; // 세션 중 로그아웃 → 스플래시 생략
   if (rerender !== false) render();
 }
-// 가입 직후 프로필 행 생성 / 로그인 시 이름·교사 여부 동기화
-async function ensureProfile() {
+// 가입 직후 프로필 행 생성 / 로그인 시 이름·반·학번·승인·교사 여부 동기화
+async function ensureProfile(signupInfo) {
   try {
-    const res = await sbFetch('/rest/v1/er_profiles?id=eq.' + auth.user.id + '&select=name,username,is_teacher');
+    const res = await sbFetch('/rest/v1/er_profiles?id=eq.' + auth.user.id + '&select=name,username,is_teacher,approved,class,student_no');
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows.length) {
+        auth.user.name = rows[0].name || auth.user.name;
+        auth.user.is_teacher = !!rows[0].is_teacher;
+        auth.user.approved = !!rows[0].approved;
+        auth.user.class = rows[0].class || '';
+        auth.user.studentNo = rows[0].student_no || '';
+        saveAuth();
+        return;
+      }
+    }
+    // 프로필이 없으면 새로 생성 (가입 시 입력값 사용, 미승인 상태)
+    const info = signupInfo || {};
+    await sbFetch('/rest/v1/er_profiles', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        id: auth.user.id, username: auth.user.username, name: auth.user.name,
+        class: info.classId || null, student_no: info.studentNo || null, approved: false
+      })
+    });
+    // 서버 기준값(교사·승인 여부)을 다시 읽어옴
+    const chk = await sbFetch('/rest/v1/er_profiles?id=eq.' + auth.user.id + '&select=is_teacher,approved,class,student_no');
+    if (chk.ok) {
+      const rows = await chk.json();
+      if (rows.length) {
+        auth.user.is_teacher = !!rows[0].is_teacher;
+        auth.user.approved = !!rows[0].approved;
+        auth.user.class = rows[0].class || '';
+        auth.user.studentNo = rows[0].student_no || '';
+        saveAuth();
+        return;
+      }
+    }
+    auth.user.approved = false;
+    auth.user.class = info.classId || '';
+    auth.user.studentNo = info.studentNo || '';
+    saveAuth();
+  } catch (e) { /* 무시 */ }
+}
+// 교사가 준 알/경험치(부여) 적용
+async function pullGrants() {
+  if (!auth || isTeacherUser()) return;
+  try {
+    const res = await sbFetch('/rest/v1/er_grants?user_id=eq.' + auth.user.id + '&applied=eq.false&select=id,eggs,xp');
     if (!res.ok) return;
     const rows = await res.json();
-    if (rows.length) {
-      auth.user.name = rows[0].name || auth.user.name;
-      auth.user.is_teacher = !!rows[0].is_teacher;
-    } else {
-      await sbFetch('/rest/v1/er_profiles', {
-        method: 'POST',
-        headers: { 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ id: auth.user.id, username: auth.user.username, name: auth.user.name })
-      });
-    }
-    saveAuth();
+    if (!rows.length) return;
+    let eggs = 0, xp = 0, ids = [];
+    rows.forEach(g => { eggs += g.eggs || 0; xp += g.xp || 0; ids.push(g.id); });
+    state.eggs = (state.eggs || 0) + eggs;
+    state.xp = (state.xp || 0) + xp;
+    save();
+    // 적용됨 표시
+    await sbFetch('/rest/v1/er_grants?id=in.(' + ids.join(',') + ')', {
+      method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ applied: true })
+    });
+    if (eggs || xp) { ui.grantMsg = `선생님이 ${xp ? 'XP ' + xp : ''}${xp && eggs ? ' · ' : ''}${eggs ? '알 ' + eggs + '개' : ''}를 주셨어요! 🎁`; }
   } catch (e) { /* 무시 */ }
 }
 // 클라우드에 저장된 진행 상황 내려받기(있으면 이 기기 상태를 덮어씀)
@@ -148,9 +197,14 @@ async function runAuth(isSignup) {
   const sb = sbConf();
   if (!sb) return;
   const id = ui.li.id.trim(), pw = ui.li.pw, name = ui.li.name.trim();
+  const studentNo = ui.li.studentNo.trim(), classId = ui.li.classId;
   if (!/^[a-zA-Z0-9_-]{3,20}$/.test(id)) { ui.authMsg = '아이디는 영문/숫자 3~20자로 입력해주세요'; render(); return; }
   if (!pw || pw.length < 6) { ui.authMsg = '비밀번호는 6자 이상이어야 해요'; render(); return; }
-  if (isSignup && !name) { ui.authMsg = '이름을 입력해주세요'; render(); return; }
+  if (isSignup) {
+    if (!name) { ui.authMsg = '이름을 입력해주세요'; render(); return; }
+    if (!studentNo) { ui.authMsg = '학번을 입력해주세요'; render(); return; }
+    if (classes().length && !classId) { ui.authMsg = '반을 선택해주세요'; render(); return; }
+  }
   ui.authBusy = true;
   ui.authMsg = isSignup ? '가입하는 중...' : '로그인 중...';
   render();
@@ -160,7 +214,7 @@ async function runAuth(isSignup) {
       res = await fetch(sbUrl() + '/auth/v1/signup', {
         method: 'POST',
         headers: { 'apikey': sb.anonKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: idToEmail(id), password: pw, data: { username: id, name } })
+        body: JSON.stringify({ email: idToEmail(id), password: pw, data: { username: id, name, student_no: studentNo } })
       });
       j = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -184,16 +238,17 @@ async function runAuth(isSignup) {
       user: { id: j.user.id, username: meta.username || id, name: meta.name || name || id, is_teacher: false }
     };
     saveAuth();
-    await ensureProfile();   // 프로필 행 생성/동기화(교사 여부 포함)
+    await ensureProfile(isSignup ? { classId, studentNo } : null);  // 프로필 생성/동기화(반·학번·승인·교사)
     await pullProgress();    // 클라우드 진행 상황 내려받기
     const role = state.role; // 보고 있던 화면(학생/교사)은 유지
     state = loadState();
     state.role = role;
     state.intro = false; // 로그인 직후에는 스플래시 없이 바로 홈
+    if (!isTeacherUser() && auth.user.approved) await pullGrants();  // 승인된 학생: 부여 적용
     ui.authMsg = '';
     ui.li.pw = '';
     ui.signupMode = false;
-    if (state.role === 'teacher' && isTeacherUser()) loadRecords();
+    if (isTeacherUser()) loadRecords();
   } catch (e) {
     ui.authMsg = '❌ ' + e.message;
   }
@@ -240,16 +295,40 @@ async function loadRecords() {
   try {
     const [r1, r2] = await Promise.all([
       sbFetch('/rest/v1/er_records?date=eq.' + todayKey() + '&select=student,task,kind,score,total,created_at&order=created_at.asc'),
-      sbFetch('/rest/v1/er_profiles?is_teacher=eq.false&select=name,username&order=name.asc')
+      sbFetch('/rest/v1/er_profiles?is_teacher=eq.false&select=id,name,username,class,student_no,approved&order=class.asc,student_no.asc')
     ]);
     if (!r1.ok) throw new Error('HTTP ' + r1.status);
     ui.records = await r1.json();
-    ui.profiles = r2.ok ? await r2.json() : [];
+    const all = r2.ok ? await r2.json() : [];
+    ui.profiles = all.filter(p => p.approved);
+    ui.pending = all.filter(p => !p.approved);
   } catch (e) {
     ui.recError = e.message;
     ui.records = null;
   }
   ui.recLoading = false;
+  render();
+}
+/* ---- 교사: 가입 승인/거절, 알·경험치 부여 ---- */
+async function approveStudent(id, ok) {
+  try {
+    if (ok) {
+      await sbFetch('/rest/v1/er_profiles?id=eq.' + id, { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ approved: true }) });
+    } else {
+      await sbFetch('/rest/v1/er_profiles?id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+    }
+    await loadRecords();
+  } catch (e) { ui.recError = e.message; render(); }
+}
+async function grantReward(id, eggs, xp) {
+  ui.grantBusy = id + ':' + eggs + ':' + xp; render();
+  try {
+    await sbFetch('/rest/v1/er_grants', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ user_id: id, eggs, xp }) });
+    ui.grantBusy = ''; ui.recError = '';
+    // 살짝 안내
+    ui.grantToast = '부여 완료! 학생이 다음에 접속하면 반영돼요.';
+    setTimeout(() => { ui.grantToast = ''; render(); }, 2500);
+  } catch (e) { ui.grantBusy = ''; ui.recError = e.message; }
   render();
 }
 // 오늘 날짜와 같거나 가장 가까운 과거 Day를 선택(모두 미래면 첫 Day)
@@ -311,7 +390,8 @@ let introTimer = null;
 const ui = {
   teacherTab: 'dash', pubMsg: '', pubBusy: false, edMsg: '',
   records: null, recLoading: false, recError: '', profiles: [],
-  signupMode: false, authMsg: '', authBusy: false, asStudent: false,
+  signupMode: false, authMsg: '', authBusy: false, asStudent: false, grantMsg: '',
+  pending: [], grantBusy: '',   // 교사: 가입 대기 목록 / 부여 진행중 표시
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' }   // 로그인 폼 입력값(리렌더에도 유지)
 };
 // 학생 화면 상단 여백: 교사 미리보기(토글 있음)일 때만 넉넉히, 실제 학생은 좁게
@@ -575,11 +655,20 @@ const actions = {
   doLogout() { doLogout(); },
   async doLogin() { await runAuth(false); },
   async doSignup() { await runAuth(true); },
+  async recheckApproval() {
+    await ensureProfile();
+    if (auth && auth.user.approved) { await pullProgress(); await pullGrants(); state = loadState(); state.intro = false; }
+    render();
+  },
+  dismissGrant() { ui.grantMsg = ''; render(); },
 
   /* ---- 교사 ---- */
   teacherTabDash() { ui.teacherTab = 'dash'; render(); if (sbConf() && isTeacherUser()) loadRecords(); },
   teacherTabContent() { ui.teacherTab = 'content'; ensureEditor(); render(); },
   dashRefresh() { loadRecords(); },
+  approveStudent(id) { approveStudent(id, true); },
+  rejectStudent(id) { if (confirm('이 학생의 가입 신청을 거절할까요?')) approveStudent(id, false); },
+  grant(arg) { const [id, eggs, xp] = arg.split(':'); grantReward(id, Number(eggs), Number(xp)); },
 
   edSelectDay(arg) { commitDayEdit(); openDay(Number(arg)); render(); },
   edAddDay() {
@@ -682,13 +771,14 @@ function ensureEditor() {
   if (!DRAFT) { DRAFT = clone(PUBLISHED || DEFAULT_CONTENT); saveDraft(); }
   if (!gEd) {
     const sb = DRAFT.supabase || {};
-    gEd = { studentsText: (DRAFT.students || []).join('\n'), sbUrl: sb.url || '', sbKey: sb.anonKey || '' };
+    gEd = { studentsText: (DRAFT.students || []).join('\n'), classesText: (DRAFT.classes || []).join('\n'), sbUrl: sb.url || '', sbKey: sb.anonKey || '' };
   }
   if (!ed) openDay(bestDayIndex());
 }
 function commitGlobalEdit() {
   if (!gEd || !DRAFT) return;
   DRAFT.students = gEd.studentsText.split('\n').map(s => s.trim()).filter(Boolean);
+  DRAFT.classes = gEd.classesText.split('\n').map(s => s.trim()).filter(Boolean);
   DRAFT.supabase = { url: gEd.sbUrl.trim(), anonKey: gEd.sbKey.trim() };
   saveDraft();
 }
@@ -806,7 +896,15 @@ function loginFormHTML(compact) {
     <div style="display:flex;flex-direction:column;gap:9px">
       <input id="li-id" class="ed-input" value="${esc(ui.li.id)}" placeholder="아이디 (영문/숫자 3~20자)" autocomplete="username" style="padding:12px 14px;font-size:14px">
       <input id="li-pw" class="ed-input" type="password" value="${esc(ui.li.pw)}" placeholder="비밀번호 (6자 이상)" autocomplete="${s ? 'new-password' : 'current-password'}" style="padding:12px 14px;font-size:14px">
-      ${s ? `<input id="li-name" class="ed-input" value="${esc(ui.li.name)}" placeholder="이름 (예: 이지민)" style="padding:12px 14px;font-size:14px">` : ''}
+      ${s ? `
+      <div style="display:flex;gap:8px">
+        <input id="li-name" class="ed-input" value="${esc(ui.li.name)}" placeholder="이름" style="flex:1.2;padding:12px 14px;font-size:14px">
+        <input id="li-studentno" class="ed-input" value="${esc(ui.li.studentNo)}" placeholder="학번" style="flex:.9;padding:12px 14px;font-size:14px">
+      </div>
+      ${classes().length ? `<select id="li-class" class="ed-input" style="padding:12px 14px;font-size:14px;color:${ui.li.classId ? '#14243f' : '#9aa8bd'}">
+        <option value="" ${ui.li.classId ? '' : 'selected'} disabled>반 선택</option>
+        ${classes().map(c => `<option value="${esc(c)}" ${ui.li.classId === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+      </select>` : ''}` : ''}
       <button data-act="${s ? 'doSignup' : 'doLogin'}" class="ed-btn primary" style="padding:13px;font-size:14px;${ui.authBusy ? 'opacity:.6' : ''}">${ui.authBusy ? '잠시만요...' : (s ? '가입하고 시작하기 🐠' : '로그인')}</button>
       ${ui.authMsg ? `<div style="font-size:12px;line-height:1.5;color:${ui.authMsg.startsWith('❌') ? '#ffb4ad' : '#dbe6f5'};background:rgba(0,0,0,${compact ? '.06' : '.25'});border-radius:10px;padding:9px 11px;${compact ? 'color:#b23a32;background:#fbe4e2' : ''}">${esc(ui.authMsg)}</div>` : ''}
       <div data-act="toggleSignup" style="text-align:center;font-size:12.5px;font-weight:600;cursor:pointer;padding:6px;${compact ? 'color:#2f74e6' : 'color:#cfe3ff;text-decoration:underline'}">${s ? '이미 계정이 있어요 → 로그인' : '처음이에요 → 가입하기'}</div>
@@ -826,6 +924,27 @@ function loginScreenHTML() {
       </div>
       <div style="animation:fadeup 1.2s ease-out">${loginFormHTML(false)}</div>
       <div style="text-align:center;color:#fff;opacity:.6;font-size:11px;margin-top:26px;letter-spacing:.02em">신당고등학교 · 최유림T</div>
+    </div>
+  </div>`;
+}
+
+/* ---- 승인 대기 화면 ---- */
+function pendingHTML() {
+  const u = auth.user;
+  return `<div style="position:absolute;inset:0;z-index:58;overflow-y:auto;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%)">
+    <div style="position:absolute;inset:0;pointer-events:none">${introBubblesHTML()}</div>
+    <div style="position:relative;min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:44px 30px;text-align:center;color:#fff">
+      <div style="font-size:52px;margin-bottom:10px">⏳</div>
+      <div style="font-size:20px;font-weight:700">가입 신청이 접수됐어요</div>
+      <div style="font-size:13px;opacity:.9;margin-top:12px;line-height:1.7">
+        <b>${esc(u.name)}</b> (${esc(u.username)})<br>
+        ${u.class ? esc(u.class) + ' · ' : ''}${u.studentNo ? '학번 ' + esc(u.studentNo) : ''}<br><br>
+        선생님이 승인하면 바로 시작할 수 있어요.<br>승인 후 아래 버튼을 눌러 새로고침하세요.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:22px">
+        <button data-act="recheckApproval" class="ed-btn primary" style="padding:13px;font-size:14px">승인됐어요 · 새로고침 🔄</button>
+        <div data-act="doLogout" style="text-align:center;font-size:12.5px;font-weight:600;cursor:pointer;padding:6px;color:#cfe3ff;text-decoration:underline">로그아웃</div>
+      </div>
     </div>
   </div>`;
 }
@@ -976,6 +1095,12 @@ function homeHTML() {
           <span style="font-size:11px;font-weight:700;color:#2f74e6">이어 읽기 →</span>
         </div>
       </div>
+    </div>` : ''}
+
+    ${ui.grantMsg ? `<div data-act="dismissGrant" style="display:flex;align-items:center;gap:11px;background:linear-gradient(150deg,#fff0d0,#ffe0a8);border:1.5px solid #f0c65a;border-radius:16px;padding:13px 15px;margin-bottom:16px;cursor:pointer">
+      <div style="font-size:24px">🎁</div>
+      <div style="flex:1;font-size:13px;font-weight:700;color:#8a6412">${esc(ui.grantMsg)}</div>
+      <div style="font-size:15px;color:#c9922a">✕</div>
     </div>` : ''}
 
     ${eggBanner}
@@ -1447,67 +1572,97 @@ function teacherDashHTML() {
 function liveDashHTML(day) {
   const req = requiredKeys();
   const recs = ui.records || [];
-  // 학생 목록: 가입된 계정(프로필) 기준, 기록에만 있는 이름도 포함
-  const names = (ui.profiles || []).map(p => p.name);
-  roster().forEach(n => { if (!names.includes(n)) names.push(n); });
-  recs.forEach(r => { if (!names.includes(r.student)) names.push(r.student); });
+  const profiles = ui.profiles || [];
+  const pending = ui.pending || [];
 
   const byStu = {};
   recs.forEach(r => { (byStu[r.student] = byStu[r.student] || []).push(r); });
 
-  const rows = names.map(n => {
-    const rs = byStu[n] || [];
+  // 승인된 학생을 기준으로, 기록만 있는 이름도 뒤에 붙임(계정 없는 데모용)
+  const students = profiles.map(p => ({ id: p.id, name: p.name, cls: p.class, no: p.student_no }));
+  recs.forEach(r => { if (!students.some(s => s.name === r.student)) students.push({ id: null, name: r.student }); });
+
+  const grantBtns = (id) => id ? `
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;align-items:center">
+      <span style="font-size:10px;font-weight:700;color:#7d8aa0;width:34px">경험치</span>
+      ${[10, 30, 50].map(x => `<button data-act="grant" data-arg="${id}:0:${x}" style="border:1px solid #cfe0f5;background:#eef5ff;color:#2f74e6;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">+${x}</button>`).join('')}
+      <span style="font-size:10px;font-weight:700;color:#7d8aa0;width:20px;margin-left:6px">알</span>
+      ${[1, 3, 5].map(e => `<button data-act="grant" data-arg="${id}:${e}:0" style="border:1px solid #f0d79a;background:#fff7e6;color:#b0851f;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">🥚+${e}</button>`).join('')}
+    </div>` : '';
+
+  const rows = students.map(s => {
+    const rs = byStu[s.name] || [];
     const doneSet = new Set(rs.map(r => r.task));
     const doneReq = req.filter(k => doneSet.has(k)).length;
     const scores = rs.filter(r => r.score != null);
     const avg = scores.length ? Math.round(scores.reduce((a, r) => a + r.score, 0) / scores.length) : null;
-    const last = rs.length ? new Date(rs[rs.length - 1].created_at) : null;
-    const lastStr = last ? `${last.getHours()}:${String(last.getMinutes()).padStart(2, '0')}` : '–';
     const allDone = req.length > 0 && doneReq >= req.length;
-    return `<div style="display:grid;grid-template-columns:1.3fr .9fr .7fr .7fr;padding:12px 15px;border-bottom:1px solid #f4f7fb;align-items:center">
-      <div style="display:flex;align-items:center;gap:8px"><div style="width:26px;height:26px;border-radius:50%;background:${allDone ? '#2fa36b' : (rs.length ? '#2f74e6' : '#c3ceda')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc(n.slice(0, 2))}</div><span style="font-size:12.5px;font-weight:600;color:#14243f">${esc(n)}</span></div>
-      <div>${allDone
-        ? `<span style="font-size:10.5px;font-weight:600;color:#2fa36b;background:#e0f3ea;padding:3px 7px;border-radius:7px">완료 ${doneReq}/${req.length}</span>`
-        : rs.length
-          ? `<span style="font-size:10.5px;font-weight:600;color:#2f74e6;background:#e7f0fd;padding:3px 7px;border-radius:7px">진행 ${doneReq}/${req.length}</span>`
-          : `<span style="font-size:10.5px;font-weight:600;color:#e2564d;background:#fbe4e2;padding:3px 7px;border-radius:7px">시작 전</span>`}</div>
-      <div style="font-size:12.5px;${avg == null ? 'color:#b8c2d2' : 'font-weight:600;color:#14243f'}">${avg == null ? '–' : avg}</div>
-      <div style="font-size:11px;color:#7d8aa0">${lastStr}</div>
+    const badge = allDone
+      ? `<span style="font-size:10.5px;font-weight:600;color:#2fa36b;background:#e0f3ea;padding:3px 8px;border-radius:7px">완료 ${doneReq}/${req.length}</span>`
+      : rs.length
+        ? `<span style="font-size:10.5px;font-weight:600;color:#2f74e6;background:#e7f0fd;padding:3px 8px;border-radius:7px">진행 ${doneReq}/${req.length}</span>`
+        : `<span style="font-size:10.5px;font-weight:600;color:#e2564d;background:#fbe4e2;padding:3px 8px;border-radius:7px">시작 전</span>`;
+    return `<div style="padding:12px 14px;border-bottom:1px solid #f4f7fb">
+      <div style="display:flex;align-items:center;gap:9px">
+        <div style="width:28px;height:28px;border-radius:50%;background:${allDone ? '#2fa36b' : (rs.length ? '#2f74e6' : '#c3ceda')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc(s.name.slice(0, 2))}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#14243f">${esc(s.name)}${s.cls || s.no ? ` <span style="font-size:10.5px;color:#9aa8bd;font-weight:500">${esc(s.cls || '')}${s.cls && s.no ? ' · ' : ''}${s.no ? s.no + '번' : ''}</span>` : ''}</div>
+        </div>
+        ${badge}
+        <div style="font-size:12px;font-weight:700;color:${avg == null ? '#c3ceda' : '#14243f'};width:34px;text-align:right">${avg == null ? '–' : avg}</div>
+      </div>
+      ${grantBtns(s.id)}
     </div>`;
   }).join('');
 
-  const totalDone = names.filter(n => {
-    const doneSet = new Set((byStu[n] || []).map(r => r.task));
+  const totalDone = students.filter(s => {
+    const doneSet = new Set((byStu[s.name] || []).map(r => r.task));
     return req.length > 0 && req.every(k => doneSet.has(k));
   }).length;
   const allScores = recs.filter(r => r.score != null);
   const avgAll = allScores.length ? Math.round(allScores.reduce((a, r) => a + r.score, 0) / allScores.length) : null;
 
+  const pendingSection = pending.length ? `
+    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 10px">가입 대기 <span style="font-size:11px;color:#fff;background:#e2564d;border-radius:8px;padding:2px 7px">${pending.length}</span></div>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      ${pending.map(p => `<div style="background:#fff;border:1px solid #f0c65a;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+        <div style="width:30px;height:30px;border-radius:50%;background:#f0a92e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${esc((p.name || '').slice(0, 2))}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#14243f">${esc(p.name)} <span style="font-size:11px;color:#9aa8bd;font-weight:500">${esc(p.username)}</span></div>
+          <div style="font-size:11px;color:#7d8aa0;margin-top:1px">${esc(p.class || '반 미지정')}${p.student_no ? ' · 학번 ' + esc(p.student_no) : ''}</div>
+        </div>
+        <button data-act="rejectStudent" data-arg="${p.id}" style="border:1px solid #f3c7c2;background:#fff;color:#c0392b;font-size:11.5px;font-weight:700;padding:7px 11px;border-radius:9px;cursor:pointer">거절</button>
+        <button data-act="approveStudent" data-arg="${p.id}" style="border:none;background:#2fa36b;color:#fff;font-size:11.5px;font-weight:700;padding:7px 13px;border-radius:9px;cursor:pointer">승인</button>
+      </div>`).join('')}
+    </div>` : '';
+
   return `
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div>
         <div style="font-size:19px;font-weight:700;color:#14243f">오늘의 학습 현황${day.label ? ' · ' + esc(day.label) : ''}</div>
-        <div style="font-size:12px;color:#7d8aa0;margin-top:2px">${esc(day.book.title)} · ${names.length}명 · ${todayKey()}</div>
+        <div style="font-size:12px;color:#7d8aa0;margin-top:2px">${esc(day.book.title)} · ${students.length}명 · ${todayKey()}</div>
       </div>
       <div style="display:flex;gap:6px">
-        <button data-act="dashRefresh" class="ed-btn ghost" style="padding:8px 13px;font-size:11.5px">${ui.recLoading ? '⏳' : '🔄 새로고침'}</button>
+        <button data-act="dashRefresh" class="ed-btn ghost" style="padding:8px 13px;font-size:11.5px">${ui.recLoading ? '⏳' : '🔄'}</button>
         <button data-act="doLogout" class="ed-btn ghost" style="padding:8px 11px;font-size:11.5px" title="교사 계정 로그아웃">↩︎</button>
       </div>
     </div>
-    ${ui.recError ? `<div style="font-size:11.5px;color:#b23a32;background:#fbe4e2;border-radius:10px;padding:9px 12px;margin-top:10px">기록을 불러오지 못했어요: ${esc(ui.recError)}</div>` : ''}
+    ${ui.recError ? `<div style="font-size:11.5px;color:#b23a32;background:#fbe4e2;border-radius:10px;padding:9px 12px;margin-top:10px">불러오지 못했어요: ${esc(ui.recError)}</div>` : ''}
+    ${ui.grantToast ? `<div style="font-size:11.5px;color:#1f7a4d;background:#e0f3ea;border-radius:10px;padding:9px 12px;margin-top:10px">${esc(ui.grantToast)}</div>` : ''}
 
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:14px">
-      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 다 끝낸 학생</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${totalDone}<span style="font-size:12px;color:#7d8aa0">/${names.length}명</span></div></div>
+    ${pendingSection}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:16px">
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 다 끝낸 학생</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${totalDone}<span style="font-size:12px;color:#7d8aa0">/${students.length}</span></div></div>
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">퀴즈 평균</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${avgAll == null ? '–' : avgAll}<span style="font-size:12px;color:#7d8aa0">점</span></div></div>
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 기록</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${recs.length}<span style="font-size:12px;color:#7d8aa0">건</span></div></div>
     </div>
 
-    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 10px">학생별 현황</div>
+    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 10px">학생별 현황 · 보상 주기</div>
     <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;overflow:hidden">
-      <div style="display:grid;grid-template-columns:1.3fr .9fr .7fr .7fr;padding:11px 15px;border-bottom:1px solid #eef2f8;font-size:10.5px;font-weight:600;color:#7d8aa0"><div>학생</div><div>오늘 할 일</div><div>평균</div><div>최근</div></div>
-      ${rows || '<div style="padding:18px;text-align:center;font-size:12px;color:#b8c2d2">아직 기록이 없어요</div>'}
+      ${rows || '<div style="padding:18px;text-align:center;font-size:12px;color:#b8c2d2">아직 학생이 없어요</div>'}
     </div>
-    <div style="font-size:10.5px;color:#b8c2d2;margin-top:8px">아이가 할 일을 끝낼 때마다 자동으로 기록돼요. 점수는 오늘 푼 퀴즈들의 평균입니다.</div>`;
+    <div style="font-size:10.5px;color:#b8c2d2;margin-top:8px">경험치·알 버튼을 누르면 학생이 다음에 접속할 때 자동으로 반영돼요.</div>`;
 }
 
 /* ---- 콘텐츠 편집기 ---- */
@@ -1582,6 +1737,12 @@ function editorHTML() {
         <button data-act="edPublish" class="ed-btn primary" style="flex:1;${ui.pubBusy ? 'opacity:.6' : ''}">${ui.pubBusy ? '배포 중...' : '지금 배포 🚀'}</button>
       </div>
       ${ui.pubMsg ? `<div style="font-size:11.5px;margin-top:9px;line-height:1.5;background:rgba(255,255,255,.12);border-radius:9px;padding:8px 10px">${esc(ui.pubMsg)}</div>` : ''}
+    </div>
+
+    <div class="ed-card">
+      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">🏫 반 목록</div>
+      <div class="ed-label">한 줄에 한 반씩. 학생이 가입할 때 여기서 반을 골라요.</div>
+      <textarea class="ed-input" data-gbind="classesText" rows="3" placeholder="A반&#10;B반&#10;C반">${esc(gEd.classesText)}</textarea>
     </div>
 
     <div class="ed-card">
@@ -1704,6 +1865,7 @@ function render() {
   }
 
   if (state.role === 'student' && needLogin()) html += loginScreenHTML();
+  else if (state.role === 'student' && needApproval()) html += pendingHTML();
   else if (state.role === 'student' && needProfile()) html += profilePickerHTML();
   else if (state.intro && state.role === 'student') html += introHTML();
 
@@ -1752,6 +1914,7 @@ appEl.addEventListener('input', e => {
   if (el.id === 'li-id') { ui.li.id = el.value; return; }
   if (el.id === 'li-pw') { ui.li.pw = el.value; return; }
   if (el.id === 'li-name') { ui.li.name = el.value; return; }
+  if (el.id === 'li-studentno') { ui.li.studentNo = el.value; return; }
   if (el.dataset.gbind && gEd) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
   if (bind && ed && el.type !== 'radio' && el.tagName !== 'SELECT') {
@@ -1760,6 +1923,7 @@ appEl.addEventListener('input', e => {
 });
 appEl.addEventListener('change', e => {
   const el = e.target;
+  if (el.id === 'li-class') { ui.li.classId = el.value; return; }
   const bind = el.dataset.bind;
   if (!bind || !ed) return;
   let v = el.value;
@@ -1781,4 +1945,9 @@ render();
       }
     }
   } catch (e) { /* 오프라인/로컬 파일이면 내장 콘텐츠 사용 */ }
+  // 승인된 학생: 접속 시 교사가 준 알/경험치 부여를 적용
+  if (auth && !isTeacherUser() && auth.user && auth.user.approved) {
+    await pullGrants();
+    render();
+  }
 })();
