@@ -191,6 +191,7 @@ function topbar(loaded) {
 /* ---- 탭 1: 지문 · 책 ---- */
 function passageTab(d) {
   const cover = (d.book.cover || '').trim();
+  const spine = (d.book.spine || '').trim();
   return `<div class="cols">
     <div>
       <div class="card">
@@ -209,15 +210,21 @@ function passageTab(d) {
       </div>
 
       <div class="card">
-        <h2>책 표지</h2>
-        <div class="hint">표지 이미지 <b>주소(URL)</b>를 붙여넣으면 학생 홈·리더에 표지로 나와요. (이미지에 우클릭 → "이미지 주소 복사")</div>
+        <h2>책 표지 · 책등(서가)</h2>
+        <div class="hint">표지 이미지 <b>주소(URL)</b>를 붙여넣으면 학생 홈·리더에 표지로 나와요. 책등 이미지는 홈 <b>서가</b>에 세워진 모습으로 보여요. (이미지에 우클릭 → "이미지 주소 복사")</div>
+        <div class="label">표지 이미지 URL</div>
         <input class="inp" data-bind="book.cover" data-rerender="1" value="${esc(cover)}" placeholder="https://.../cover.jpg">
+        <div class="label">책등(서가) 이미지 URL <span style="font-weight:400;color:#b8c2d2">— 비우면 제목이 세로로 적힌 책등이 자동 생성돼요</span></div>
+        <input class="inp" data-bind="book.spine" data-rerender="1" value="${esc(spine)}" placeholder="https://.../spine.jpg (선택)">
         <div style="margin-top:12px;display:flex;gap:14px;align-items:flex-start">
           ${cover
             ? `<img src="${esc(cover)}" alt="표지 미리보기" style="width:96px;height:132px;object-fit:cover;border-radius:10px;border:1px solid #e2e9f2" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                <div style="display:none;width:96px;height:132px;border-radius:10px;border:1px dashed #e2564d;color:#b23a32;align-items:center;justify-content:center;font-size:12px;text-align:center;padding:8px">이미지를<br>불러올 수 없어요</div>`
-            : `<div style="width:96px;height:132px;border-radius:10px;border:1px dashed #c8d4e2;color:#9aa8bd;display:flex;align-items:center;justify-content:center;font-size:12px">표지 없음</div>`}
-          <div style="font-size:12px;color:#7d8aa0;line-height:1.7">미리보기 →<br>URL을 넣으면 왼쪽에 표지가 보여요.<br>표지가 없으면 기본 파란 표지로 나옵니다.</div>
+            : `<div style="width:96px;height:132px;border-radius:10px;border:1px dashed #c8d4e2;color:#9aa8bd;display:flex;align-items:center;justify-content:center;font-size:12px;text-align:center">표지<br>없음</div>`}
+          ${spine
+            ? `<img src="${esc(spine)}" alt="책등 미리보기" style="width:40px;height:132px;object-fit:cover;border-radius:2px 5px 5px 2px;border:1px solid #e2e9f2" onerror="this.style.display='none'">`
+            : `<div style="width:40px;height:132px;border-radius:2px 5px 5px 2px;background:linear-gradient(90deg,#1f57c4,#2f74e6);display:flex;align-items:center;justify-content:center"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Lora',serif;font-size:10px;color:#fff;padding:6px 0;max-height:120px;overflow:hidden">${esc(d.book.title || '제목')}</div></div>`}
+          <div style="font-size:12px;color:#7d8aa0;line-height:1.7">← 표지 / 책등 →<br>서가에는 책등이 세워져 보이고,<br>탭하면 표지와 함께 읽기가 열려요.</div>
         </div>
       </div>
     </div>

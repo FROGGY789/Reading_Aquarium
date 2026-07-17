@@ -556,7 +556,8 @@ const actions = {
   openDex() { set({ dexOpen: true }); },
   closeDex() { set({ dexOpen: false }); },
 
-  openReader() { set({ screen: 'reader', readerBurning: false, readerPage: 0 }); },
+  openReader() { set({ screen: 'reader', readerBurning: false, readerPage: 0, readerBookKey: (activeDay().book || {}).title || '' }); },
+  openBook(i) { const b = allBooks()[Number(i)]; if (b) set({ screen: 'reader', readerBurning: false, readerPage: 0, readerBookKey: b.title }); },
   readerPrev() { if (state.readerPage > 0) set({ readerPage: state.readerPage - 1 }); },
   readerNext() { if (state.readerPage < readerPages().length - 1) set({ readerPage: state.readerPage + 1 }); },
 
@@ -1121,12 +1122,46 @@ function homeHTML() {
     <div style="font-size:11px;color:#7d8aa0;margin-bottom:11px">보너스 학습 · 원할 때 자유롭게</div>
     <div style="display:flex;flex-direction:column;gap:10px">${bonusRows}</div>` : ''}
 
+    ${shelfHTML()}
+
     ${authMode() ? `
     <div style="margin-top:26px;text-align:center">
       <div data-act="doLogout" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#7d8aa0;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">↩︎ 로그아웃</div>
     </div>` : ''}
 
   </div></div>`;
+}
+
+/* ---- 홈 하단 서가(자유 읽기) ---- */
+const SPINE_COLORS = [
+  ['#1f57c4', '#2f74e6'], ['#17827a', '#1fae9e'], ['#b8480f', '#e0691f'],
+  ['#6d3fb0', '#8a5fd6'], ['#a5760f', '#d19a1a'], ['#b23a5c', '#e05a80'],
+  ['#2a6b4f', '#3e9a72'], ['#3a4a6b', '#5f74a0']
+];
+function shelfHTML() {
+  const books = allBooks();
+  if (!books.length) return '';
+  const spines = books.map((b, i) => {
+    const [c1, c2] = SPINE_COLORS[i % SPINE_COLORS.length];
+    const inner = b.spine
+      ? `<img src="${esc(b.spine)}" alt="${esc(b.title)}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.dataset.fallback='1';this.remove()">`
+      : `<div style="position:absolute;inset:0;background:linear-gradient(90deg,${c1},${c2});display:flex;align-items:center;justify-content:center">
+           <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Lora',serif;font-size:11px;font-weight:600;color:rgba(255,255,255,.95);letter-spacing:.02em;white-space:nowrap;max-height:118px;overflow:hidden;text-overflow:ellipsis;padding:6px 0">${esc(b.title)}</div>
+         </div>`;
+    return `<div data-act="openBook" data-arg="${i}" title="${esc(b.title)}" style="flex:none;position:relative;width:40px;height:140px;border-radius:2px 5px 5px 2px;overflow:hidden;cursor:pointer;box-shadow:2px 3px 8px -3px rgba(20,40,70,.55),inset -3px 0 5px -3px rgba(0,0,0,.4);background:linear-gradient(90deg,${c1},${c2})">
+      <div style="position:absolute;top:0;bottom:0;left:3px;width:2px;background:rgba(255,255,255,.25)"></div>
+      ${inner}
+    </div>`;
+  }).join('');
+  return `
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin:24px 0 4px">
+      <div style="font-size:13px;font-weight:700;color:#14243f">📚 나의 서가</div>
+      <div style="font-size:11px;color:#7d8aa0">${books.length}권 · 자유롭게 읽어요</div>
+    </div>
+    <div style="background:linear-gradient(180deg,#fbf7ef,#f1e7d6);border:1px solid #e6dcc7;border-radius:16px;padding:16px 14px 0;box-shadow:inset 0 2px 8px -4px rgba(120,90,40,.25)">
+      <div style="display:flex;gap:8px;align-items:flex-end;overflow-x:auto;padding-bottom:0">${spines}</div>
+      <div style="height:12px;margin:0 -14px;background:linear-gradient(180deg,#caa96e,#a9834f);border-top:2px solid #8a6836;box-shadow:0 4px 8px -4px rgba(90,60,20,.5)"></div>
+    </div>`;
 }
 
 /* ---- 아쿠아리움 ---- */
@@ -1319,13 +1354,40 @@ function resultHTML() {
 }
 
 /* ---- e-북 리더 ---- */
-function readerPages() { return passageToPages(dayPassage(activeDay())); }
+// 서가: 지문이 있는 Day들을 책 제목으로 묶어 한 권씩 (여러 Day = 여러 챕터)
+function allBooks() {
+  const map = {};
+  contentSource().days.forEach(d => {
+    const p = dayPassage(d);
+    if (!p.trim()) return;
+    const title = ((d.book && d.book.title) || '').trim() || '제목 없는 책';
+    if (!map[title]) map[title] = { title, author: (d.book && d.book.author) || '', cover: '', spine: '', chapters: [] };
+    map[title].chapters.push({ date: d.date || '', chapter: (d.book && d.book.chapter) || '', passage: p });
+    if (!map[title].cover && dayCover(d)) map[title].cover = dayCover(d);
+    if (!map[title].spine && daySpine(d)) map[title].spine = daySpine(d);
+    if (!map[title].author && d.book && d.book.author) map[title].author = d.book.author;
+  });
+  return Object.values(map).map(b => {
+    b.chapters.sort((x, y) => (x.date || '').localeCompare(y.date || ''));
+    b.passage = b.chapters.map(c => c.passage).join('\n---\n');
+    return b;
+  });
+}
+function currentBook() {
+  const books = allBooks();
+  const found = books.find(b => b.title === state.readerBookKey);
+  if (found) return found;
+  // 폴백: 오늘 Day
+  const d = activeDay();
+  return { title: (d.book && d.book.title) || '', author: (d.book && d.book.author) || '', chapter: (d.book && d.book.chapter) || '', cover: dayCover(d), spine: daySpine(d), passage: dayPassage(d) };
+}
+function readerPages() { return passageToPages(currentBook().passage); }
 function readerProgress() {
   const total = readerPages().length || 1;
   return Math.round((Math.min(state.readerPage, total - 1) + 1) / total * 100) + '%';
 }
 function readerHTML() {
-  const book = activeDay().book || {};
+  const book = currentBook();
   const pages = readerPages();
   const page = Math.min(state.readerPage, Math.max(0, pages.length - 1));
   const paras = pages[page] || [];
@@ -1334,7 +1396,7 @@ function readerHTML() {
       <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#ece3d2;color:#7a6b52;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       <div style="text-align:center">
         <div style="font-family:'Lora',serif;font-size:13px;font-weight:600;color:#3a3222">${esc(book.title)}</div>
-        <div style="font-size:10.5px;color:#9c8f76;margin-top:1px">${esc(book.chapter)}</div>
+        <div style="font-size:10.5px;color:#9c8f76;margin-top:1px">${esc(book.chapter || book.author || '')}</div>
       </div>
       <div style="width:30px;height:30px;border-radius:10px;background:#ece3d2;color:#7a6b52;display:flex;align-items:center;justify-content:center;font-size:13px">Aa</div>
     </div>

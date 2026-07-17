@@ -89,7 +89,8 @@ const DEFAULT_CONTENT = {
         title: 'The Curiosity of the Sea',
         author: 'E. M. Hartwell',
         chapter: 'Chapter 3 · The Silent Horizon',
-        cover: ''
+        cover: '',
+        spine: ''
       },
       // 지문(그날 읽을 전체 텍스트) — 문단은 빈 줄, 페이지는 --- , 팝오버 단어는 [대괄호].
       // e-북 리더와 지문 복습이 모두 이 하나의 지문에서 나옵니다.
@@ -152,6 +153,7 @@ function _todayKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function dayCover(day) { return (day && day.book && day.book.cover) || ''; }
+function daySpine(day) { return (day && day.book && day.book.spine) || ''; }
 // 지문 원문(대괄호 포함). 구버전(book.pages) 콘텐츠도 자동 변환.
 function dayPassage(day) {
   if (day && typeof day.passage === 'string' && day.passage.trim()) return day.passage;
@@ -206,7 +208,7 @@ function dayToEdit(day) {
     date: day.date || _todayKey(),
     label: day.label || '',
     quote: Object.assign({ en: '', ko: '', teacher: '', comment: '' }, day.quote || {}),
-    book: Object.assign({ title: '', author: '', chapter: '', cover: '' }, day.book || {}),
+    book: Object.assign({ title: '', author: '', chapter: '', cover: '', spine: '' }, day.book || {}),
     passageText,
     words,
     previewCoreText: ((day.previewCore) || []).join('\n'),  // 보통 난이도: 핵심 문장(줄바꿈 구분)
@@ -242,7 +244,7 @@ function editToDay(e) {
     date: e.date || _todayKey(),
     label: (e.label || '').trim(),
     quote: { en: e.quote.en.trim(), ko: e.quote.ko.trim(), teacher: e.quote.teacher.trim(), comment: e.quote.comment.trim() },
-    book: { title: e.book.title.trim(), author: e.book.author.trim(), chapter: e.book.chapter.trim(), cover: (e.book.cover || '').trim() },
+    book: { title: e.book.title.trim(), author: e.book.author.trim(), chapter: e.book.chapter.trim(), cover: (e.book.cover || '').trim(), spine: (e.book.spine || '').trim() },
     passage: (e.passageText || '').trim(),
     vocab,
     previewCore,
