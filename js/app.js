@@ -843,27 +843,40 @@ async function publishContent() {
   ui.pubBusy = true; ui.pubMsg = '배포 중...'; render();
   const api = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`;
   const headers = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' };
-  try {
-    const repo = await (await fetch(api, { headers })).json();
-    const branch = repo.default_branch || 'main';
-    let sha;
-    const cur = await fetch(`${api}/contents/data/content.json?ref=${branch}`, { headers });
-    if (cur.ok) sha = (await cur.json()).sha;
+  // 캐시 없이 현재 파일 sha 읽기(GitHub API가 잠깐 옛 sha를 캐시로 돌려주는 문제 회피)
+  const getSha = async branch => {
+    const cur = await fetch(`${api}/contents/data/content.json?ref=${branch}&_=${Date.now()}`, { headers, cache: 'no-store' });
+    return cur.ok ? (await cur.json()).sha : undefined;
+  };
+  const putOnce = (branch, sha) => {
     const body = {
       message: '콘텐츠 배포: ' + new Date().toLocaleString('ko-KR'),
       content: btoa(unescape(encodeURIComponent(JSON.stringify(DRAFT, null, 2)))),
       branch
     };
     if (sha) body.sha = sha;
-    const res = await fetch(`${api}/contents/data/content.json`, { method: 'PUT', headers, body: JSON.stringify(body) });
+    return fetch(`${api}/contents/data/content.json`, { method: 'PUT', headers, body: JSON.stringify(body) });
+  };
+  try {
+    const repoRes = await fetch(api, { headers, cache: 'no-store' });
+    if (!repoRes.ok) {
+      if ([401, 403, 404].includes(repoRes.status)) throw new Error('저장소에 접근할 수 없어요 — 토큰 권한(Contents: Read and write)과 저장소 선택을 확인해 주세요. (HTTP ' + repoRes.status + ')');
+      throw new Error('HTTP ' + repoRes.status);
+    }
+    const branch = (await repoRes.json()).default_branch || 'main';
+    let res = await putOnce(branch, await getSha(branch));
+    // sha 충돌(다른 곳에서 먼저 저장됨) → 최신 sha로 한 번 더 시도
+    if (res.status === 409) res = await putOnce(branch, await getSha(branch));
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+      if (res.status === 409) throw new Error('다른 기기·창에서 방금 먼저 배포된 것 같아요. 새로고침 후 다시 시도해 주세요 (이미 반영됐을 수도 있어요).');
+      if ([401, 403].includes(res.status)) throw new Error((err.message || '권한 오류') + ' — 토큰 권한(Contents: Read and write)을 확인해 주세요.');
       throw new Error(err.message || ('HTTP ' + res.status));
     }
     PUBLISHED = clone(DRAFT);
     ui.pubMsg = '✅ 배포 완료! 1~2분 뒤 모든 기기에 반영됩니다.';
   } catch (e) {
-    ui.pubMsg = '❌ 배포 실패: ' + e.message + ' (토큰 권한을 확인해 주세요)';
+    ui.pubMsg = '❌ 배포 실패: ' + e.message;
   }
   ui.pubBusy = false;
   render();
