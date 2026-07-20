@@ -184,6 +184,19 @@ function passageToReview(passage) {
     .replace(/\n\s*-{3,}\s*\n/g, '\n\n')
     .split(/\n\s*\n/).map(p => p.trim().replace(/\s*\n\s*/g, ' ')).filter(Boolean);
 }
+// 지문 → 문장 배열 (수업용 전체화면 발표: 한 화면에 한 문장). 대괄호 제거, 문단 순서 유지.
+function passageToSentences(passage) {
+  const out = [];
+  passageToReview(passage).forEach(para => {
+    const p = stripBrackets(para).trim();
+    if (!p) return;
+    // 종결부호(. ! ? …)로 문장 분리 + 뒤따르는 따옴표/괄호 포함, 마지막 미종결 조각도 포함
+    const parts = p.match(/[^.!?…]+(?:[.!?…]+["'”’)\]]*|$)/g);
+    if (parts) parts.forEach(s => { const t = s.trim(); if (t) out.push(t); });
+    else out.push(p);
+  });
+  return out;
+}
 
 /* ---- 편집 모델 변환 (교사 편집기 공용) ---- */
 // 저장형 Day → 편집형(폼)
