@@ -392,7 +392,8 @@ const ui = {
   records: null, recLoading: false, recError: '', profiles: [],
   signupMode: false, authMsg: '', authBusy: false, asStudent: false, grantMsg: '',
   pending: [], grantBusy: '',   // 교사: 가입 대기 목록 / 부여 진행중 표시
-  li: { id: '', pw: '', name: '', studentNo: '', classId: '' }   // 로그인 폼 입력값(리렌더에도 유지)
+  li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
+  present: { on: false, i: 0, sents: [], title: '' }   // 수업용 전체화면 발표(PPT처럼 한 문장씩)
 };
 // 학생 화면 상단 여백: 교사 미리보기(토글 있음)일 때만 넉넉히, 실제 학생은 좁게
 function topPad() { return isTeacherUser() ? '52px' : '28px'; }
@@ -670,6 +671,21 @@ const actions = {
   approveStudent(id) { approveStudent(id, true); },
   rejectStudent(id) { if (confirm('이 학생의 가입 신청을 거절할까요?')) approveStudent(id, false); },
   grant(arg) { const [id, eggs, xp] = arg.split(':'); grantReward(id, Number(eggs), Number(xp)); },
+
+  /* ---- 수업용 전체화면 발표(PPT처럼 한 문장씩) ---- */
+  openPresent() {
+    ensureEditor();
+    const passage = (ed && ed.day && ed.day.passageText) || dayPassage(activeDay());
+    const sents = passageToSentences(passage);
+    if (!sents.length) { ui.edMsg = '띄울 지문이 없어요. 먼저 지문을 입력하고 저장해 주세요.'; render(); return; }
+    ui.present = { on: true, i: 0, sents, title: (ed && ed.day && ed.day.label) || (activeDay().label || '') };
+    requestFS();
+    render();
+  },
+  presentNext() { const p = ui.present; if (p.on && p.i < p.sents.length - 1) { p.i++; render(); } },
+  presentPrev() { const p = ui.present; if (p.on && p.i > 0) { p.i--; render(); } },
+  presentGo(arg) { const p = ui.present; const i = Number(arg); if (p.on && i >= 0 && i < p.sents.length) { p.i = i; render(); } },
+  presentClose() { ui.present.on = false; exitFS(); render(); },
 
   edSelectDay(arg) { commitDayEdit(); openDay(Number(arg)); render(); },
   edAddDay() {
@@ -1866,6 +1882,13 @@ function editorHTML() {
       <a href="admin.html" style="display:block;margin-top:8px;text-align:center;background:#2f74e6;color:#fff;font-size:12.5px;font-weight:700;padding:11px;border-radius:11px;text-decoration:none">🖥️ 컴퓨터에서 지문 편집하기</a>
     </div>
 
+    <div class="ed-card" style="background:linear-gradient(150deg,#0b243f,#123a63);border:none;color:#fff">
+      <div style="font-size:13.5px;font-weight:700">🖥️ 수업용 전체화면 (PPT처럼)</div>
+      <div style="font-size:11.5px;opacity:.85;line-height:1.6;margin-top:5px">이 Day의 지문을 <b>한 화면에 한 문장씩</b> 크게 띄워요. 화면을 탭하거나 ← → 키로 넘기고, Esc로 닫습니다.
+      ${d.passageText && d.passageText.trim() ? `지금 <b>${passageToSentences(d.passageText).length}문장</b>을 띄울 수 있어요.` : '아직 지문이 비어 있어요 — 위에서 먼저 입력해 주세요.'}</div>
+      <button data-act="openPresent" class="ed-btn primary" style="width:100%;margin-top:10px;background:#2f74e6;box-shadow:0 4px 0 #1f57c4">▶ 전체화면으로 띄우기</button>
+    </div>
+
     <div style="font-size:14px;font-weight:700;color:#14243f;margin:18px 0 10px">퀴즈 문항</div>
     ${Object.keys(QUIZ_META).map(qEditor).join('')}
 
@@ -1875,6 +1898,65 @@ function editorHTML() {
     </div>
     <button data-act="edDiscardDraft" class="ed-btn ghost" style="width:100%;margin-top:8px;font-size:11.5px;padding:9px">↩︎ 초안 버리고 배포본으로 되돌리기</button>
     <div style="height:20px"></div>`;
+}
+
+/* =========================================================
+ * 수업용 전체화면 발표 (PPT처럼 한 문장씩)
+ * ========================================================= */
+function requestFS() {
+  try { const el = document.documentElement; if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {}); } catch (e) { /* 무시 */ }
+}
+function exitFS() {
+  try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (e) { /* 무시 */ }
+}
+function presentHTML() {
+  const p = ui.present;
+  const total = p.sents.length;
+  const i = Math.min(p.i, total - 1);
+  const sentence = p.sents[i] || '';
+  const atFirst = i <= 0;
+  const atLast = i >= total - 1;
+
+  // 진행 점(문장이 많으면 막대로 대체)
+  const progress = total <= 24
+    ? `<div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:70vw">
+        ${p.sents.map((_, k) => `<div data-act="presentGo" data-arg="${k}" style="width:${k === i ? '22px' : '8px'};height:8px;border-radius:99px;background:${k === i ? '#7db4ff' : 'rgba(255,255,255,.28)'};cursor:pointer;transition:width .2s"></div>`).join('')}
+      </div>`
+    : `<div style="width:min(60vw,520px);height:6px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden">
+        <div style="width:${((i + 1) / total) * 100}%;height:100%;background:#7db4ff;transition:width .2s"></div>
+      </div>`;
+
+  const navBtn = (act, label, disabled) => `<div ${disabled ? '' : `data-act="${act}"`} style="display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,${disabled ? '.05' : '.14'});color:#fff;font-size:22px;cursor:${disabled ? 'default' : 'pointer'};opacity:${disabled ? '.3' : '1'};-webkit-user-select:none;user-select:none">${label}</div>`;
+
+  return `<div style="position:fixed;inset:0;z-index:2147483000;background:radial-gradient(120% 130% at 50% -10%,#123a63 0%,#0b243f 46%,#061627 100%);color:#fff;overflow:hidden">
+    <!-- 좌우 탭 영역: 왼쪽 30% 이전, 오른쪽 70% 다음 -->
+    <div ${atFirst ? '' : 'data-act="presentPrev"'} style="position:absolute;top:0;left:0;width:30%;height:100%;z-index:1;cursor:${atFirst ? 'default' : 'w-resize'}"></div>
+    <div ${atLast ? '' : 'data-act="presentNext"'} style="position:absolute;top:0;right:0;width:70%;height:100%;z-index:1;cursor:${atLast ? 'default' : 'e-resize'}"></div>
+
+    <!-- 상단 바 -->
+    <div style="position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:16px 20px;pointer-events:none">
+      <div style="font-size:13px;font-weight:600;letter-spacing:.3px;color:rgba(255,255,255,.6)">${esc(p.title) || '수업 자료'}</div>
+      <div style="display:flex;gap:9px;pointer-events:auto">
+        <div data-act="presentClose" title="닫기 (Esc)" style="display:flex;align-items:center;gap:6px;padding:0 15px;height:40px;border-radius:12px;background:rgba(255,255,255,.12);cursor:pointer;font-size:13px;font-weight:700">✕ 닫기</div>
+      </div>
+    </div>
+
+    <!-- 문장(가운데, 크고 깔끔하게) -->
+    <div style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:9vh 8vw;pointer-events:none">
+      <div key="${i}" style="font-family:'Lora',Georgia,serif;font-weight:500;line-height:1.4;text-align:center;font-size:clamp(30px,5.4vw,68px);max-width:1100px;text-wrap:balance;animation:fadeup .4s ease">${esc(sentence)}</div>
+    </div>
+
+    <!-- 하단 바: 이전/진행/다음 -->
+    <div style="position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;flex-direction:column;align-items:center;gap:14px;padding:0 20px 26px;pointer-events:none">
+      <div style="display:flex;align-items:center;gap:26px;pointer-events:auto">
+        ${navBtn('presentPrev', '‹', atFirst)}
+        <div style="font-size:14px;font-weight:700;color:rgba(255,255,255,.75);min-width:64px;text-align:center;font-variant-numeric:tabular-nums">${i + 1} / ${total}</div>
+        ${navBtn('presentNext', '›', atLast)}
+      </div>
+      <div style="pointer-events:auto">${progress}</div>
+      <div style="font-size:11.5px;color:rgba(255,255,255,.4)">← → 또는 화면 탭으로 넘기기 · Esc 닫기</div>
+    </div>
+  </div>`;
 }
 
 /* ---- 하단 내비게이션 ---- */
@@ -1931,6 +2013,8 @@ function render() {
   else if (state.role === 'student' && needProfile()) html += profilePickerHTML();
   else if (state.intro && state.role === 'student') html += introHTML();
 
+  if (ui.present.on) html += presentHTML();  // 수업용 전체화면 발표(최상단)
+
   document.getElementById('app').innerHTML = html;
   bindQuizInput();
 }
@@ -1968,6 +2052,17 @@ appEl.addEventListener('keydown', e => {
   if (['li-id', 'li-pw', 'li-name'].includes(e.target.id)) {
     actions[ui.signupMode ? 'doSignup' : 'doLogin']();
   }
+});
+// 수업용 발표: 키보드로 넘기기(← → Space PageUp/Down)·Esc 닫기
+document.addEventListener('keydown', e => {
+  if (!ui.present.on) return;
+  if (['ArrowRight', ' ', 'Spacebar', 'PageDown'].includes(e.key)) { e.preventDefault(); actions.presentNext(); }
+  else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); actions.presentPrev(); }
+  else if (e.key === 'Escape') { e.preventDefault(); actions.presentClose(); }
+});
+// 브라우저 전체화면을 사용자가 직접 끄면(F11/Esc) 발표 오버레이도 함께 닫기
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && ui.present.on) { ui.present.on = false; render(); }
 });
 // 편집기 입력 바인딩(리렌더 없이 편집 객체에 즉시 반영)
 appEl.addEventListener('input', e => {
