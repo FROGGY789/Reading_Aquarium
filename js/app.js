@@ -843,27 +843,40 @@ async function publishContent() {
   ui.pubBusy = true; ui.pubMsg = '배포 중...'; render();
   const api = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`;
   const headers = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' };
-  try {
-    const repo = await (await fetch(api, { headers })).json();
-    const branch = repo.default_branch || 'main';
-    let sha;
-    const cur = await fetch(`${api}/contents/data/content.json?ref=${branch}`, { headers });
-    if (cur.ok) sha = (await cur.json()).sha;
+  // 캐시 없이 현재 파일 sha 읽기(GitHub API가 잠깐 옛 sha를 캐시로 돌려주는 문제 회피)
+  const getSha = async branch => {
+    const cur = await fetch(`${api}/contents/data/content.json?ref=${branch}&_=${Date.now()}`, { headers, cache: 'no-store' });
+    return cur.ok ? (await cur.json()).sha : undefined;
+  };
+  const putOnce = (branch, sha) => {
     const body = {
       message: '콘텐츠 배포: ' + new Date().toLocaleString('ko-KR'),
       content: btoa(unescape(encodeURIComponent(JSON.stringify(DRAFT, null, 2)))),
       branch
     };
     if (sha) body.sha = sha;
-    const res = await fetch(`${api}/contents/data/content.json`, { method: 'PUT', headers, body: JSON.stringify(body) });
+    return fetch(`${api}/contents/data/content.json`, { method: 'PUT', headers, body: JSON.stringify(body) });
+  };
+  try {
+    const repoRes = await fetch(api, { headers, cache: 'no-store' });
+    if (!repoRes.ok) {
+      if ([401, 403, 404].includes(repoRes.status)) throw new Error('저장소에 접근할 수 없어요 — 토큰 권한(Contents: Read and write)과 저장소 선택을 확인해 주세요. (HTTP ' + repoRes.status + ')');
+      throw new Error('HTTP ' + repoRes.status);
+    }
+    const branch = (await repoRes.json()).default_branch || 'main';
+    let res = await putOnce(branch, await getSha(branch));
+    // sha 충돌(다른 곳에서 먼저 저장됨) → 최신 sha로 한 번 더 시도
+    if (res.status === 409) res = await putOnce(branch, await getSha(branch));
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+      if (res.status === 409) throw new Error('다른 기기·창에서 방금 먼저 배포된 것 같아요. 새로고침 후 다시 시도해 주세요 (이미 반영됐을 수도 있어요).');
+      if ([401, 403].includes(res.status)) throw new Error((err.message || '권한 오류') + ' — 토큰 권한(Contents: Read and write)을 확인해 주세요.');
       throw new Error(err.message || ('HTTP ' + res.status));
     }
     PUBLISHED = clone(DRAFT);
     ui.pubMsg = '✅ 배포 완료! 1~2분 뒤 모든 기기에 반영됩니다.';
   } catch (e) {
-    ui.pubMsg = '❌ 배포 실패: ' + e.message + ' (토큰 권한을 확인해 주세요)';
+    ui.pubMsg = '❌ 배포 실패: ' + e.message;
   }
   ui.pubBusy = false;
   render();
@@ -1097,12 +1110,15 @@ function homeHTML() {
     ${dayPassage(day).trim() ? `
     <div style="font-size:12px;font-weight:700;color:#7d8aa0;letter-spacing:.02em;margin-bottom:9px">지금 읽는 책</div>
     <div data-act="openReader" style="display:flex;gap:14px;background:#fff;border:1px solid #e2e9f2;border-radius:18px;padding:14px;margin-bottom:20px;cursor:pointer;box-shadow:0 8px 20px -14px rgba(20,50,90,.5)">
+      <div style="position:relative;flex:none;width:58px;height:80px">
       ${dayCover(day)
-        ? `<img src="${esc(dayCover(day))}" alt="" style="width:58px;height:80px;border-radius:8px;flex:none;object-fit:cover;box-shadow:0 4px 10px -4px rgba(31,87,196,.5)">`
-        : `<div style="width:58px;height:80px;border-radius:8px;flex:none;background:linear-gradient(150deg,#1f57c4,#17b0c4);box-shadow:0 4px 10px -4px rgba(31,87,196,.7);position:relative;overflow:hidden">
+        ? `<img src="${esc(dayCover(day))}" alt="" style="width:58px;height:80px;border-radius:8px;object-fit:cover;box-shadow:0 4px 10px -4px rgba(31,87,196,.5);display:block">`
+        : `<div style="width:58px;height:80px;border-radius:8px;background:linear-gradient(150deg,#1f57c4,#17b0c4);box-shadow:0 4px 10px -4px rgba(31,87,196,.7);position:relative;overflow:hidden">
         <div style="position:absolute;top:0;left:8px;bottom:0;width:2px;background:rgba(255,255,255,.35)"></div>
         <div style="position:absolute;bottom:9px;left:12px;right:8px;font-family:'Lora',serif;font-size:9px;line-height:1.2;color:#fff;font-style:italic">${esc((day.book.title || '').split(' ').slice(-2).join(' ').toLowerCase())}</div>
       </div>`}
+        ${chapterTag(day.book.chapter) ? `<div style="position:absolute;top:5px;left:5px;background:rgba(15,30,55,.85);color:#fff;font-size:9px;font-weight:800;line-height:1;padding:3px 6px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.4)">${esc(chapterTag(day.book.chapter))}</div>` : ''}
+      </div>
       <div style="flex:1;display:flex;flex-direction:column">
         <div style="font-family:'Lora',serif;font-size:15px;font-weight:600;color:#14243f;line-height:1.3">${esc(day.book.title)}</div>
         <div style="font-size:11.5px;color:#7d8aa0;margin-top:2px">${esc(day.book.author)}</div>
@@ -1154,19 +1170,50 @@ const SPINE_COLORS = [
   ['#6d3fb0', '#8a5fd6'], ['#a5760f', '#d19a1a'], ['#b23a5c', '#e05a80'],
   ['#2a6b4f', '#3e9a72'], ['#3a4a6b', '#5f74a0']
 ];
+// 챕터 문자열 → 짧은 배지("Ch.1"). 숫자를 못 찾으면 짧은 라벨은 그대로, 아니면 빈 값.
+function chapterTag(chapter) {
+  const s = (chapter || '').trim();
+  if (!s) return '';
+  const m = s.match(/(?:ch(?:apter|apt|\.)?|챕터|제)\s*0*(\d+)/i) || s.match(/\b0*(\d+)\b/);
+  if (m) return 'Ch.' + m[1];
+  return s.length <= 5 ? s : '';
+}
+// 서가 책(챕터 여러 개 병합 가능) → 대표 챕터 배지. 여러 챕터면 범위로("Ch.1–3").
+function bookChapterTag(b) {
+  const tags = ((b && b.chapters) || []).map(c => chapterTag(c.chapter)).filter(Boolean);
+  if (!tags.length) return chapterTag(b && b.chapter);
+  if (tags.length === 1) return tags[0];
+  const nums = tags.map(t => parseInt(t.replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
+  if (nums.length === tags.length) return 'Ch.' + Math.min(...nums) + '–' + Math.max(...nums);
+  return tags[0];
+}
+// 지문(본문) 글자 수에 비례한 책등 너비(px). 본문이 많을수록 두껍게 — 실제 책처럼.
+function spineWidth(b) {
+  const len = ((b && b.passage) || '').replace(/\s+/g, ' ').trim().length;
+  const t = Math.min(1, Math.max(0, (len - 500) / 3500));
+  return Math.round(28 + t * 40); // 28 ~ 68px
+}
+// 책등 위 챕터 배지(이미지·자동생성 공통)
+function spineChapterBadge(tag) {
+  if (!tag) return '';
+  return `<div style="position:absolute;top:5px;left:50%;transform:translateX(-50%);z-index:3;background:rgba(15,30,55,.82);color:#fff;font-size:8px;font-weight:800;letter-spacing:.01em;line-height:1;padding:3px 5px;border-radius:5px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.45)">${esc(tag)}</div>`;
+}
 function shelfHTML() {
   const books = allBooks();
   if (!books.length) return '';
   const spines = books.map((b, i) => {
     const [c1, c2] = SPINE_COLORS[i % SPINE_COLORS.length];
+    const w = spineWidth(b);
+    const badge = spineChapterBadge(bookChapterTag(b));
     const inner = b.spine
       ? `<img src="${esc(b.spine)}" alt="${esc(b.title)}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.dataset.fallback='1';this.remove()">`
       : `<div style="position:absolute;inset:0;background:linear-gradient(90deg,${c1},${c2});display:flex;align-items:center;justify-content:center">
-           <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Lora',serif;font-size:11px;font-weight:600;color:rgba(255,255,255,.95);letter-spacing:.02em;white-space:nowrap;max-height:118px;overflow:hidden;text-overflow:ellipsis;padding:6px 0">${esc(b.title)}</div>
+           <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Lora',serif;font-size:11px;font-weight:600;color:rgba(255,255,255,.95);letter-spacing:.02em;white-space:nowrap;max-height:110px;overflow:hidden;text-overflow:ellipsis;padding:6px 0">${esc(b.title)}</div>
          </div>`;
-    return `<div data-act="openBook" data-arg="${i}" title="${esc(b.title)}" style="flex:none;position:relative;width:40px;height:140px;border-radius:2px 5px 5px 2px;overflow:hidden;cursor:pointer;box-shadow:2px 3px 8px -3px rgba(20,40,70,.55),inset -3px 0 5px -3px rgba(0,0,0,.4);background:linear-gradient(90deg,${c1},${c2})">
+    return `<div data-act="openBook" data-arg="${i}" title="${esc(b.title)}" style="flex:none;position:relative;width:${w}px;height:140px;border-radius:2px 5px 5px 2px;overflow:hidden;cursor:pointer;box-shadow:2px 3px 8px -3px rgba(20,40,70,.55),inset -3px 0 5px -3px rgba(0,0,0,.4);background:linear-gradient(90deg,${c1},${c2})">
       <div style="position:absolute;top:0;bottom:0;left:3px;width:2px;background:rgba(255,255,255,.25)"></div>
       ${inner}
+      ${badge}
     </div>`;
   }).join('');
   return `
