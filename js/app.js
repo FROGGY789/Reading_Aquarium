@@ -460,6 +460,15 @@ const DEFAULT_STATE = {
 let state = loadState();
 let hatchTimer = null;
 let introTimer = null;
+let reviewTimer = null;
+let _lastRevIndex = -1;   // 문장이 바뀔 때만 등장 애니메이션 재생(단어 탭 리렌더엔 재생 안 함)
+// 지문 복습: 현재 문장을 최소 2초 읽은 뒤에야 '다음'이 열리도록
+function armReviewGate() {
+  ui.revReady = false;
+  _lastRevIndex = -1;
+  clearTimeout(reviewTimer);
+  reviewTimer = setTimeout(() => { ui.revReady = true; render(); }, 2000);
+}
 
 // 화면에만 쓰이는 임시 UI 상태(저장 안 함)
 const ui = {
@@ -471,6 +480,7 @@ const ui = {
   dashClass: '',   // 교사 대시보드: 반별 보기 필터('' = 전체)
   viewClass: '',   // 교사가 학생 미리보기 시 볼 반('' = 공통만)
   presDay: null,   // 핸드폰 발표: 선택한 배포 Day 인덱스
+  revReady: false, // 지문 복습: 현재 문장 2초 경과(다음 버튼 활성)
   acct: { open: false, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false },   // 내 계정(비번 변경/탈퇴)
   present: { on: false, i: 0, sents: [], title: '' }   // 수업용 전체화면 발표(PPT처럼 한 문장씩)
 };
@@ -659,7 +669,7 @@ const actions = {
 
   startTask(t) {
     if (!taskAvailable(t)) return;
-    if (t === 'review') set({ screen: 'review', pop: null });
+    if (t === 'review') { armReviewGate(); set({ screen: 'review', pop: null, revIndex: 0 }); }
     else if (t === 'preview') set({ screen: 'preview', pop: null });   // 3단계 난이도 선택
     else set({ screen: 'quiz', quizTask: t, quizQi: 0, picks: {}, inputs: {}, checked: {} });
   },
@@ -682,6 +692,13 @@ const actions = {
   },
   tapWord(w) { set({ pop: state.pop === w ? null : w }); },
   reviewDone() { completeTask('review'); },
+  reviewNext() {
+    if (!ui.revReady) return;   // 2초 전에는 무시
+    const total = passageToReviewSentences(dayPassage(activeDay())).length;
+    if ((state.revIndex || 0) >= total - 1) { completeTask('review'); return; }
+    armReviewGate();
+    set({ revIndex: (state.revIndex || 0) + 1, pop: null });
+  },
 
   pickOption(arg) {
     if (state.checked[state.quizQi]) return;
@@ -1470,38 +1487,44 @@ function aquariumHTML() {
 
 /* ---- 지문 복습 ---- */
 function reviewHTML() {
-  const rev = { paragraphs: passageToReview(dayPassage(activeDay())), words: dayVocab(activeDay()) };
+  const words = dayVocab(activeDay());
+  const sents = passageToReviewSentences(dayPassage(activeDay()));
+  const total = sents.length || 1;
+  const i = Math.min(state.revIndex || 0, total - 1);
+  const last = i >= total - 1;
+  const sentence = sents[i] || '';
+  const animate = _lastRevIndex !== i; _lastRevIndex = i;   // 문장 바뀔 때만 페이드
+
   const wordStyle = active => `background:${active ? '#2f74e6' : '#e7f0fd'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #2f74e6;border-radius:3px;padding:0 3px;cursor:pointer`;
-  const pop = state.pop && rev.words[state.pop] ? Object.assign({ word: state.pop }, rev.words[state.pop]) : null;
+  const sentHTML = esc(sentence).replace(/\[([^\]]+)\]/g, (m, w) =>
+    words[w]
+      ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wordStyle(state.pop === w)}">${esc(w)}</span>`
+      : esc(w));
+  const pop = state.pop && words[state.pop] && sentence.includes('[' + state.pop + ']')
+    ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `
-    <div style="font-family:'IBM Plex Sans KR',sans-serif;background:#14243f;color:#fff;border-radius:14px;padding:13px 15px;margin:0 0 16px;box-shadow:0 14px 30px -12px rgba(0,0,0,.5)">
+    <div style="font-family:'IBM Plex Sans KR',sans-serif;background:#14243f;color:#fff;border-radius:14px;padding:13px 15px;margin:18px 0 0;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);text-align:left">
       <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.word)}</span><span style="font-size:11px;color:#7fd0e6">${esc(pop.pos)}</span></div>
       <div style="font-size:13px;color:#dbe6f5;margin-top:5px">${esc(pop.def)}</div>
       ${pop.ex ? `<div style="font-size:12px;color:#93a6c2;margin-top:6px;font-style:italic;font-family:'Lora',serif">${esc(pop.ex)}</div>` : ''}
     </div>` : '';
 
-  // [단어] 토큰 → 탭 가능한 span, 팝오버는 탭한 단어가 속한 문단 아래 표시
-  let paras = '';
-  rev.paragraphs.forEach((p, pi) => {
-    const isLast = pi === rev.paragraphs.length - 1;
-    const html = esc(p).replace(/\[([^\]]+)\]/g, (m, w) =>
-      rev.words[w]
-        ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wordStyle(state.pop === w)}">${esc(w)}</span>`
-        : esc(w));
-    const hasActive = state.pop && p.includes('[' + state.pop + ']');
-    paras += `<p style="margin:0 0 ${isLast && !hasActive ? 0 : 14}px">${html}</p>`;
-    if (hasActive) paras += popHTML;
-  });
+  const btn = ui.revReady
+    ? `<button data-act="reviewNext" style="width:100%;border:none;background:${last ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${last ? '복습 완료 ✓' : '다음 문장 →'}</button>`
+    : `<button disabled style="width:100%;border:none;background:#c3d2e6;color:#fff;font-size:13.5px;font-weight:600;padding:14px;border-radius:15px;cursor:default">잠깐 읽어볼까요… ⏳</button>`;
 
-  return `<div style="padding:${topPad()} 0 40px">
-    <div style="padding:0 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+  return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:${topPad()} 20px 24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <div data-act="goHome" style="display:flex;align-items:center;gap:8px;cursor:pointer"><div style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center">←</div><span style="font-size:13px;font-weight:600;color:#14243f">지문 복습</span></div>
-      <div style="font-size:11px;color:#7d8aa0">단어를 탭해보세요</div>
+      <div style="font-size:12px;font-weight:700;color:#7d8aa0">${i + 1} / ${total}</div>
     </div>
-    <div style="padding:16px 22px 0;font-family:'Lora',serif;font-size:18px;line-height:2;color:#26303f">
-      ${paras}
+    <div style="height:5px;border-radius:3px;background:#e7edf5;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:${Math.round((i + 1) / total * 100)}%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:3px;transition:width .3s"></div></div>
+    <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;padding:10px 4px">
+      <div style="font-family:'Lora',serif;font-size:23px;line-height:1.75;color:#26303f;text-align:center;${animate ? 'animation:fadeup .35s ease' : ''}">${sentHTML}</div>
+      ${popHTML}
     </div>
-    <div style="padding:26px 20px 0"><button data-act="reviewDone" style="width:100%;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:600;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f57c4;cursor:pointer">복습 완료 ✓</button></div>
+    <div style="font-size:11px;color:#9aa8bd;text-align:center;margin-bottom:10px">밑줄 친 단어를 탭하면 뜻이 나와요</div>
+    ${btn}
   </div>`;
 }
 

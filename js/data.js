@@ -184,6 +184,18 @@ function passageToReview(passage) {
     .replace(/\n\s*-{3,}\s*\n/g, '\n\n')
     .split(/\n\s*\n/).map(p => p.trim().replace(/\s*\n\s*/g, ' ')).filter(Boolean);
 }
+// 지문 → 문장 배열 ([단어] 토큰 유지 — 지문 복습 팝오버용). 문단 순서 유지.
+function passageToReviewSentences(passage) {
+  const out = [];
+  passageToReview(passage).forEach(para => {
+    const p = (para || '').trim();
+    if (!p) return;
+    const parts = p.match(/[^.!?…]+(?:[.!?…]+["'”’)\]]*|$)/g);
+    if (parts) parts.forEach(s => { const t = s.trim(); if (t) out.push(t); });
+    else out.push(p);
+  });
+  return out;
+}
 // 지문 → 문장 배열 (수업용 전체화면 발표: 한 화면에 한 문장). 대괄호 제거, 문단 순서 유지.
 function passageToSentences(passage) {
   const out = [];
