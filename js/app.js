@@ -332,8 +332,24 @@ async function grantReward(id, eggs, xp) {
   render();
 }
 // 오늘 날짜와 같거나 가장 가까운 과거 Day를 선택(모두 미래면 첫 Day)
+// 지금 화면이 '어느 반' 기준으로 콘텐츠를 볼지. null = 필터 없음(교사 대시보드/로그인 전)
+function viewingClass() {
+  if (isTeacherUser() && ui.asStudent) return ui.viewClass || '';        // 교사: 학생 미리보기(반 선택)
+  if (auth && auth.user && !auth.user.is_teacher) return auth.user.class || '';  // 실제 학생: 자기 반
+  return null;
+}
+// Day가 이 반에게 보이는가: 대상 반이 없으면(공통) 모두에게, 있으면 그 반에게만
+function dayMatchesClass(d, cls) {
+  const dc = ((d && d.class) || '').trim();
+  return !dc || dc === cls;
+}
 function activeDay() {
-  const days = contentSource().days.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  let days = contentSource().days.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const cls = viewingClass();
+  if (cls !== null) {
+    const m = days.filter(d => dayMatchesClass(d, cls));
+    if (m.length) days = m;   // 내 반+공통이 있으면 그걸로, 하나도 없으면 안전하게 전체
+  }
   const today = todayKey();
   const past = days.filter(d => (d.date || '') <= today);
   return past.length ? past[past.length - 1] : days[0];
@@ -394,10 +410,14 @@ const ui = {
   pending: [], grantBusy: '',   // 교사: 가입 대기 목록 / 부여 진행중 표시
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
   dashClass: '',   // 교사 대시보드: 반별 보기 필터('' = 전체)
+  viewClass: '',   // 교사가 학생 미리보기 시 볼 반('' = 공통만)
   present: { on: false, i: 0, sents: [], title: '' }   // 수업용 전체화면 발표(PPT처럼 한 문장씩)
 };
 // 학생 화면 상단 여백: 교사 미리보기(토글 있음)일 때만 넉넉히, 실제 학생은 좁게
-function topPad() { return isTeacherUser() ? '52px' : '28px'; }
+function topPad() {
+  if (isTeacherUser() && ui.asStudent) return classes().length ? '94px' : '52px';  // 미리보기: 역할토글+반선택 바 공간
+  return isTeacherUser() ? '52px' : '28px';
+}
 let ed = null;  // 콘텐츠 편집기 상태 {dayIndex, day(편집용 형태)}
 let gEd = null; // 전역 설정 편집(학생 명단·Supabase)
 
@@ -541,8 +561,9 @@ function canCheck() {
  * 액션
  * ========================================================= */
 const actions = {
-  setRoleStudent() { ui.asStudent = true; render(); },   // 교사: 학생 화면 미리보기
+  setRoleStudent() { ui.asStudent = true; if (!ui.viewClass) ui.viewClass = classes()[0] || ''; set({ screen: 'home' }); },   // 교사: 학생 화면 미리보기
   setRoleTeacher() { ui.asStudent = false; render(); },
+  setViewClass(arg) { ui.viewClass = arg || ''; set({ screen: 'home', pop: null }); },   // 교사 미리보기: 볼 반 선택
 
   startApp() {
     if (state.introLeaving) return;
@@ -903,6 +924,21 @@ function roleToggleHTML() {
   return `<div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:3px;background:rgba(11,33,64,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:999px;padding:3px;box-shadow:0 4px 14px -6px rgba(0,0,0,.5)">
     <div data-act="setRoleStudent" style="${tab(ui.asStudent)}">학생</div>
     <div data-act="setRoleTeacher" style="${tab(!ui.asStudent)}">교사</div>
+  </div>`;
+}
+
+// 교사가 학생 미리보기 중일 때: 어느 반의 콘텐츠를 볼지 고르는 바(상단)
+function previewClassBarHTML() {
+  const cs = classes();
+  if (!cs.length) return '';
+  const chip = (c, label) => {
+    const on = (ui.viewClass || '') === c;
+    return `<div data-act="setViewClass" data-arg="${esc(c)}" style="flex:none;font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:999px;cursor:pointer;white-space:nowrap;color:${on ? '#14243f' : '#eaf2ff'};background:${on ? '#fff' : 'rgba(255,255,255,.16)'};border:1px solid ${on ? '#fff' : 'rgba(255,255,255,.28)'}">${esc(label)}</div>`;
+  };
+  return `<div style="position:absolute;top:46px;left:10px;right:10px;z-index:59;display:flex;align-items:center;gap:6px;overflow-x:auto;padding:6px 8px;background:rgba(11,33,64,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:999px;box-shadow:0 4px 14px -6px rgba(0,0,0,.5)">
+    <span style="flex:none;font-size:10.5px;font-weight:700;color:#bcd4f5;padding-left:5px">미리보기 반</span>
+    ${chip('', '공통')}
+    ${cs.map(c => chip(c, c)).join('')}
   </div>`;
 }
 
@@ -1431,7 +1467,9 @@ function resultHTML() {
 // 서가: 지문이 있는 Day들을 책 제목으로 묶어 한 권씩 (여러 Day = 여러 챕터)
 function allBooks() {
   const map = {};
+  const cls = viewingClass();
   contentSource().days.forEach(d => {
+    if (cls !== null && !dayMatchesClass(d, cls)) return;   // 다른 반 책은 서가에서 제외(공통은 포함)
     const p = dayPassage(d);
     if (!p.trim()) return;
     const title = ((d.book && d.book.title) || '').trim() || '제목 없는 책';
@@ -1941,6 +1979,10 @@ function render() {
 
   let html = '';
   if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
+  if (isTeacherUser() && ui.asStudent && state.role === 'student'
+      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead'].includes(state.screen)) {
+    html += previewClassBarHTML();  // 미리보기: 반 선택 바(몰입 화면 제외)
+  }
 
   if (state.hatchStage === 'cracking') html += hatchCinematicHTML();
 

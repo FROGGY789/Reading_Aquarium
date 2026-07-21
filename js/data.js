@@ -220,6 +220,7 @@ function dayToEdit(day) {
   return {
     date: day.date || _todayKey(),
     label: day.label || '',
+    classTarget: day.class || '',   // 대상 반('' = 공통/전체)
     quote: Object.assign({ en: '', ko: '', teacher: '', comment: '' }, day.quote || {}),
     book: Object.assign({ title: '', author: '', chapter: '', cover: '', spine: '' }, day.book || {}),
     passageText,
@@ -253,7 +254,7 @@ function editToDay(e) {
       .filter(q => q.type === 'mc' ? q.options.length >= 2 : q.accept.length >= 1);
   });
   const previewCore = (e.previewCoreText || '').split('\n').map(t => t.trim()).filter(Boolean);
-  return {
+  const out = {
     date: e.date || _todayKey(),
     label: (e.label || '').trim(),
     quote: { en: e.quote.en.trim(), ko: e.quote.ko.trim(), teacher: e.quote.teacher.trim(), comment: e.quote.comment.trim() },
@@ -263,6 +264,9 @@ function editToDay(e) {
     previewCore,
     quiz
   };
+  const cls = (e.classTarget || '').trim();
+  if (cls) out.class = cls;   // 대상 반이 있으면 저장('' 공통은 필드 생략)
+  return out;
 }
 
 /* ---- 지문 예습 3단계 헬퍼 ---- */
