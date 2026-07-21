@@ -331,6 +331,54 @@ async function grantReward(id, eggs, xp) {
   } catch (e) { ui.grantBusy = ''; ui.recError = e.message; }
   render();
 }
+
+/* ---- 계정 관리(비밀번호 변경 · 탈퇴 · 교사의 학생 삭제) ---- */
+// 본인 비밀번호 변경(Supabase Auth: 세션이 유효하면 이전 비번 없이 변경)
+async function changePassword() {
+  const p1 = ui.acct.pw1, p2 = ui.acct.pw2;
+  if (!p1 || p1.length < 6) { ui.acct.msg = '❌ 새 비밀번호는 6자 이상이어야 해요'; render(); return; }
+  if (p1 !== p2) { ui.acct.msg = '❌ 두 비밀번호가 서로 달라요'; render(); return; }
+  ui.acct.busy = true; ui.acct.msg = '변경 중...'; render();
+  try {
+    const res = await sbFetch('/auth/v1/user', { method: 'PUT', body: JSON.stringify({ password: p1 }) });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.msg || e.error_description || ('HTTP ' + res.status)); }
+    ui.acct.pw1 = ''; ui.acct.pw2 = ''; ui.acct.msg = '✅ 비밀번호를 바꿨어요!';
+  } catch (e) { ui.acct.msg = '❌ 실패: ' + e.message; }
+  ui.acct.busy = false; render();
+}
+// user_id의 학습 데이터 일괄 삭제(프로필은 마지막). 로그인 계정(auth.users)은 관리자만 완전 삭제.
+async function purgeUserData(id) {
+  await sbFetch('/rest/v1/er_grants?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+  await sbFetch('/rest/v1/er_records?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+  await sbFetch('/rest/v1/er_progress?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+  const res = await sbFetch('/rest/v1/er_profiles?id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+  if (!res.ok) throw new Error('프로필 삭제 실패 (HTTP ' + res.status + ')');
+}
+// 본인 탈퇴: 데이터 삭제 후 로그아웃
+async function deleteOwnAccount() {
+  if (!auth) return;
+  ui.acct.busy = true; ui.acct.msg = '탈퇴 처리 중...'; render();
+  try {
+    await purgeUserData(auth.user.id);
+    try { localStorage.removeItem(storeKey()); } catch (e) { /* 무시 */ }
+    ui.acct = { open: false, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false };
+    doLogout(false);
+    ui.authMsg = '계정에서 탈퇴했어요. 그동안 이용해 주셔서 고마워요 🐠';
+    render();
+  } catch (e) { ui.acct.busy = false; ui.acct.msg = '❌ 실패: ' + e.message; render(); }
+}
+// 교사: 학생 삭제(확인 → 데이터 정리 → 목록 갱신)
+async function teacherDeleteStudent(id) {
+  const p = (ui.profiles || []).find(x => x.id === id) || {};
+  const name = p.name || '이 학생';
+  if (!confirm(`'${name}' 학생의 계정 기록을 삭제할까요?\n프로필·학습기록·진행·보상이 모두 지워집니다. (되돌릴 수 없어요)`)) return;
+  ui.grantBusy = 'del:' + id; render();
+  try {
+    await purgeUserData(id);
+    ui.grantBusy = ''; ui.recError = '';
+    await loadRecords();
+  } catch (e) { ui.grantBusy = ''; ui.recError = e.message; render(); }
+}
 // 오늘 날짜와 같거나 가장 가까운 과거 Day를 선택(모두 미래면 첫 Day)
 // 지금 화면이 '어느 반' 기준으로 콘텐츠를 볼지. null = 필터 없음(교사 대시보드/로그인 전)
 function viewingClass() {
@@ -411,6 +459,7 @@ const ui = {
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
   dashClass: '',   // 교사 대시보드: 반별 보기 필터('' = 전체)
   viewClass: '',   // 교사가 학생 미리보기 시 볼 반('' = 공통만)
+  acct: { open: false, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false },   // 내 계정(비번 변경/탈퇴)
   present: { on: false, i: 0, sents: [], title: '' }   // 수업용 전체화면 발표(PPT처럼 한 문장씩)
 };
 // 학생 화면 상단 여백: 교사 미리보기(토글 있음)일 때만 넉넉히, 실제 학생은 좁게
@@ -690,6 +739,15 @@ const actions = {
   pickClass(arg) { ui.li.classId = (ui.li.classId === arg) ? '' : arg; ui.authMsg = ''; render(); },  // 가입: 반 칩 선택/해제
   setDashClass(arg) { ui.dashClass = arg || ''; render(); },  // 대시보드: 반별 필터
 
+  /* 내 계정(비밀번호 변경 · 탈퇴) */
+  openAccount() { ui.acct = { open: true, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false }; render(); },
+  closeAccount() { ui.acct.open = false; ui.acct.confirmDel = false; render(); },
+  changePw() { changePassword(); },
+  askDeleteSelf() { ui.acct.confirmDel = true; ui.acct.msg = ''; render(); },
+  cancelDeleteSelf() { ui.acct.confirmDel = false; render(); },
+  deleteSelf() { deleteOwnAccount(); },
+  delStudent(arg) { teacherDeleteStudent(arg); },  // 교사: 학생 삭제
+
   teacherTabDash() { ui.teacherTab = 'dash'; render(); if (sbConf() && isTeacherUser()) loadRecords(); },
   teacherTabContent() { ui.teacherTab = 'content'; ensureEditor(); render(); },
   dashRefresh() { loadRecords(); },
@@ -939,6 +997,52 @@ function previewClassBarHTML() {
     <span style="flex:none;font-size:10.5px;font-weight:700;color:#bcd4f5;padding-left:5px">미리보기 반</span>
     ${chip('', '공통')}
     ${cs.map(c => chip(c, c)).join('')}
+  </div>`;
+}
+
+// 내 계정(비밀번호 변경 · 로그아웃 · 회원 탈퇴)
+function accountHTML() {
+  const u = (auth && auth.user) || {};
+  const a = ui.acct;
+  const infoRow = (k, v) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0"><span style="color:#7d8aa0">${k}</span><b style="color:#14243f">${v}</b></div>`;
+  return `<div style="position:absolute;inset:0;z-index:70;overflow-y:auto;background:rgba(6,20,40,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)">
+    <div data-act="closeAccount" style="position:absolute;inset:0"></div>
+    <div style="position:relative;max-width:420px;margin:0 auto;min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px 18px">
+      <div style="width:100%;background:#fff;border-radius:22px;padding:20px 18px 18px;box-shadow:0 20px 50px -18px rgba(0,0,0,.6)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:16px;font-weight:800;color:#14243f">내 계정</div>
+          <div data-act="closeAccount" style="font-size:16px;color:#9aa8bd;cursor:pointer;padding:4px 8px">✕</div>
+        </div>
+        <div style="background:#f4f8fd;border:1px solid #e2e9f2;border-radius:14px;padding:12px 14px;margin-bottom:16px">
+          ${infoRow('이름', esc(u.name || ''))}
+          ${infoRow('아이디', esc(u.username || ''))}
+          ${u.class || u.studentNo ? infoRow('반 · 학번', `${esc(u.class || '-')}${u.studentNo ? ' · ' + esc(u.studentNo) : ''}`) : ''}
+          <div style="font-size:10.5px;color:#b8c2d2;margin-top:5px">아이디는 로그인에 쓰여서 바꿀 수 없어요.</div>
+        </div>
+
+        <div style="font-size:12.5px;font-weight:700;color:#14243f;margin-bottom:7px">🔑 비밀번호 변경</div>
+        <input id="acct-pw1" class="ed-input" type="password" value="${esc(a.pw1)}" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password" style="margin-bottom:6px">
+        <input id="acct-pw2" class="ed-input" type="password" value="${esc(a.pw2)}" placeholder="새 비밀번호 확인" autocomplete="new-password">
+        <button data-act="changePw" class="ed-btn primary" style="width:100%;margin-top:9px;${a.busy ? 'opacity:.6' : ''}">${a.busy && !a.confirmDel ? '처리 중...' : '비밀번호 변경'}</button>
+        ${a.msg ? `<div style="font-size:12px;margin-top:9px;padding:9px 11px;border-radius:10px;line-height:1.5;background:${a.msg.startsWith('❌') ? '#fbe4e2' : '#e0f3ea'};color:${a.msg.startsWith('❌') ? '#b23a32' : '#1f7a4d'}">${esc(a.msg)}</div>` : ''}
+
+        <div style="height:1px;background:#eef2f8;margin:16px 0"></div>
+
+        ${a.confirmDel ? `
+          <div style="background:#fbe4e2;border:1px solid #f3c7c2;border-radius:12px;padding:12px 13px">
+            <div style="font-size:12.5px;font-weight:700;color:#b23a32">정말 탈퇴할까요?</div>
+            <div style="font-size:11.5px;color:#8a4b45;line-height:1.6;margin-top:4px">내 아쿠아리움·경험치·학습기록이 모두 삭제되고 되돌릴 수 없어요.</div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button data-act="cancelDeleteSelf" class="ed-btn ghost" style="flex:1">취소</button>
+              <button data-act="deleteSelf" class="ed-btn danger" style="flex:1;${a.busy ? 'opacity:.6' : ''}">${a.busy ? '처리 중...' : '탈퇴할게요'}</button>
+            </div>
+          </div>` : `
+          <div style="display:flex;gap:8px">
+            <button data-act="doLogout" class="ed-btn ghost" style="flex:1">로그아웃</button>
+            <button data-act="askDeleteSelf" class="ed-btn danger" style="flex:1">회원 탈퇴</button>
+          </div>`}
+      </div>
+    </div>
   </div>`;
 }
 
@@ -1204,7 +1308,8 @@ function homeHTML() {
     ${shelfHTML()}
 
     ${authMode() ? `
-    <div style="margin-top:26px;text-align:center">
+    <div style="margin-top:26px;display:flex;justify-content:center;gap:8px">
+      <div data-act="openAccount" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#4a5a72;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">⚙️ 내 계정</div>
       <div data-act="doLogout" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#7d8aa0;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">↩︎ 로그아웃</div>
     </div>` : ''}
 
@@ -1780,6 +1885,8 @@ function liveDashHTML(day) {
       ${[10, 30, 50].map(x => `<button data-act="grant" data-arg="${id}:0:${x}" style="border:1px solid #cfe0f5;background:#eef5ff;color:#2f74e6;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">+${x}</button>`).join('')}
       <span style="font-size:10px;font-weight:700;color:#7d8aa0;width:20px;margin-left:6px">알</span>
       ${[1, 3, 5].map(e => `<button data-act="grant" data-arg="${id}:${e}:0" style="border:1px solid #f0d79a;background:#fff7e6;color:#b0851f;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">🥚+${e}</button>`).join('')}
+      <div style="flex:1"></div>
+      <button data-act="delStudent" data-arg="${id}" title="학생 계정 삭제" style="border:1px solid #f3c7c2;background:#fff;color:#c0392b;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">${ui.grantBusy === 'del:' + id ? '삭제 중…' : '🗑 삭제'}</button>
     </div>` : '';
 
   const rows = shown.map(s => {
@@ -2011,6 +2118,7 @@ function render() {
   else if (state.role === 'student' && needProfile()) html += profilePickerHTML();
   else if (state.intro && state.role === 'student') html += introHTML();
 
+  if (auth && ui.acct.open) html += accountHTML();  // 내 계정(비번 변경/탈퇴)
   if (ui.present.on) html += presentHTML();  // 수업용 전체화면 발표(최상단)
 
   document.getElementById('app').innerHTML = html;
@@ -2066,6 +2174,8 @@ document.addEventListener('fullscreenchange', () => {
 appEl.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'quiz-input' || el.id === 'gh-token') return;
+  if (el.id === 'acct-pw1') { ui.acct.pw1 = el.value; return; }
+  if (el.id === 'acct-pw2') { ui.acct.pw2 = el.value; return; }
   if (el.id === 'li-id') { ui.li.id = el.value; return; }
   if (el.id === 'li-pw') { ui.li.pw = el.value; return; }
   if (el.id === 'li-name') { ui.li.name = el.value; return; }
