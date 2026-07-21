@@ -17,7 +17,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 let content = null;         // { version, students[], supabase{}, days[] }
 let ed = null;              // { dayIndex, day(편집형) }
 let gEd = null;             // { studentsText, sbUrl, sbKey }
-const ui = { tab: 'passage', msg: '', msgType: '', busy: false, loaded: false, expand: false, expandFont: 17 };
+const ui = { tab: 'passage', msg: '', msgType: '', busy: false, loaded: false, expand: false, expandFont: 17, coreMode: 'subject', corePickOpen: false };
 
 /* ---------- 로드 ---------- */
 async function boot() {
@@ -102,6 +102,25 @@ const actions = {
   },
   addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', explain: '' }); render(); },
   delQ(arg) { const [cat, i] = arg.split(':'); ed.day.quiz[cat].splice(Number(i), 1); render(); },
+  /* 핵심 문장(리치) 편집 */
+  coreMode(m) { ui.coreMode = m; render(); },
+  coreTogglePicker() { ui.corePickOpen = !ui.corePickOpen; render(); },
+  coreAdd(arg) {   // 지문의 idx번째 문장을 핵심 문장으로 추가
+    const s = passageToSentences(ed.day.passageText)[Number(arg)];
+    if (!s) return;
+    ed.day.core = ed.day.core || [];
+    ed.day.core.push({ text: s, subject: [], verb: [], bold: [], italic: [], ko: '' });
+    render();
+  },
+  coreAddBlank() { ed.day.core = ed.day.core || []; ed.day.core.push({ text: '', subject: [], verb: [], bold: [], italic: [], ko: '' }); render(); },
+  coreDelete(arg) { ed.day.core.splice(Number(arg), 1); render(); },
+  coreWord(arg) {   // arg = "문장i:단어j" — 현재 모드 마크 토글
+    const [si, wi] = arg.split(':').map(Number);
+    const c = ed.day.core[si]; if (!c) return;
+    if (ui.coreMode === 'clear') { ['subject', 'verb', 'bold', 'italic'].forEach(k => { c[k] = (c[k] || []).filter(x => x !== wi); }); }
+    else { const arr = c[ui.coreMode] = c[ui.coreMode] || []; const p = arr.indexOf(wi); if (p >= 0) arr.splice(p, 1); else arr.push(wi); }
+    render();
+  },
   saveToken() {
     const el = document.getElementById('gh-token'); const v = (el.value || '').trim();
     if (v) { localStorage.setItem(TOKEN_KEY, v); toast('토큰을 저장했어요.', 'ok'); }
@@ -224,7 +243,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v10 (지문복습 한문장씩)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v11 (핵심문장 편집기)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -314,7 +333,6 @@ function passageTab(d) {
 
 /* ---- 탭 2: 지문 예습 (살살·보통·버닝) ---- */
 function previewTab(d) {
-  const coreN = (d.previewCoreText || '').split('\n').map(s => s.trim()).filter(Boolean).length;
   return `<div class="card" style="background:#f4faf6;border-color:#cfe9da">
     <h2>지문 예습 3단계 안내</h2>
     <div class="hint" style="margin:0">
@@ -325,16 +343,63 @@ function previewTab(d) {
     </div>
   </div>
   <div class="cols">
-    <div class="card">
-      <h2>🟡 보통 · 핵심 문장 <span style="font-size:12px;color:#7d8aa0;font-weight:600">${coreN}문장</span></h2>
-      <div class="hint">한 줄에 한 문장씩. 비워두면 지문 앞부분 문장 6개가 자동으로 쓰여요.</div>
-      <textarea class="inp" data-bind="previewCoreText" rows="8" placeholder="The sea has always drawn people toward its edge.&#10;Sailors spoke of a restless horizon.">${esc(d.previewCoreText)}</textarea>
-    </div>
+    ${coreEditor(d)}
     <div class="card">
       <h2>🔴 버닝 · 이해도 확인 (comprehension)</h2>
       <div class="hint">지문 전체를 읽은 뒤 풀 문항이에요. 비워두면 읽기만으로 완료돼요.</div>
       ${qcat('preview')}
     </div>
+  </div>`;
+}
+
+// 🟡 보통 · 핵심 문장 리치 편집기(주어/동사 표시 + 볼드/이탤릭 + 해석)
+function coreEditor(d) {
+  const core = d.core || [];
+  const modeBtn = (m, label, color) => `<button class="btn sm" data-act="coreMode" data-arg="${m}" style="background:${ui.coreMode === m ? color : '#eef2f8'};color:${ui.coreMode === m ? '#fff' : '#4a5a72'};border:1px solid ${ui.coreMode === m ? color : '#e2e9f2'}">${label}</button>`;
+  const chip = (si, wi, w, c) => {
+    const isS = (c.subject || []).includes(wi), isV = (c.verb || []).includes(wi), isB = (c.bold || []).includes(wi), isI = (c.italic || []).includes(wi);
+    let bg = '#fff', bd = '#e2e9f2';
+    if (isS) { bg = '#dbeafe'; bd = '#2f74e6'; }
+    if (isV) { bg = '#dcfce7'; bd = '#2fa36b'; }
+    if (isS && isV) { bg = 'linear-gradient(90deg,#dbeafe,#dcfce7)'; }
+    return `<span data-act="coreWord" data-arg="${si}:${wi}" style="display:inline-block;margin:2px;padding:4px 8px;border-radius:8px;cursor:pointer;border:1px solid ${bd};background:${bg};color:#14243f;font-weight:${isB ? '800' : '500'};font-style:${isI ? 'italic' : 'normal'};font-family:'Lora',serif;font-size:15px">${esc(w)}</span>`;
+  };
+  const cards = core.map((c, si) => {
+    const toks = (c.text || '').split(/\s+/).filter(Boolean);
+    return `<div class="qcard">
+      <div class="row" style="align-items:center;margin-bottom:8px">
+        <span style="flex:none;font-size:12px;font-weight:700;color:#7d8aa0">문장 ${si + 1}</span>
+        <input class="inp" style="flex:1" data-bind="core.${si}.text" data-rerender="1" value="${esc(c.text)}" placeholder="핵심 문장(영어)">
+        <button class="btn danger sm" data-act="coreDelete" data-arg="${si}">삭제</button>
+      </div>
+      ${toks.length ? `<div style="margin-bottom:8px;line-height:2.1">${toks.map((w, wi) => chip(si, wi, w, c)).join('')}</div>` : '<div class="hint" style="margin:0 0 8px">문장을 입력하고 <b>Enter</b>(또는 다른 곳 클릭) 하면 단어를 클릭해 표시할 수 있어요.</div>'}
+      <input class="inp" data-bind="core.${si}.ko" value="${esc(c.ko)}" placeholder="우리말 해석 (문장 작문·채점에 사용)">
+    </div>`;
+  }).join('') || '<div class="empty">아직 핵심 문장이 없어요. 아래에서 지문 문장을 골라 추가하세요.</div>';
+  const psents = passageToSentences(d.passageText);
+  const picker = ui.corePickOpen ? `
+    <div style="margin-top:8px;border:1px solid #e2e9f2;border-radius:12px;padding:8px 10px;max-height:240px;overflow:auto;background:#fafcff">
+      ${psents.length ? psents.map((s, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f4f9">
+        <button class="btn ghost sm" data-act="coreAdd" data-arg="${i}" style="flex:none">＋</button>
+        <span style="font-size:13px;color:#4a5a72;font-family:'Lora',serif">${esc(s)}</span>
+      </div>`).join('') : '<div class="hint" style="margin:0">지문이 비어 있어요. 지문 탭에서 먼저 입력하세요.</div>'}
+    </div>` : '';
+  return `<div class="card">
+    <h2>🟡 보통 · 핵심 문장 <span style="font-size:12px;color:#7d8aa0;font-weight:600">${core.length}문장</span></h2>
+    <div class="hint"><b>모드를 고르고 단어를 클릭</b>해 표시하세요. 🔵주어 · 🟢동사(예습 '보통' 채점에 사용) · 볼드·이탤릭(강조). 해석은 '문장 작문'에 쓰여요. 비워두면 지문 앞 문장 6개가 자동으로 쓰여요.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0">
+      ${modeBtn('subject', '🔵 주어', '#2f74e6')}
+      ${modeBtn('verb', '🟢 동사', '#2fa36b')}
+      ${modeBtn('bold', '볼드', '#14243f')}
+      ${modeBtn('italic', '이탤릭', '#8a5fd6')}
+      ${modeBtn('clear', '🧽 지우개', '#b23a32')}
+    </div>
+    ${cards}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn ghost sm" data-act="coreTogglePicker">${ui.corePickOpen ? '▲ 닫기' : '📄 지문에서 문장 고르기'}</button>
+      <button class="btn ghost sm" data-act="coreAddBlank">＋ 직접 입력</button>
+    </div>
+    ${picker}
   </div>`;
 }
 
