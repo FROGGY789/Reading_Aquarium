@@ -415,11 +415,57 @@ function activeDay() {
 }
 function dayQuiz(cat) { return (activeDay().quiz && activeDay().quiz[cat]) || []; }
 
+/* ---- 플래시카드(예습 살살 · 어휘 복습) 공용 헬퍼 ---- */
+// 오늘(activeDay) 다음의 Day — 예습 살살에 쓰는 '다음 수업' (반 필터 반영)
+function nextDayAfterActive() {
+  const cur = activeDay();
+  const cls = viewingClass();
+  let days = contentSource().days.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (cls !== null) { const m = days.filter(d => dayMatchesClass(d, cls)); if (m.length) days = m; }
+  const after = days.filter(d => (d.date || '') > (cur.date || ''));
+  return after.length ? after[0] : null;
+}
+// 브라우저 내장 음성으로 영어 발음 재생
+function speak(text) {
+  try {
+    if (!window.speechSynthesis || !text) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 0.9;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  } catch (e) { /* 미지원 브라우저 무시 */ }
+}
+// 어휘 복습 힌트: 그 단어가 들어있던 지문 문장(영어)
+function wordHintSentence(word) {
+  const sents = passageToReviewSentences(dayPassage(activeDay()));
+  const hit = sents.find(s => s.includes('[' + word + ']'))
+    || sents.find(s => new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(stripBrackets(s)));
+  return hit ? stripBrackets(hit) : '';
+}
+// 플래시카드 덱: preview=다음날 어휘 10개 / vocab=오늘 어휘(선택 개수)
+function flashcardCards(mode) {
+  if (mode === 'preview') return dayVocabCards(nextDayAfterActive() || activeDay()).slice(0, 10);
+  return dayVocabCards(activeDay()).slice(0, state.vrCount || 0);
+}
+// 현재 보고 있는 플래시카드
+function fcCurrentCard() {
+  const mode = state.screen === 'previewVocab' ? 'preview' : 'vocab';
+  const cards = flashcardCards(mode);
+  return cards[Math.min(state.fcI || 0, cards.length - 1)] || null;
+}
+// '몰라요' 단어를 내 단어장에 담기(중복 제거)
+function addToWordbook(card) {
+  if (!card || !card.word) return;
+  const wb = state.wordbook || (state.wordbook = []);
+  if (wb.some(w => w.word === card.word)) return;
+  wb.push({ word: card.word, def: card.def || '', pos: card.pos || '', ex: card.ex || '', ts: Date.now() });
+}
+
 // 오늘 할 일 구성(문항이 있는 카테고리만 노출)
 const MAIN_TASKS = [
   { key: 'review',   icon: '📖',  bg: '#e0f3ea', sub: () => '단어 팝오버로 다시 읽기' },
   { key: 'sentence', icon: '🧩',  bg: '#efe7fd', sub: n => `구조 분석 + 해석 ${n}문항` },
-  { key: 'vocab',    icon: '🔤',  bg: '#fdeede', sub: n => `뜻·빈칸·스펠링 ${n}문항` },
+  { key: 'vocab',    icon: '🔤',  bg: '#fdeede', sub: () => `플래시카드로 단어 복습 (알아요/몰라요)` },
   { key: 'preview',  icon: '👀',  bg: '#e7f0fd', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
 ];
 const BONUS_TASKS = [
@@ -429,6 +475,7 @@ const BONUS_TASKS = [
 ];
 function taskAvailable(key) {
   if (key === 'review') return passageToReview(dayPassage(activeDay())).length > 0;
+  if (key === 'vocab') return dayVocabCards(activeDay()).length > 0;   // 어휘 복습 = 플래시카드
   if (key === 'preview') {
     // 세 난이도 중 하나라도 가능하면 노출 (어휘/핵심문장/지문+이해도)
     const d = activeDay();
@@ -454,7 +501,8 @@ const DEFAULT_STATE = {
   hatchStage: 'idle', hatchSpecies: null,
   pop: null,
   dexOpen: false,
-  readerPage: 0
+  readerPage: 0,
+  wordbook: []              // '몰라요' 한 단어 모음 [{word,def,pos,ex,ts}] (5번에서 클라우드 동기화)
 };
 
 let state = loadState();
@@ -671,18 +719,29 @@ const actions = {
     if (!taskAvailable(t)) return;
     if (t === 'review') { armReviewGate(); set({ screen: 'review', pop: null, revIndex: 0 }); }
     else if (t === 'preview') set({ screen: 'preview', pop: null });   // 3단계 난이도 선택
+    else if (t === 'vocab') set({ screen: 'vocabReview', vrCount: null, fcI: 0, fcFlipped: false, fcHint: false });   // 어휘 복습(플래시카드)
     else set({ screen: 'quiz', quizTask: t, quizQi: 0, picks: {}, inputs: {}, checked: {} });
   },
-  // 지문 예습 난이도 선택
-  previewEasy() { if (dayVocabCards(activeDay()).length) set({ screen: 'previewVocab', pvIndex: 0 }); },
+  // 지문 예습 난이도 선택 — 살살: 다음날 어휘 플래시카드
+  previewEasy() { if (flashcardCards('preview').length) set({ screen: 'previewVocab', fcI: 0, fcFlipped: false, fcHint: false }); },
   previewMedium() { set({ screen: 'previewRead' }); },
   previewHard() { set({ screen: 'reader', readerBurning: true, readerPage: 0 }); },
-  pvNext() {
-    const cards = dayVocabCards(activeDay());
-    if (state.pvIndex < cards.length - 1) set({ pvIndex: state.pvIndex + 1 });
-    else completeTask('preview');   // 마지막 카드 → 완료
+  // 어휘 복습: 개수 선택
+  vrPick(n) {
+    const total = dayVocabCards(activeDay()).length;
+    set({ vrCount: n === 'all' ? total : Math.min(Number(n), total), fcI: 0, fcFlipped: false, fcHint: false });
   },
-  pvPrev() { if (state.pvIndex > 0) set({ pvIndex: state.pvIndex - 1 }); },
+  // 플래시카드 공용: 알아요/몰라요(뒤집기+발음) → 다음
+  fcKnow() { const c = fcCurrentCard(); if (!c) return; speak(c.word); set({ fcFlipped: true }); },
+  fcDontKnow() { const c = fcCurrentCard(); if (!c) return; speak(c.word); addToWordbook(c); set({ fcFlipped: true }); },
+  fcSpeak() { const c = fcCurrentCard(); if (c) speak(c.word); },
+  fcHint() { set({ fcHint: !state.fcHint }); },
+  fcNext() {
+    const mode = state.screen === 'previewVocab' ? 'preview' : 'vocab';
+    const cards = flashcardCards(mode);
+    if ((state.fcI || 0) >= cards.length - 1) { completeTask(mode === 'preview' ? 'preview' : 'vocab'); return; }
+    set({ fcI: (state.fcI || 0) + 1, fcFlipped: false, fcHint: false });
+  },
   previewReadDone() { completeTask('preview'); },
   goPreview() { set({ screen: 'preview' }); },
   // 버닝: 리더 끝까지 읽고 → comprehension check(quiz.preview) → 없으면 바로 완료
@@ -1686,7 +1745,7 @@ function readerHTML() {
 /* ---- 지문 예습: 난이도 선택 ---- */
 function previewLevelsHTML() {
   const d = activeDay();
-  const vocabN = dayVocabCards(d).length;
+  const easyN = flashcardCards('preview').length;   // 살살 = 다음 수업 어휘
   const coreN = dayCoreSentences(d).length;
   const compN = dayQuiz('preview').length;
   const card = (act, stage, emoji, color, name, en, desc, disabled) => `
@@ -1711,37 +1770,80 @@ function previewLevelsHTML() {
       <span style="font-size:16px">🎁</span><span style="font-size:11.5px;font-weight:600;color:#8a6412;line-height:1.5">3단계를 <b>모두</b> 완료하면 <b>보너스 경험치</b>를 받아요!</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      ${card('previewEasy', 1, '🟢', '#2fa36b', '살살', 'EASY', vocabN ? `핵심 어휘 ${vocabN}개만 가볍게 훑기` : '오늘은 어휘가 없어요', vocabN === 0)}
+      ${card('previewEasy', 1, '🟢', '#2fa36b', '살살', 'EASY', easyN ? `다음 수업 어휘 ${easyN}개 미리보기 (플래시카드)` : '다음 수업 어휘가 아직 없어요', easyN === 0)}
       ${card('previewMedium', 2, '🟡', '#e0a41a', '보통', 'MEDIUM', coreN ? `핵심 문장 ${coreN}개 읽기` : '읽을 문장이 없어요', coreN === 0)}
       ${card('previewHard', 3, '🔴', '#e2564d', '버닝', 'BURNING', `지문 전체 읽기${compN ? ` + 이해도 확인 ${compN}문항` : ''}`, dayPassage(d).trim() === '')}
     </div>
   </div>`;
 }
 
-/* ---- 지문 예습: 살살(어휘 카드) ---- */
-function previewVocabHTML() {
-  const cards = dayVocabCards(activeDay());
-  const i = Math.min(state.pvIndex || 0, cards.length - 1);
+/* ---- 플래시카드 화면 (예습 살살 · 어휘 복습 공용) ---- */
+function flashcardScreenHTML(mode) {
+  const isPreview = mode === 'preview';
+  const cards = flashcardCards(mode);
+  const total = cards.length || 1;
+  const i = Math.min(state.fcI || 0, total - 1);
   const c = cards[i] || { word: '', pos: '', def: '', ex: '' };
-  const last = i >= cards.length - 1;
-  return `<div style="padding:${topPad()} 20px 40px;min-height:100%;display:flex;flex-direction:column">
+  const last = i >= total - 1;
+  const flipped = !!state.fcFlipped;
+  const inWb = (state.wordbook || []).some(w => w.word === c.word);
+  const badge = isPreview
+    ? `<span style="display:inline-flex;align-items:center;gap:6px;background:#e0f3ea;color:#1f7a4d;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🟢 1단계 살살 · 다음 수업 어휘</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:6px;background:#fdeede;color:#b8480f;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🔤 어휘 복습</span>`;
+  const hintSent = (!isPreview && state.fcHint) ? wordHintSentence(c.word) : '';
+
+  const face = `<div style="width:100%;background:#fff;border:1px solid #e2e9f2;border-radius:22px;padding:30px 22px;text-align:center;box-shadow:0 16px 36px -20px rgba(20,50,90,.6);${flipped ? 'animation:pop .35s ease' : ''}">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+      <div style="font-family:'Lora',serif;font-size:34px;font-weight:600;color:#14243f">${esc(c.word)}</div>
+      <div data-act="fcSpeak" title="발음 듣기" style="width:34px;height:34px;border-radius:50%;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px">🔊</div>
+    </div>
+    ${flipped ? `
+      ${c.pos ? `<div style="font-size:12px;color:#7fb0d8;font-weight:700;margin-top:6px">${esc(c.pos)}</div>` : ''}
+      <div style="height:1px;background:#eef2f8;margin:16px 0"></div>
+      <div style="font-size:18px;color:#26303f;line-height:1.6">${esc(c.def) || '<span style=\"color:#b8c2d2\">뜻이 없어요</span>'}</div>
+      ${c.ex ? `<div style="font-size:14px;color:#93a6c2;margin-top:12px;font-style:italic;font-family:'Lora',serif">${esc(c.ex)}</div>` : ''}
+      ${inWb ? `<div style="margin-top:14px;display:inline-flex;align-items:center;gap:5px;background:#fff0d0;color:#8a6412;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:20px">📒 내 단어장에 담았어요</div>` : ''}
+    ` : `
+      <div style="font-size:12px;color:#b8c2d2;margin-top:14px">뜻을 아는지 아래에서 골라보세요</div>
+      ${hintSent ? `<div style="margin-top:14px;background:#f4f8fd;border:1px solid #dbeafe;border-radius:12px;padding:11px 13px;font-family:'Lora',serif;font-size:14px;color:#3a5578;line-height:1.6">${esc(hintSent)}</div>` : ''}
+    `}
+  </div>`;
+
+  const controls = flipped
+    ? `<button data-act="fcNext" style="width:100%;border:none;background:${last ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${last ? (isPreview ? '예습 완료 ✓' : '복습 완료 ✓') : '다음 →'}</button>`
+    : `${!isPreview ? `<button data-act="fcHint" style="width:100%;border:1.5px solid ${state.fcHint ? '#2f74e6' : '#dbe4ef'};background:#fff;color:${state.fcHint ? '#2f74e6' : '#5f7794'};font-size:12.5px;font-weight:700;padding:10px;border-radius:13px;cursor:pointer;margin-bottom:9px">💡 힌트 — 이 단어가 든 문장 보기</button>` : ''}
+      <div style="display:flex;gap:10px">
+        <button data-act="fcDontKnow" style="flex:1;border:1.5px solid #f3c7c2;background:#fff;color:#c0392b;font-size:15px;font-weight:700;padding:14px;border-radius:15px;cursor:pointer">🤔 몰라요</button>
+        <button data-act="fcKnow" style="flex:1;border:none;background:#2fa36b;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f7a4d;cursor:pointer">🙂 알아요</button>
+      </div>`;
+
+  return `<div style="padding:${topPad()} 20px 30px;min-height:100%;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div data-act="goPreview" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
-      <span style="display:inline-flex;align-items:center;gap:6px;background:#e0f3ea;color:#1f7a4d;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🟢 살살 · 어휘</span>
-      <span style="font-size:12px;font-weight:700;color:#14243f">${i + 1}/${cards.length}</span>
+      <div data-act="${isPreview ? 'goPreview' : 'goHome'}" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      ${badge}
+      <span style="font-size:12px;font-weight:700;color:#14243f">${i + 1}/${total}</span>
     </div>
-    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:10px 0">
-      <div style="width:100%;background:#fff;border:1px solid #e2e9f2;border-radius:22px;padding:34px 22px;text-align:center;box-shadow:0 16px 36px -20px rgba(20,50,90,.6)">
-        <div style="font-family:'Lora',serif;font-size:34px;font-weight:600;color:#14243f">${esc(c.word)}</div>
-        ${c.pos ? `<div style="font-size:12px;color:#7fb0d8;font-weight:700;margin-top:6px">${esc(c.pos)}</div>` : ''}
-        <div style="height:1px;background:#eef2f8;margin:18px 0"></div>
-        <div style="font-size:17px;color:#26303f;line-height:1.6">${esc(c.def)}</div>
-        ${c.ex ? `<div style="font-size:14px;color:#93a6c2;margin-top:12px;font-style:italic;font-family:'Lora',serif">${esc(c.ex)}</div>` : ''}
-      </div>
+    <div style="font-size:11px;color:#9aa8bd;text-align:center;margin-bottom:2px">🔈 뒤집으면 발음이 나와요 — 휴대폰 음량을 올려 주세요!</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px 0">${face}</div>
+    <div style="margin-top:10px">${controls}</div>
+  </div>`;
+}
+function previewVocabHTML() { return flashcardScreenHTML('preview'); }
+// 어휘 복습: 개수 선택 → 플래시카드
+function vocabReviewHTML() {
+  if (state.vrCount != null) return flashcardScreenHTML('vocab');
+  const total = dayVocabCards(activeDay()).length;
+  const opts = [30, 50].filter(n => total > n);
+  const btn = (label, val) => `<button data-act="vrPick" data-arg="${val}" style="border:1.5px solid #e2e9f2;background:#fff;color:#14243f;font-size:16px;font-weight:700;padding:16px;border-radius:15px;cursor:pointer;box-shadow:0 5px 14px -10px rgba(20,50,90,.5)">${label}</button>`;
+  return `<div style="padding:${topPad()} 20px 40px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <span style="font-size:15px;font-weight:700;color:#14243f">어휘 복습</span>
     </div>
-    <div style="display:flex;gap:10px;margin-top:10px">
-      <button data-act="pvPrev" ${i === 0 ? 'disabled' : ''} style="flex:none;border:1.5px solid #dbe4ef;background:#fff;color:#5f7794;font-size:14px;font-weight:600;padding:14px 20px;border-radius:15px;cursor:pointer;${i === 0 ? 'opacity:.4' : ''}">←</button>
-      <button data-act="pvNext" style="flex:1;border:none;background:${last ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${last ? '예습 완료 ✓' : '다음 카드 →'}</button>
+    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 16px;line-height:1.6">오늘 지문의 단어를 플래시카드로 복습해요. 몇 개를 볼까요? (총 ${total}개)</div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      ${opts.map(n => btn(n + '개', n)).join('')}
+      ${btn('전체 ' + total + '개', 'all')}
     </div>
   </div>`;
 }
@@ -2148,7 +2250,7 @@ function render() {
   let html = '';
   if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
   if (isTeacherUser() && ui.asStudent && state.role === 'student'
-      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead'].includes(state.screen)) {
+      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead', 'vocabReview'].includes(state.screen)) {
     html += previewClassBarHTML();  // 미리보기: 반 선택 바(몰입 화면 제외)
   }
 
@@ -2162,6 +2264,7 @@ function render() {
       case 'review': screen = reviewHTML(); break;
       case 'preview': screen = previewLevelsHTML(); break;
       case 'previewVocab': screen = previewVocabHTML(); break;
+      case 'vocabReview': screen = vocabReviewHTML(); break;
       case 'previewRead': screen = previewReadHTML(); break;
       case 'quiz': screen = quizHTML(); break;
       case 'result': screen = resultHTML(); break;
