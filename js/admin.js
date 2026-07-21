@@ -17,7 +17,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 let content = null;         // { version, students[], supabase{}, days[] }
 let ed = null;              // { dayIndex, day(편집형) }
 let gEd = null;             // { studentsText, sbUrl, sbKey }
-const ui = { tab: 'passage', msg: '', msgType: '', busy: false, loaded: false };
+const ui = { tab: 'passage', msg: '', msgType: '', busy: false, loaded: false, expand: false, expandFont: 17 };
 
 /* ---------- 로드 ---------- */
 async function boot() {
@@ -68,6 +68,10 @@ function toast(msg, type) { ui.msg = msg; ui.msgType = type || ''; }
 /* ---------- 액션 ---------- */
 const actions = {
   tab(t) { commit(); ui.tab = t; toast(''); render(); },
+  expandPassage() { ui.expand = true; render(); },   // 지문 크게 편집(전체화면)
+  collapsePassage() { ui.expand = false; render(); },
+  expandFontUp() { ui.expandFont = Math.min(32, ui.expandFont + 2); render(); },
+  expandFontDown() { ui.expandFont = Math.max(12, ui.expandFont - 2); render(); },
   selectDay(i) { commit(); openDay(Number(i)); toast(''); render(); },
   addDay() {
     commit();
@@ -190,6 +194,30 @@ function render() {
     <div class="msg ${ui.msgType === 'ok' ? 'toast-ok' : ui.msgType === 'err' ? 'toast-err' : ''}">${ui.msg ? esc(ui.msg) : '변경 후 <b>배포</b>를 누르면 모든 기기에 반영됩니다.'}</div>
     <button class="btn danger" data-act="delDay">이 Day 삭제</button>
     <button class="btn primary" data-act="publish" ${ui.busy ? 'disabled' : ''}>${ui.busy ? '배포 중...' : '🚀 배포하기'}</button>
+  </div>
+  ${ui.expand ? passageEditorOverlay(d) : ''}`;
+
+  if (ui.expand) { const t = document.getElementById('pv-textarea'); if (t && document.activeElement !== t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
+}
+
+// 지문 전체화면 편집 오버레이(장편 검토용)
+function passageEditorOverlay(d) {
+  const paras = (typeof passageToReview === 'function') ? passageToReview(d.passageText).length : 0;
+  const chars = (d.passageText || '').length;
+  return `<div style="position:fixed;inset:0;z-index:1000;background:#f7f9fc;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#fff;border-bottom:1px solid #e2e9f2;flex:none">
+      <div style="font-size:15px;font-weight:800;color:#14243f;white-space:nowrap">📖 지문 크게 편집${d.label ? ' · ' + esc(d.label) : ''}</div>
+      <div style="font-size:12px;color:#7d8aa0">문단=빈 줄 · 페이지=<span class="mono">---</span> · 팝오버=<span class="mono">[단어]</span></div>
+      <div style="flex:1"></div>
+      <span style="font-size:12px;color:#7d8aa0;white-space:nowrap">${paras}문단 · ${chars.toLocaleString()}자</span>
+      <button class="btn light sm" data-act="expandFontDown" title="글자 작게">가－</button>
+      <span style="font-size:12px;color:#9aa8bd;width:34px;text-align:center">${ui.expandFont}px</span>
+      <button class="btn light sm" data-act="expandFontUp" title="글자 크게">가＋</button>
+      <button class="btn primary sm" data-act="collapsePassage">✓ 완료</button>
+    </div>
+    <div style="flex:1;overflow:auto;display:flex;justify-content:center;padding:18px">
+      <textarea id="pv-textarea" class="inp" data-bind="passageText" spellcheck="false" style="width:100%;max-width:920px;height:100%;resize:none;font-size:${ui.expandFont}px;line-height:1.85;padding:24px 28px;border-radius:12px" placeholder="여기에 그날 읽을 지문을 붙여넣으세요. 아주 길어도 괜찮아요.">${esc(d.passageText)}</textarea>
+    </div>
   </div>`;
 }
 
@@ -254,8 +282,11 @@ function passageTab(d) {
 
     <div>
       <div class="card">
-        <h2>지문 (그날 읽을 전체 텍스트)</h2>
-        <div class="hint">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <h2 style="margin:0">지문 (그날 읽을 전체 텍스트)</h2>
+          <button class="btn light sm" data-act="expandPassage" title="전체화면으로 크게 편집">⤢ 크게 편집</button>
+        </div>
+        <div class="hint" style="margin-top:10px">
           · 문단은 <b>빈 줄</b>로 구분<br>
           · e-북 페이지는 <span class="mono">---</span> 를 한 줄에 넣어 구분<br>
           · 팝오버로 뜻을 보여줄 단어는 <span class="mono">[대괄호]</span>로 감싸기 (예: a <span class="mono">[restless]</span> horizon)<br>
@@ -416,5 +447,8 @@ rootEl.addEventListener('change', e => {
   setPath(ed.day, bind, v);
   if (el.dataset.rerender) render();
 });
+
+// 지문 크게 편집: Esc로 닫기(내용은 이미 저장돼 있어 안전)
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && ui.expand) { ui.expand = false; render(); } });
 
 boot();
