@@ -417,10 +417,10 @@ function dayQuiz(cat) { return (activeDay().quiz && activeDay().quiz[cat]) || []
 
 // 오늘 할 일 구성(문항이 있는 카테고리만 노출)
 const MAIN_TASKS = [
-  { key: 'preview',  icon: '👀',  bg: '#e7f0fd', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` },
   { key: 'review',   icon: '📖',  bg: '#e0f3ea', sub: () => '단어 팝오버로 다시 읽기' },
+  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', sub: n => `구조 분석 + 해석 ${n}문항` },
   { key: 'vocab',    icon: '🔤',  bg: '#fdeede', sub: n => `뜻·빈칸·스펠링 ${n}문항` },
-  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', sub: n => `구조 분석 + 해석 ${n}문항` }
+  { key: 'preview',  icon: '👀',  bg: '#e7f0fd', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
 ];
 const BONUS_TASKS = [
   { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', sub: n => `다음 수업 단어 미리보기 ${n}문항` },
@@ -1666,9 +1666,12 @@ function previewLevelsHTML() {
   const vocabN = dayVocabCards(d).length;
   const coreN = dayCoreSentences(d).length;
   const compN = dayQuiz('preview').length;
-  const card = (act, emoji, color, name, en, desc, disabled) => `
+  const card = (act, stage, emoji, color, name, en, desc, disabled) => `
     <div ${disabled ? '' : `data-act="${act}"`} style="display:flex;align-items:center;gap:14px;background:#fff;border:1.5px solid ${disabled ? '#eef2f7' : '#e2e9f2'};border-left:5px solid ${color};border-radius:16px;padding:15px 16px;cursor:${disabled ? 'default' : 'pointer'};opacity:${disabled ? '.5' : '1'};box-shadow:0 6px 16px -12px rgba(20,50,90,.5)">
-      <div style="font-size:30px">${emoji}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:none;width:40px">
+        <div style="font-size:26px;line-height:1">${emoji}</div>
+        <span style="font-size:9.5px;font-weight:800;color:${color};background:${color}1a;padding:1px 6px;border-radius:6px">${stage}단계</span>
+      </div>
       <div style="flex:1">
         <div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:16px;font-weight:700;color:#14243f">${name}</span><span style="font-size:11px;font-weight:700;color:${color}">${en}</span></div>
         <div style="font-size:12px;color:#7d8aa0;margin-top:3px;line-height:1.5">${desc}</div>
@@ -1680,11 +1683,14 @@ function previewLevelsHTML() {
       <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       <span style="font-size:15px;font-weight:700;color:#14243f">지문 예습</span>
     </div>
-    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 16px;line-height:1.6">오늘 난이도를 골라 예습해요. 하나만 완료해도 오늘 할 일에 체크돼요 🐠</div>
+    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 6px;line-height:1.6">1·2·3단계 중 골라 예습해요. <b>하나만 완료해도</b> 오늘 할 일에 체크돼요 🐠</div>
+    <div style="display:flex;align-items:center;gap:7px;background:#fff8e6;border:1px solid #f0d79a;border-radius:12px;padding:9px 12px;margin-bottom:14px">
+      <span style="font-size:16px">🎁</span><span style="font-size:11.5px;font-weight:600;color:#8a6412;line-height:1.5">3단계를 <b>모두</b> 완료하면 <b>보너스 경험치</b>를 받아요!</span>
+    </div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      ${card('previewEasy', '🟢', '#2fa36b', '살살', 'EASY', vocabN ? `핵심 어휘 ${vocabN}개만 가볍게 훑기` : '오늘은 어휘가 없어요', vocabN === 0)}
-      ${card('previewMedium', '🟡', '#e0a41a', '보통', 'MEDIUM', coreN ? `핵심 문장 ${coreN}개 읽기` : '읽을 문장이 없어요', coreN === 0)}
-      ${card('previewHard', '🔴', '#e2564d', '버닝', 'BURNING', `지문 전체 읽기${compN ? ` + 이해도 확인 ${compN}문항` : ''}`, dayPassage(d).trim() === '')}
+      ${card('previewEasy', 1, '🟢', '#2fa36b', '살살', 'EASY', vocabN ? `핵심 어휘 ${vocabN}개만 가볍게 훑기` : '오늘은 어휘가 없어요', vocabN === 0)}
+      ${card('previewMedium', 2, '🟡', '#e0a41a', '보통', 'MEDIUM', coreN ? `핵심 문장 ${coreN}개 읽기` : '읽을 문장이 없어요', coreN === 0)}
+      ${card('previewHard', 3, '🔴', '#e2564d', '버닝', 'BURNING', `지문 전체 읽기${compN ? ` + 이해도 확인 ${compN}문항` : ''}`, dayPassage(d).trim() === '')}
     </div>
   </div>`;
 }
