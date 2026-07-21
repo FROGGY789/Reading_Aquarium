@@ -210,9 +210,9 @@ function passageEditorOverlay(d) {
       <div style="font-size:12px;color:#7d8aa0">문단=빈 줄 · 페이지=<span class="mono">---</span> · 팝오버=<span class="mono">[단어]</span></div>
       <div style="flex:1"></div>
       <span style="font-size:12px;color:#7d8aa0;white-space:nowrap">${paras}문단 · ${chars.toLocaleString()}자</span>
-      <button class="btn light sm" data-act="expandFontDown" title="글자 작게">가－</button>
+      <button class="btn ghost sm" data-act="expandFontDown" title="글자 작게">가－</button>
       <span style="font-size:12px;color:#9aa8bd;width:34px;text-align:center">${ui.expandFont}px</span>
-      <button class="btn light sm" data-act="expandFontUp" title="글자 크게">가＋</button>
+      <button class="btn ghost sm" data-act="expandFontUp" title="글자 크게">가＋</button>
       <button class="btn primary sm" data-act="collapsePassage">✓ 완료</button>
     </div>
     <div style="flex:1;overflow:auto;display:flex;justify-content:center;padding:18px">
@@ -224,7 +224,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v7 (크게편집)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v8 (버튼색 수정)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -284,7 +284,7 @@ function passageTab(d) {
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
           <h2 style="margin:0">지문 (그날 읽을 전체 텍스트)</h2>
-          <button class="btn light sm" data-act="expandPassage" title="전체화면으로 크게 편집">⤢ 크게 편집</button>
+          <button class="btn primary sm" data-act="expandPassage" title="전체화면으로 크게 편집">⤢ 크게 편집</button>
         </div>
         <div class="hint" style="margin-top:10px">
           · 문단은 <b>빈 줄</b>로 구분<br>
