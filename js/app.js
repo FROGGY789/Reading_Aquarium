@@ -255,7 +255,7 @@ async function runAuth(isSignup) {
     state = loadState();
     state.role = role;
     state.intro = false; // 로그인 직후에는 스플래시 없이 바로 홈
-    if (!isTeacherUser() && auth.user.approved) await pullGrants();  // 승인된 학생: 부여 적용
+    if (!isTeacherUser() && auth.user.approved) { await pullGrants(); loadWordbook(); }  // 승인된 학생: 부여·단어장
     ui.authMsg = '';
     ui.li.pw = '';
     ui.signupMode = false;
@@ -453,12 +453,64 @@ function fcCurrentCard() {
   const cards = flashcardCards(mode);
   return cards[Math.min(state.fcI || 0, cards.length - 1)] || null;
 }
-// '몰라요' 단어를 내 단어장에 담기(중복 제거)
+// 오늘부터 n일 뒤 날짜키(YYYY-MM-DD)
+function addDaysKey(n) {
+  const d = new Date(); d.setDate(d.getDate() + (n || 0));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// 간격반복(SM-2 간소화): 정답이면 간격↑, 오답이면 초기화
+function scheduleWord(e, correct) {
+  if (correct) {
+    e.reps = (e.reps || 0) + 1;
+    if (e.reps === 1) e.interval = 1;
+    else if (e.reps === 2) e.interval = 3;
+    else e.interval = Math.max(1, Math.round((e.interval || 1) * (e.ease || 2.5)));
+    e.ease = Math.min(2.8, (e.ease || 2.5) + 0.1);
+  } else {
+    e.reps = 0; e.interval = 0; e.lapses = (e.lapses || 0) + 1;
+    e.ease = Math.max(1.3, (e.ease || 2.5) - 0.2);
+  }
+  e.due = addDaysKey(e.interval);
+}
+// 오늘 복습할 단어(due <= 오늘), 예정일 빠른 순
+function dueWords() {
+  return (state.wordbook || []).filter(w => (w.due || todayKey()) <= todayKey())
+    .sort((a, b) => (a.due || '').localeCompare(b.due || ''));
+}
+function shuffleArr(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+// '몰라요' 단어를 내 단어장에 담기(중복 제거) + 클라우드 저장
 function addToWordbook(card) {
   if (!card || !card.word) return;
   const wb = state.wordbook || (state.wordbook = []);
   if (wb.some(w => w.word === card.word)) return;
-  wb.push({ word: card.word, def: card.def || '', pos: card.pos || '', ex: card.ex || '', ts: Date.now() });
+  const e = { word: card.word, def: card.def || '', pos: card.pos || '', ex: card.ex || '', reps: 0, interval: 0, ease: 2.5, lapses: 0, due: todayKey(), ts: Date.now() };
+  wb.push(e);
+  upsertWord(e);   // 클라우드에도 저장(로그인+Supabase 시)
+}
+// 단어 한 개를 서버에 upsert(없으면 추가, 있으면 스케줄 갱신)
+async function upsertWord(e) {
+  if (!sbConf() || !auth || isTeacherUser()) return;
+  try {
+    await sbFetch('/rest/v1/er_wordbook?on_conflict=user_id,word', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ user_id: auth.user.id, word: e.word, def: e.def, pos: e.pos, ex: e.ex, reps: e.reps, interval: e.interval, ease: e.ease, lapses: e.lapses, due: e.due, updated_at: new Date().toISOString() })
+    });
+  } catch (err) { /* 오프라인 무시 */ }
+}
+// 로그인 시 서버 단어장을 내려받아 로컬과 병합(서버 우선)
+async function loadWordbook() {
+  if (!sbConf() || !auth || isTeacherUser()) return;
+  try {
+    const res = await sbFetch('/rest/v1/er_wordbook?user_id=eq.' + auth.user.id + '&select=word,def,pos,ex,reps,interval,ease,lapses,due');
+    if (!res.ok) return;
+    const rows = await res.json();
+    const byWord = {}; (state.wordbook || []).forEach(w => { byWord[w.word] = w; });
+    rows.forEach(r => { byWord[r.word] = Object.assign(byWord[r.word] || {}, r); });
+    state.wordbook = Object.values(byWord);
+    save();
+    render();
+  } catch (err) { /* 무시 */ }
 }
 
 // 오늘 할 일 구성(문항이 있는 카테고리만 노출)
@@ -735,12 +787,38 @@ const actions = {
   fcKnow() { const c = fcCurrentCard(); if (!c) return; speak(c.word); set({ fcFlipped: true }); },
   fcDontKnow() { const c = fcCurrentCard(); if (!c) return; speak(c.word); addToWordbook(c); set({ fcFlipped: true }); },
   fcSpeak() { const c = fcCurrentCard(); if (c) speak(c.word); },
+  fcSpeakWord(arg) { speak(arg); },
   fcHint() { set({ fcHint: !state.fcHint }); },
   fcNext() {
     const mode = state.screen === 'previewVocab' ? 'preview' : 'vocab';
     const cards = flashcardCards(mode);
     if ((state.fcI || 0) >= cards.length - 1) { completeTask(mode === 'preview' ? 'preview' : 'vocab'); return; }
     set({ fcI: (state.fcI || 0) + 1, fcFlipped: false, fcHint: false });
+  },
+  // 오늘의 단어시험(보너스): 복습 예정 단어를 간격반복 순서로 30문항
+  startWordTest() {
+    const due = dueWords();
+    if (!due.length) return;
+    const pool = (state.wordbook || []).filter(w => w.def);
+    const deck = due.slice(0, 30).map(e => {
+      const others = shuffleArr(pool.filter(x => x.word !== e.word).map(x => x.def).filter(Boolean));
+      const opts = shuffleArr([e.def].concat(others.slice(0, 3)));
+      return { word: e.word, options: opts, answer: opts.indexOf(e.def) };
+    });
+    set({ screen: 'wordTest', wtDeck: deck, wtI: 0, wtPick: null, wtScore: 0, wtDone: false });
+  },
+  wtPick(arg) {
+    if (state.wtPick != null) return;
+    const i = Number(arg);
+    const q = state.wtDeck[state.wtI]; if (!q) return;
+    const correct = i === q.answer;
+    const e = (state.wordbook || []).find(w => w.word === q.word);
+    if (e) { scheduleWord(e, correct); upsertWord(e); }
+    set({ wtPick: i, wtScore: state.wtScore + (correct ? 1 : 0) });
+  },
+  wtNext() {
+    if (state.wtI >= state.wtDeck.length - 1) { set({ wtDone: true }); return; }
+    set({ wtI: state.wtI + 1, wtPick: null });
   },
   previewReadDone() { completeTask('preview'); },
   goPreview() { set({ screen: 'preview' }); },
@@ -1328,6 +1406,13 @@ function homeHTML() {
     </div>` : '';
 
   const bonusRows = BONUS_TASKS.map(taskRow).join('');
+  const dueN = dueWords().length;
+  const wordTestCard = (state.wordbook && state.wordbook.length) ? `
+    <div ${dueN ? 'data-act="startWordTest"' : ''} style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 15px;cursor:${dueN ? 'pointer' : 'default'};opacity:${dueN ? '1' : '.6'}">
+      <div style="width:40px;height:40px;border-radius:12px;background:#e7f0fd;display:flex;align-items:center;justify-content:center;font-size:19px">📒</div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#14243f">오늘의 단어시험</div><div style="font-size:11px;color:#7d8aa0;margin-top:1px">${dueN ? `복습할 단어 ${dueN}개 · 망각곡선 맞춤 출제` : '오늘 복습할 단어가 없어요 — 잘하고 있어요!'}</div></div>
+      <div style="font-size:11px;font-weight:700;color:${dueN ? '#2f74e6' : '#b8c2d2'}">${dueN ? '시작 →' : '—'}</div>
+    </div>` : '';
 
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -1401,10 +1486,10 @@ function homeHTML() {
       ${MAIN_TASKS.map(taskRow).join('')}
     </div>
 
-    ${bonusRows ? `
+    ${(bonusRows || wordTestCard) ? `
     <div style="font-size:13px;font-weight:700;color:#14243f;margin:20px 0 4px">더 해보기</div>
     <div style="font-size:11px;color:#7d8aa0;margin-bottom:11px">보너스 학습 · 원할 때 자유롭게</div>
-    <div style="display:flex;flex-direction:column;gap:10px">${bonusRows}</div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:10px">${wordTestCard}${bonusRows}</div>` : ''}
 
     ${shelfHTML()}
 
@@ -1829,6 +1914,50 @@ function flashcardScreenHTML(mode) {
   </div>`;
 }
 function previewVocabHTML() { return flashcardScreenHTML('preview'); }
+/* ---- 오늘의 단어시험(보너스): 단어장 간격반복 ---- */
+function wordTestHTML() {
+  const deck = state.wtDeck || [];
+  const total = deck.length || 1;
+  if (state.wtDone) {
+    const pct = Math.round((state.wtScore || 0) / total * 100);
+    return `<div style="padding:${topPad()} 20px 40px;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+      <div style="font-size:48px;margin-bottom:8px">📒</div>
+      <div style="font-size:18px;font-weight:800;color:#14243f">오늘의 단어시험 완료!</div>
+      <div style="font-size:44px;font-weight:800;color:#2f74e6;margin:12px 0 2px">${state.wtScore || 0}<span style="font-size:18px;color:#7d8aa0;font-weight:600"> / ${total}</span></div>
+      <div style="font-size:12.5px;color:#7d8aa0;line-height:1.6;margin-bottom:22px">맞힌 단어는 복습 간격이 늘어나고,<br>틀린 단어는 곧 다시 나와요 🔁</div>
+      <button data-act="goHome" style="width:100%;max-width:280px;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f57c4;cursor:pointer">완료하고 홈으로</button>
+    </div>`;
+  }
+  const i = Math.min(state.wtI || 0, total - 1);
+  const q = deck[i] || { word: '', options: [], answer: 0 };
+  const picked = state.wtPick;
+  const answered = picked != null;
+  const last = i >= total - 1;
+  const optBtn = (o, oi) => {
+    let bg = '#fff', bd = '#e2e9f2', color = '#14243f';
+    if (answered) {
+      if (oi === q.answer) { bg = '#e0f3ea'; bd = '#2fa36b'; color = '#1f7a4d'; }
+      else if (oi === picked) { bg = '#fbe4e2'; bd = '#e2564d'; color = '#b23a32'; }
+    }
+    return `<div ${answered ? '' : `data-act="wtPick" data-arg="${oi}"`} style="background:${bg};border:1.5px solid ${bd};color:${color};border-radius:14px;padding:14px 15px;font-size:14.5px;cursor:${answered ? 'default' : 'pointer'};display:flex;align-items:center;gap:8px">${answered && oi === q.answer ? '✓ ' : ''}${esc(o)}</div>`;
+  };
+  return `<div style="padding:${topPad()} 20px 30px;min-height:100%;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#e7f0fd;color:#1f57c4;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">📒 오늘의 단어시험</span>
+      <span style="font-size:12px;font-weight:700;color:#14243f">${i + 1}/${total}</span>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+      <div style="text-align:center;margin-bottom:6px"><span style="font-size:11px;color:#9aa8bd">이 단어의 뜻은?</span></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px">
+        <div style="font-family:'Lora',serif;font-size:32px;font-weight:600;color:#14243f">${esc(q.word)}</div>
+        <div data-act="fcSpeakWord" data-arg="${esc(q.word)}" style="width:34px;height:34px;border-radius:50%;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px">🔊</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">${q.options.map(optBtn).join('')}</div>
+    </div>
+    ${answered ? `<button data-act="wtNext" style="width:100%;border:none;background:#14243f;color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 #0a1526;cursor:pointer;margin-top:12px">${last ? '결과 보기' : '다음 →'}</button>` : ''}
+  </div>`;
+}
 // 어휘 복습: 개수 선택 → 플래시카드
 function vocabReviewHTML() {
   if (state.vrCount != null) return flashcardScreenHTML('vocab');
@@ -2250,7 +2379,7 @@ function render() {
   let html = '';
   if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
   if (isTeacherUser() && ui.asStudent && state.role === 'student'
-      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead', 'vocabReview'].includes(state.screen)) {
+      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead', 'vocabReview', 'wordTest'].includes(state.screen)) {
     html += previewClassBarHTML();  // 미리보기: 반 선택 바(몰입 화면 제외)
   }
 
@@ -2265,6 +2394,7 @@ function render() {
       case 'preview': screen = previewLevelsHTML(); break;
       case 'previewVocab': screen = previewVocabHTML(); break;
       case 'vocabReview': screen = vocabReviewHTML(); break;
+      case 'wordTest': screen = wordTestHTML(); break;
       case 'previewRead': screen = previewReadHTML(); break;
       case 'quiz': screen = quizHTML(); break;
       case 'result': screen = resultHTML(); break;
@@ -2382,9 +2512,10 @@ render();
       }
     }
   } catch (e) { /* 오프라인/로컬 파일이면 내장 콘텐츠 사용 */ }
-  // 승인된 학생: 접속 시 교사가 준 알/경험치 부여를 적용
+  // 승인된 학생: 접속 시 교사가 준 알/경험치 부여를 적용 + 단어장 동기화
   if (auth && !isTeacherUser() && auth.user && auth.user.approved) {
     await pullGrants();
+    loadWordbook();
     render();
   }
 })();

@@ -141,6 +141,34 @@ create policy "grants delete own or teacher" on public.er_grants
 --    Users 에서 해당 사용자를 삭제하면 (on delete cascade로) 프로필·진행도 함께 지워집니다.
 
 -- =========================================================
+-- v5: 개인 단어장 (몰라요 단어 + 망각곡선 간격반복)
+-- 학생이 '몰라요' 한 단어가 모여, '오늘의 단어시험'이 복습 주기에 맞춰 출제돼요.
+-- 이미 실행했어도 안전하게 재실행됩니다.
+-- =========================================================
+create table if not exists public.er_wordbook (
+  id bigint generated always as identity primary key,
+  user_id uuid not null default auth.uid(),
+  word text not null,
+  def text, pos text, ex text,
+  reps int not null default 0,       -- 연속 정답 횟수
+  interval int not null default 0,   -- 다음 복습까지 일수
+  ease real not null default 2.5,    -- 난이도 계수(SM-2 간소화)
+  lapses int not null default 0,     -- 틀린 횟수
+  due date not null default current_date,   -- 다음 복습 예정일
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, word)
+);
+create index if not exists er_wordbook_due_idx on public.er_wordbook (user_id, due);
+alter table public.er_wordbook enable row level security;
+drop policy if exists "wordbook own all" on public.er_wordbook;
+-- 본인 단어장만 읽고/쓰고/지움
+create policy "wordbook own select" on public.er_wordbook for select to authenticated using (user_id = auth.uid());
+create policy "wordbook own insert" on public.er_wordbook for insert to authenticated with check (user_id = auth.uid());
+create policy "wordbook own update" on public.er_wordbook for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "wordbook own delete" on public.er_wordbook for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
+
+-- =========================================================
 -- 교사 계정 지정 (최초 1회):
 -- 앱에서 선생님도 학생처럼 가입한 뒤, 아래에서 아이디만 바꿔 실행하세요.
 -- (교사 계정은 승인 대기 없이 바로 사용됩니다)
