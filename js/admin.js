@@ -170,7 +170,8 @@ function render() {
     <div class="daybar">
       ${content.days.map((day, i) => {
         const md = (day.date || '').slice(5).replace('-', '/');
-        return `<div class="daychip ${i === ed.dayIndex ? 'on' : ''}" data-act="selectDay" data-arg="${i}">${esc(md)}${day.label ? ' · ' + esc(day.label) : ''}</div>`;
+        const ct = day.class ? ` 〔${esc(day.class)}〕` : '';
+        return `<div class="daychip ${i === ed.dayIndex ? 'on' : ''}" data-act="selectDay" data-arg="${i}">${esc(md)}${day.label ? ' · ' + esc(day.label) : ''}${ct}</div>`;
       }).join('')}
       <button class="btn ghost sm" data-act="addDay">＋ 새 Day</button>
     </div>
@@ -217,6 +218,12 @@ function passageTab(d) {
           <input type="date" class="inp" data-bind="date" value="${esc(d.date)}">
           <input class="inp" data-bind="label" value="${esc(d.label)}" placeholder="라벨 (예: A반 Day 3)">
         </div>
+        <div class="label">📢 대상 반 <span style="font-weight:400;color:#b8c2d2">(이 반에게만 배포 · '공통'이면 모든 반에게 보여요)</span></div>
+        <select class="inp" data-bind="classTarget" data-rerender="1">
+          <option value="" ${!d.classTarget ? 'selected' : ''}>공통 (모든 반)</option>
+          ${(content.classes || []).map(c => `<option value="${esc(c)}" ${d.classTarget === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+        </select>
+        ${(content.classes || []).length ? '' : `<div class="hint" style="margin-top:6px">아직 반이 없어요 — 아래 <b>학생·설정</b> 탭에서 반을 먼저 만들면 여기서 고를 수 있어요.</div>`}
         <div class="label">책 제목 / 저자 / 챕터</div>
         <input class="inp" data-bind="book.title" value="${esc(d.book.title)}" placeholder="책 제목">
         <div class="row" style="margin-top:8px">

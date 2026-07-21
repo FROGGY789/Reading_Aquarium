@@ -331,9 +331,73 @@ async function grantReward(id, eggs, xp) {
   } catch (e) { ui.grantBusy = ''; ui.recError = e.message; }
   render();
 }
+
+/* ---- 계정 관리(비밀번호 변경 · 탈퇴 · 교사의 학생 삭제) ---- */
+// 본인 비밀번호 변경(Supabase Auth: 세션이 유효하면 이전 비번 없이 변경)
+async function changePassword() {
+  const p1 = ui.acct.pw1, p2 = ui.acct.pw2;
+  if (!p1 || p1.length < 6) { ui.acct.msg = '❌ 새 비밀번호는 6자 이상이어야 해요'; render(); return; }
+  if (p1 !== p2) { ui.acct.msg = '❌ 두 비밀번호가 서로 달라요'; render(); return; }
+  ui.acct.busy = true; ui.acct.msg = '변경 중...'; render();
+  try {
+    const res = await sbFetch('/auth/v1/user', { method: 'PUT', body: JSON.stringify({ password: p1 }) });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.msg || e.error_description || ('HTTP ' + res.status)); }
+    ui.acct.pw1 = ''; ui.acct.pw2 = ''; ui.acct.msg = '✅ 비밀번호를 바꿨어요!';
+  } catch (e) { ui.acct.msg = '❌ 실패: ' + e.message; }
+  ui.acct.busy = false; render();
+}
+// user_id의 학습 데이터 일괄 삭제(프로필은 마지막). 로그인 계정(auth.users)은 관리자만 완전 삭제.
+async function purgeUserData(id) {
+  await sbFetch('/rest/v1/er_grants?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+  await sbFetch('/rest/v1/er_records?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+  await sbFetch('/rest/v1/er_progress?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+  const res = await sbFetch('/rest/v1/er_profiles?id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+  if (!res.ok) throw new Error('프로필 삭제 실패 (HTTP ' + res.status + ')');
+}
+// 본인 탈퇴: 데이터 삭제 후 로그아웃
+async function deleteOwnAccount() {
+  if (!auth) return;
+  ui.acct.busy = true; ui.acct.msg = '탈퇴 처리 중...'; render();
+  try {
+    await purgeUserData(auth.user.id);
+    try { localStorage.removeItem(storeKey()); } catch (e) { /* 무시 */ }
+    ui.acct = { open: false, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false };
+    doLogout(false);
+    ui.authMsg = '계정에서 탈퇴했어요. 그동안 이용해 주셔서 고마워요 🐠';
+    render();
+  } catch (e) { ui.acct.busy = false; ui.acct.msg = '❌ 실패: ' + e.message; render(); }
+}
+// 교사: 학생 삭제(확인 → 데이터 정리 → 목록 갱신)
+async function teacherDeleteStudent(id) {
+  const p = (ui.profiles || []).find(x => x.id === id) || {};
+  const name = p.name || '이 학생';
+  if (!confirm(`'${name}' 학생의 계정 기록을 삭제할까요?\n프로필·학습기록·진행·보상이 모두 지워집니다. (되돌릴 수 없어요)`)) return;
+  ui.grantBusy = 'del:' + id; render();
+  try {
+    await purgeUserData(id);
+    ui.grantBusy = ''; ui.recError = '';
+    await loadRecords();
+  } catch (e) { ui.grantBusy = ''; ui.recError = e.message; render(); }
+}
 // 오늘 날짜와 같거나 가장 가까운 과거 Day를 선택(모두 미래면 첫 Day)
+// 지금 화면이 '어느 반' 기준으로 콘텐츠를 볼지. null = 필터 없음(교사 대시보드/로그인 전)
+function viewingClass() {
+  if (isTeacherUser() && ui.asStudent) return ui.viewClass || '';        // 교사: 학생 미리보기(반 선택)
+  if (auth && auth.user && !auth.user.is_teacher) return auth.user.class || '';  // 실제 학생: 자기 반
+  return null;
+}
+// Day가 이 반에게 보이는가: 대상 반이 없으면(공통) 모두에게, 있으면 그 반에게만
+function dayMatchesClass(d, cls) {
+  const dc = ((d && d.class) || '').trim();
+  return !dc || dc === cls;
+}
 function activeDay() {
-  const days = contentSource().days.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  let days = contentSource().days.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const cls = viewingClass();
+  if (cls !== null) {
+    const m = days.filter(d => dayMatchesClass(d, cls));
+    if (m.length) days = m;   // 내 반+공통이 있으면 그걸로, 하나도 없으면 안전하게 전체
+  }
   const today = todayKey();
   const past = days.filter(d => (d.date || '') <= today);
   return past.length ? past[past.length - 1] : days[0];
@@ -393,10 +457,16 @@ const ui = {
   signupMode: false, authMsg: '', authBusy: false, asStudent: false, grantMsg: '',
   pending: [], grantBusy: '',   // 교사: 가입 대기 목록 / 부여 진행중 표시
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
+  dashClass: '',   // 교사 대시보드: 반별 보기 필터('' = 전체)
+  viewClass: '',   // 교사가 학생 미리보기 시 볼 반('' = 공통만)
+  acct: { open: false, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false },   // 내 계정(비번 변경/탈퇴)
   present: { on: false, i: 0, sents: [], title: '' }   // 수업용 전체화면 발표(PPT처럼 한 문장씩)
 };
 // 학생 화면 상단 여백: 교사 미리보기(토글 있음)일 때만 넉넉히, 실제 학생은 좁게
-function topPad() { return isTeacherUser() ? '52px' : '28px'; }
+function topPad() {
+  if (isTeacherUser() && ui.asStudent) return classes().length ? '94px' : '52px';  // 미리보기: 역할토글+반선택 바 공간
+  return isTeacherUser() ? '52px' : '28px';
+}
 let ed = null;  // 콘텐츠 편집기 상태 {dayIndex, day(편집용 형태)}
 let gEd = null; // 전역 설정 편집(학생 명단·Supabase)
 
@@ -540,8 +610,9 @@ function canCheck() {
  * 액션
  * ========================================================= */
 const actions = {
-  setRoleStudent() { ui.asStudent = true; render(); },   // 교사: 학생 화면 미리보기
+  setRoleStudent() { ui.asStudent = true; if (!ui.viewClass) ui.viewClass = classes()[0] || ''; set({ screen: 'home' }); },   // 교사: 학생 화면 미리보기
   setRoleTeacher() { ui.asStudent = false; render(); },
+  setViewClass(arg) { ui.viewClass = arg || ''; set({ screen: 'home', pop: null }); },   // 교사 미리보기: 볼 반 선택
 
   startApp() {
     if (state.introLeaving) return;
@@ -665,6 +736,18 @@ const actions = {
   dismissGrant() { ui.grantMsg = ''; render(); },
 
   /* ---- 교사 ---- */
+  pickClass(arg) { ui.li.classId = (ui.li.classId === arg) ? '' : arg; ui.authMsg = ''; render(); },  // 가입: 반 칩 선택/해제
+  setDashClass(arg) { ui.dashClass = arg || ''; render(); },  // 대시보드: 반별 필터
+
+  /* 내 계정(비밀번호 변경 · 탈퇴) */
+  openAccount() { ui.acct = { open: true, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false }; render(); },
+  closeAccount() { ui.acct.open = false; ui.acct.confirmDel = false; render(); },
+  changePw() { changePassword(); },
+  askDeleteSelf() { ui.acct.confirmDel = true; ui.acct.msg = ''; render(); },
+  cancelDeleteSelf() { ui.acct.confirmDel = false; render(); },
+  deleteSelf() { deleteOwnAccount(); },
+  delStudent(arg) { teacherDeleteStudent(arg); },  // 교사: 학생 삭제
+
   teacherTabDash() { ui.teacherTab = 'dash'; render(); if (sbConf() && isTeacherUser()) loadRecords(); },
   teacherTabContent() { ui.teacherTab = 'content'; ensureEditor(); render(); },
   dashRefresh() { loadRecords(); },
@@ -688,6 +771,7 @@ const actions = {
   presentClose() { ui.present.on = false; exitFS(); render(); },
 
   edSelectDay(arg) { commitDayEdit(); openDay(Number(arg)); render(); },
+  edSelectDayView(arg) { ensureEditor(); openDay(Number(arg)); render(); },  // 발표용: 편집 없이 날짜만 전환
   edAddDay() {
     commitDayEdit();
     const days = DRAFT.days;
@@ -901,6 +985,67 @@ function roleToggleHTML() {
   </div>`;
 }
 
+// 교사가 학생 미리보기 중일 때: 어느 반의 콘텐츠를 볼지 고르는 바(상단)
+function previewClassBarHTML() {
+  const cs = classes();
+  if (!cs.length) return '';
+  const chip = (c, label) => {
+    const on = (ui.viewClass || '') === c;
+    return `<div data-act="setViewClass" data-arg="${esc(c)}" style="flex:none;font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:999px;cursor:pointer;white-space:nowrap;color:${on ? '#14243f' : '#eaf2ff'};background:${on ? '#fff' : 'rgba(255,255,255,.16)'};border:1px solid ${on ? '#fff' : 'rgba(255,255,255,.28)'}">${esc(label)}</div>`;
+  };
+  return `<div style="position:absolute;top:46px;left:10px;right:10px;z-index:59;display:flex;align-items:center;gap:6px;overflow-x:auto;padding:6px 8px;background:rgba(11,33,64,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:999px;box-shadow:0 4px 14px -6px rgba(0,0,0,.5)">
+    <span style="flex:none;font-size:10.5px;font-weight:700;color:#bcd4f5;padding-left:5px">미리보기 반</span>
+    ${chip('', '공통')}
+    ${cs.map(c => chip(c, c)).join('')}
+  </div>`;
+}
+
+// 내 계정(비밀번호 변경 · 로그아웃 · 회원 탈퇴)
+function accountHTML() {
+  const u = (auth && auth.user) || {};
+  const a = ui.acct;
+  const infoRow = (k, v) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0"><span style="color:#7d8aa0">${k}</span><b style="color:#14243f">${v}</b></div>`;
+  return `<div style="position:absolute;inset:0;z-index:70;overflow-y:auto;background:rgba(6,20,40,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)">
+    <div data-act="closeAccount" style="position:absolute;inset:0"></div>
+    <div style="position:relative;max-width:420px;margin:0 auto;min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px 18px">
+      <div style="width:100%;background:#fff;border-radius:22px;padding:20px 18px 18px;box-shadow:0 20px 50px -18px rgba(0,0,0,.6)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:16px;font-weight:800;color:#14243f">내 계정</div>
+          <div data-act="closeAccount" style="font-size:16px;color:#9aa8bd;cursor:pointer;padding:4px 8px">✕</div>
+        </div>
+        <div style="background:#f4f8fd;border:1px solid #e2e9f2;border-radius:14px;padding:12px 14px;margin-bottom:16px">
+          ${infoRow('이름', esc(u.name || ''))}
+          ${infoRow('아이디', esc(u.username || ''))}
+          ${u.class || u.studentNo ? infoRow('반 · 학번', `${esc(u.class || '-')}${u.studentNo ? ' · ' + esc(u.studentNo) : ''}`) : ''}
+          <div style="font-size:10.5px;color:#b8c2d2;margin-top:5px">아이디는 로그인에 쓰여서 바꿀 수 없어요.</div>
+        </div>
+
+        <div style="font-size:12.5px;font-weight:700;color:#14243f;margin-bottom:7px">🔑 비밀번호 변경</div>
+        <input id="acct-pw1" class="ed-input" type="password" value="${esc(a.pw1)}" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password" style="margin-bottom:6px">
+        <input id="acct-pw2" class="ed-input" type="password" value="${esc(a.pw2)}" placeholder="새 비밀번호 확인" autocomplete="new-password">
+        <button data-act="changePw" class="ed-btn primary" style="width:100%;margin-top:9px;${a.busy ? 'opacity:.6' : ''}">${a.busy && !a.confirmDel ? '처리 중...' : '비밀번호 변경'}</button>
+        ${a.msg ? `<div style="font-size:12px;margin-top:9px;padding:9px 11px;border-radius:10px;line-height:1.5;background:${a.msg.startsWith('❌') ? '#fbe4e2' : '#e0f3ea'};color:${a.msg.startsWith('❌') ? '#b23a32' : '#1f7a4d'}">${esc(a.msg)}</div>` : ''}
+
+        <div style="height:1px;background:#eef2f8;margin:16px 0"></div>
+
+        ${a.confirmDel ? `
+          <div style="background:#fbe4e2;border:1px solid #f3c7c2;border-radius:12px;padding:12px 13px">
+            <div style="font-size:12.5px;font-weight:700;color:#b23a32">정말 탈퇴할까요?</div>
+            <div style="font-size:11.5px;color:#8a4b45;line-height:1.6;margin-top:4px">내 아쿠아리움·경험치·학습기록이 모두 삭제되고 되돌릴 수 없어요.</div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button data-act="cancelDeleteSelf" class="ed-btn ghost" style="flex:1">취소</button>
+              <button data-act="deleteSelf" class="ed-btn danger" style="flex:1;${a.busy ? 'opacity:.6' : ''}">${a.busy ? '처리 중...' : '탈퇴할게요'}</button>
+            </div>
+          </div>` : `
+          <div style="display:flex;gap:8px">
+            <button data-act="doLogout" class="ed-btn ghost" style="flex:1">로그아웃</button>
+            <button data-act="askDeleteSelf" class="ed-btn danger" style="flex:1">회원 탈퇴</button>
+          </div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
 function introHTML() {
   const leaving = state.introLeaving ? 'animation:diveOut .9s cubic-bezier(.6,0,.2,1) both' : '';
   return `<div data-act="startApp" style="position:absolute;inset:0;z-index:80;cursor:pointer;overflow:hidden;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;${leaving}">
@@ -931,10 +1076,16 @@ function loginFormHTML(compact) {
         <input id="li-name" class="ed-input" value="${esc(ui.li.name)}" placeholder="이름" style="flex:1.2;padding:12px 14px;font-size:14px">
         <input id="li-studentno" class="ed-input" value="${esc(ui.li.studentNo)}" placeholder="학번" style="flex:.9;padding:12px 14px;font-size:14px">
       </div>
-      ${classes().length ? `<select id="li-class" class="ed-input" style="padding:12px 14px;font-size:14px;color:${ui.li.classId ? '#14243f' : '#9aa8bd'}">
-        <option value="" ${ui.li.classId ? '' : 'selected'} disabled>반 선택</option>
-        ${classes().map(c => `<option value="${esc(c)}" ${ui.li.classId === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
-      </select>` : ''}` : ''}
+      ${classes().length ? `
+      <div style="font-size:12px;font-weight:600;margin:2px 0 -1px;color:${compact ? '#7d8aa0' : 'rgba(255,255,255,.85)'}">반을 선택하세요</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px">
+        ${classes().map(c => {
+          const on = ui.li.classId === c;
+          const idle = compact ? 'background:#fff;border:1.5px solid #e2e9f2;color:#4a5a72' : 'background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);color:#eaf2ff';
+          const sel = 'background:#2f74e6;border:1.5px solid #2f74e6;color:#fff;box-shadow:0 4px 12px -5px rgba(47,116,230,.8)';
+          return `<div data-act="pickClass" data-arg="${esc(c)}" style="flex:none;font-size:13.5px;font-weight:700;padding:10px 17px;border-radius:12px;cursor:pointer;${on ? sel : idle}">${esc(c)}</div>`;
+        }).join('')}
+      </div>` : ''}` : ''}
       <button data-act="${s ? 'doSignup' : 'doLogin'}" class="ed-btn primary" style="padding:13px;font-size:14px;${ui.authBusy ? 'opacity:.6' : ''}">${ui.authBusy ? '잠시만요...' : (s ? '가입하고 시작하기 🐠' : '로그인')}</button>
       ${ui.authMsg ? `<div style="font-size:12px;line-height:1.5;color:${ui.authMsg.startsWith('❌') ? '#ffb4ad' : '#dbe6f5'};background:rgba(0,0,0,${compact ? '.06' : '.25'});border-radius:10px;padding:9px 11px;${compact ? 'color:#b23a32;background:#fbe4e2' : ''}">${esc(ui.authMsg)}</div>` : ''}
       <div data-act="toggleSignup" style="text-align:center;font-size:12.5px;font-weight:600;cursor:pointer;padding:6px;${compact ? 'color:#2f74e6' : 'color:#cfe3ff;text-decoration:underline'}">${s ? '이미 계정이 있어요 → 로그인' : '처음이에요 → 가입하기'}</div>
@@ -1157,7 +1308,8 @@ function homeHTML() {
     ${shelfHTML()}
 
     ${authMode() ? `
-    <div style="margin-top:26px;text-align:center">
+    <div style="margin-top:26px;display:flex;justify-content:center;gap:8px">
+      <div data-act="openAccount" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#4a5a72;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">⚙️ 내 계정</div>
       <div data-act="doLogout" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#7d8aa0;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">↩︎ 로그아웃</div>
     </div>` : ''}
 
@@ -1420,7 +1572,9 @@ function resultHTML() {
 // 서가: 지문이 있는 Day들을 책 제목으로 묶어 한 권씩 (여러 Day = 여러 챕터)
 function allBooks() {
   const map = {};
+  const cls = viewingClass();
   contentSource().days.forEach(d => {
+    if (cls !== null && !dayMatchesClass(d, cls)) return;   // 다른 반 책은 서가에서 제외(공통은 포함)
     const p = dayPassage(d);
     if (!p.trim()) return;
     const title = ((d.book && d.book.title) || '').trim() || '제목 없는 책';
@@ -1707,15 +1861,35 @@ function liveDashHTML(day) {
   const students = profiles.map(p => ({ id: p.id, name: p.name, cls: p.class, no: p.student_no }));
   recs.forEach(r => { if (!students.some(s => s.name === r.student)) students.push({ id: null, name: r.student }); });
 
+  // 반별 보기: 반 목록 수집 + 선택된 반으로 학생/기록 필터
+  const nameClass = {}; profiles.forEach(p => { nameClass[p.name] = p.class || ''; });
+  const classSet = [];
+  students.forEach(s => { const c = s.cls || ''; if (c && !classSet.includes(c)) classSet.push(c); });
+  classes().forEach(c => { if (c && !classSet.includes(c)) classSet.push(c); });
+  classSet.sort();
+  if (ui.dashClass && !classSet.includes(ui.dashClass)) ui.dashClass = '';  // 사라진 반이 선택돼 있으면 전체로
+  const filt = ui.dashClass;
+  const shown = filt ? students.filter(s => (s.cls || '') === filt) : students;
+  const shownRecs = filt ? recs.filter(r => (nameClass[r.student] || '') === filt) : recs;
+  const classChips = classSet.length ? `
+    <div style="display:flex;align-items:center;gap:7px;overflow-x:auto;padding-bottom:2px;margin-top:14px">
+      ${['', ...classSet].map(c => {
+        const on = filt === c;
+        return `<div data-act="setDashClass" data-arg="${esc(c)}" style="flex:none;font-size:12px;font-weight:700;padding:7px 14px;border-radius:11px;cursor:pointer;white-space:nowrap;color:${on ? '#fff' : '#4a5a72'};background:${on ? '#2f74e6' : '#fff'};border:1px solid ${on ? '#2f74e6' : '#e2e9f2'}">${c ? esc(c) : '전체'}${c ? ` <span style="opacity:.7;font-weight:500">${students.filter(s => (s.cls || '') === c).length}</span>` : ''}</div>`;
+      }).join('')}
+    </div>` : '';
+
   const grantBtns = (id) => id ? `
     <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;align-items:center">
       <span style="font-size:10px;font-weight:700;color:#7d8aa0;width:34px">경험치</span>
       ${[10, 30, 50].map(x => `<button data-act="grant" data-arg="${id}:0:${x}" style="border:1px solid #cfe0f5;background:#eef5ff;color:#2f74e6;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">+${x}</button>`).join('')}
       <span style="font-size:10px;font-weight:700;color:#7d8aa0;width:20px;margin-left:6px">알</span>
       ${[1, 3, 5].map(e => `<button data-act="grant" data-arg="${id}:${e}:0" style="border:1px solid #f0d79a;background:#fff7e6;color:#b0851f;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">🥚+${e}</button>`).join('')}
+      <div style="flex:1"></div>
+      <button data-act="delStudent" data-arg="${id}" title="학생 계정 삭제" style="border:1px solid #f3c7c2;background:#fff;color:#c0392b;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">${ui.grantBusy === 'del:' + id ? '삭제 중…' : '🗑 삭제'}</button>
     </div>` : '';
 
-  const rows = students.map(s => {
+  const rows = shown.map(s => {
     const rs = byStu[s.name] || [];
     const doneSet = new Set(rs.map(r => r.task));
     const doneReq = req.filter(k => doneSet.has(k)).length;
@@ -1740,11 +1914,11 @@ function liveDashHTML(day) {
     </div>`;
   }).join('');
 
-  const totalDone = students.filter(s => {
+  const totalDone = shown.filter(s => {
     const doneSet = new Set((byStu[s.name] || []).map(r => r.task));
     return req.length > 0 && req.every(k => doneSet.has(k));
   }).length;
-  const allScores = recs.filter(r => r.score != null);
+  const allScores = shownRecs.filter(r => r.score != null);
   const avgAll = allScores.length ? Math.round(allScores.reduce((a, r) => a + r.score, 0) / allScores.length) : null;
 
   const pendingSection = pending.length ? `
@@ -1764,8 +1938,8 @@ function liveDashHTML(day) {
   return `
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div>
-        <div style="font-size:19px;font-weight:700;color:#14243f">오늘의 학습 현황${day.label ? ' · ' + esc(day.label) : ''}</div>
-        <div style="font-size:12px;color:#7d8aa0;margin-top:2px">${esc(day.book.title)} · ${students.length}명 · ${todayKey()}</div>
+        <div style="font-size:19px;font-weight:700;color:#14243f">오늘의 학습 현황${filt ? ' · ' + esc(filt) : ''}</div>
+        <div style="font-size:12px;color:#7d8aa0;margin-top:2px">${esc(day.book.title)} · ${shown.length}명${filt ? ` (전체 ${students.length})` : ''} · ${todayKey()}</div>
       </div>
       <div style="display:flex;gap:6px">
         <button data-act="dashRefresh" class="ed-btn ghost" style="padding:8px 13px;font-size:11.5px">${ui.recLoading ? '⏳' : '🔄'}</button>
@@ -1777,173 +1951,53 @@ function liveDashHTML(day) {
 
     ${pendingSection}
 
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:16px">
-      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 다 끝낸 학생</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${totalDone}<span style="font-size:12px;color:#7d8aa0">/${students.length}</span></div></div>
+    ${classChips}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:14px">
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 다 끝낸 학생</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${totalDone}<span style="font-size:12px;color:#7d8aa0">/${shown.length}</span></div></div>
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">퀴즈 평균</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${avgAll == null ? '–' : avgAll}<span style="font-size:12px;color:#7d8aa0">점</span></div></div>
-      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 기록</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${recs.length}<span style="font-size:12px;color:#7d8aa0">건</span></div></div>
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 기록</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${shownRecs.length}<span style="font-size:12px;color:#7d8aa0">건</span></div></div>
     </div>
 
-    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 10px">학생별 현황 · 보상 주기</div>
+    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 10px">학생별 현황 · 보상 주기${filt ? ' · ' + esc(filt) : ''}</div>
     <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;overflow:hidden">
       ${rows || '<div style="padding:18px;text-align:center;font-size:12px;color:#b8c2d2">아직 학생이 없어요</div>'}
     </div>
     <div style="font-size:10.5px;color:#b8c2d2;margin-top:8px">경험치·알 버튼을 누르면 학생이 다음에 접속할 때 자동으로 반영돼요.</div>`;
 }
 
-/* ---- 콘텐츠 편집기 ---- */
+/* ---- 콘텐츠 관리(핸드폰): 편집은 컴퓨터에서, 여기선 발표만 ---- */
 function editorHTML() {
   ensureEditor();
   const d = ed.day;
-  const hasToken = !!localStorage.getItem(TOKEN_KEY);
 
+  // 발표할 날짜 고르기(편집 없이 보기만 전환)
   const dayChips = DRAFT.days.map((day, i) => {
     const on = i === ed.dayIndex;
     const md = (day.date || '').slice(5).replace('-', '/');
-    return `<div data-act="edSelectDay" data-arg="${i}" style="flex:none;font-size:11.5px;font-weight:700;padding:8px 13px;border-radius:11px;cursor:pointer;white-space:nowrap;color:${on ? '#fff' : '#4a5a72'};background:${on ? '#14243f' : '#fff'};border:1px solid ${on ? '#14243f' : '#e2e9f2'}">${esc(md)}${day.label ? ' · ' + esc(day.label) : ''}</div>`;
+    return `<div data-act="edSelectDayView" data-arg="${i}" style="flex:none;font-size:11.5px;font-weight:700;padding:8px 13px;border-radius:11px;cursor:pointer;white-space:nowrap;color:${on ? '#fff' : '#4a5a72'};background:${on ? '#14243f' : '#fff'};border:1px solid ${on ? '#14243f' : '#e2e9f2'}">${esc(md)}${day.label ? ' · ' + esc(day.label) : ''}</div>`;
   }).join('');
 
-  const qEditor = cat => {
-    const meta = QUIZ_META[cat];
-    const cards = d.quiz[cat].map((q, i) => {
-      const base = `quiz.${cat}.${i}`;
-      const optRows = q.type === 'mc' ? q.options.map((o, oi) => `
-        <div style="display:flex;align-items:center;gap:7px;margin-top:6px">
-          <input type="radio" name="ans-${cat}-${i}" value="${oi}" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === oi ? 'checked' : ''} style="accent-color:#2fa36b;flex:none">
-          <input class="ed-input" data-bind="${base}.options.${oi}" value="${esc(o)}" placeholder="보기 ${oi + 1}${oi < 2 ? '' : ' (선택)'}" style="flex:1">
-        </div>`).join('') : '';
-      return `<div style="background:#f7faff;border:1px solid #e2e9f2;border-radius:12px;padding:11px 12px;margin-top:9px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-          <span style="font-size:11px;font-weight:700;color:#7d8aa0">Q${i + 1}</span>
-          <select class="ed-input" data-bind="${base}.type" data-rerender="1" style="width:auto;padding:5px 8px;font-size:12px">
-            <option value="mc" ${q.type === 'mc' ? 'selected' : ''}>객관식</option>
-            <option value="input" ${q.type === 'input' ? 'selected' : ''}>주관식</option>
-          </select>
-          <div style="flex:1"></div>
-          <button data-act="edDelQ" data-arg="${cat}:${i}" class="ed-btn danger" style="padding:5px 10px;font-size:11px">삭제</button>
-        </div>
-        <input class="ed-input" data-bind="${base}.prompt" value="${esc(q.prompt)}" placeholder="문제 (비워두면 출제되지 않아요)">
-        <input class="ed-input" data-bind="${base}.sentence" value="${esc(q.sentence)}" placeholder="예문/제시 문장 (선택)" style="margin-top:6px">
-        ${q.type === 'mc'
-          ? `<div style="font-size:10.5px;color:#7d8aa0;margin-top:8px">보기 (동그라미로 정답 선택, 2개 이상 입력)</div>${optRows}`
-          : `<input class="ed-input" data-bind="${base}.accept" value="${esc(q.accept)}" placeholder="정답 (여러 개면 쉼표로 구분: retreat, 후퇴하다)" style="margin-top:6px">`}
-        <input class="ed-input" data-bind="${base}.explain" value="${esc(q.explain)}" placeholder="해설" style="margin-top:6px">
-      </div>`;
-    }).join('');
-    return `<div class="ed-card">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:13px;font-weight:700;color:#14243f">${meta.name} <span style="font-size:11px;color:#7d8aa0;font-weight:600">${d.quiz[cat].length}문항</span></div>
-        <button data-act="edAddQ" data-arg="${cat}" class="ed-btn ghost" style="padding:6px 11px;font-size:11.5px">＋ 문항 추가</button>
-      </div>
-      ${cards || '<div style="font-size:11.5px;color:#b8c2d2;margin-top:8px">문항이 없으면 이 항목은 학생 홈에서 숨겨져요.</div>'}
-    </div>`;
-  };
-
-  const wordRows = d.words.map((w, i) => `
-    <div style="background:#f7faff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 12px;margin-top:8px">
-      <div style="display:flex;gap:6px">
-        <input class="ed-input" data-bind="words.${i}.word" value="${esc(w.word)}" placeholder="단어 (영어)" style="flex:1.2">
-        <input class="ed-input" data-bind="words.${i}.pos" value="${esc(w.pos)}" placeholder="품사" style="flex:.8">
-        <button data-act="edDelWord" data-arg="${i}" class="ed-btn danger" style="padding:5px 10px;font-size:11px;flex:none">삭제</button>
-      </div>
-      <input class="ed-input" data-bind="words.${i}.def" value="${esc(w.def)}" placeholder="뜻" style="margin-top:6px">
-      <input class="ed-input" data-bind="words.${i}.ex" value="${esc(w.ex)}" placeholder="예문 (선택)" style="margin-top:6px">
-    </div>`).join('');
+  const sentN = d.passageText && d.passageText.trim() ? passageToSentences(d.passageText).length : 0;
 
   return `
     <div class="ed-card" style="background:linear-gradient(150deg,#14243f,#1f3a63);border:none;color:#fff">
-      <div style="font-size:13.5px;font-weight:700">🚀 배포</div>
-      <div style="font-size:11.5px;opacity:.85;line-height:1.6;margin-top:5px">저장은 이 기기에서만 보여요(미리보기용).<br>배포하면 1~2분 뒤 <b>모든 기기</b>의 학생 화면에 반영됩니다.</div>
-      <a href="admin.html" style="display:block;margin-top:10px;text-align:center;background:rgba(255,255,255,.16);color:#fff;font-size:12px;font-weight:700;padding:10px;border-radius:10px;text-decoration:none">🖥️ 컴퓨터에서 편하게 편집하기 (콘텐츠 관리 페이지)</a>
-      <div style="display:flex;gap:6px;margin-top:10px">
-        <input id="gh-token" type="password" class="ed-input" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경하려면 입력)' : 'GitHub 토큰 (github_pat_...)'}" style="flex:1;background:rgba(255,255,255,.95)">
-        <button data-act="edSaveToken" class="ed-btn ghost" style="flex:none">토큰 저장</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button data-act="edPublish" class="ed-btn primary" style="flex:1;${ui.pubBusy ? 'opacity:.6' : ''}">${ui.pubBusy ? '배포 중...' : '지금 배포 🚀'}</button>
-      </div>
-      ${ui.pubMsg ? `<div style="font-size:11.5px;margin-top:9px;line-height:1.5;background:rgba(255,255,255,.12);border-radius:9px;padding:8px 10px">${esc(ui.pubMsg)}</div>` : ''}
+      <div style="font-size:14px;font-weight:800">🖥️ 콘텐츠 편집은 컴퓨터에서</div>
+      <div style="font-size:12px;opacity:.88;line-height:1.75;margin-top:7px">문제·지문·책 정보 편집과 <b>배포</b>는 화면이 넓은 <b>컴퓨터</b>에서 하는 게 편해요.<br>핸드폰에서는 <b>학생 현황(대시보드)</b> 확인과, 아래 <b>수업용 전체화면 발표</b>를 하세요.</div>
+      <a href="admin.html" style="display:block;margin-top:12px;text-align:center;background:#2f74e6;color:#fff;font-size:13px;font-weight:800;padding:13px;border-radius:12px;text-decoration:none">🖥️ 컴퓨터에서 편집하기 (콘텐츠 관리 페이지)</a>
     </div>
 
     <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">🏫 반 목록</div>
-      <div class="ed-label">한 줄에 한 반씩. 학생이 가입할 때 여기서 반을 골라요.</div>
-      <textarea class="ed-input" data-gbind="classesText" rows="3" placeholder="A반&#10;B반&#10;C반">${esc(gEd.classesText)}</textarea>
-    </div>
-
-    <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">👧 학생 명단 (Supabase 미사용 시)</div>
-      <div class="ed-label">한 줄에 한 명씩. 입력하면 학생 화면에 "누구인가요?" 이름 선택이 생기고, 아이별로 진행이 따로 저장돼요. ${sbConf() ? '⚠️ 지금은 아래 Supabase가 설정되어 있어 아이디/비밀번호 로그인이 대신 사용됩니다 — 이 명단은 무시돼요.' : '비워두면 이름 선택 없이 동작합니다.'}</div>
-      <textarea class="ed-input" data-gbind="studentsText" rows="3" placeholder="이지민&#10;박서준&#10;최하윤">${esc(gEd.studentsText)}</textarea>
-    </div>
-
-    <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">📡 기록 수집 (Supabase)</div>
-      <div class="ed-label">설정하면 ① 학생 화면이 아이디/비밀번호 로그인으로 바뀌고(어느 기기서든 자기 아쿠아리움 유지) ② 점수·완료 기록이 모여 대시보드에 실제 데이터가 표시돼요. supabase.com 무료 프로젝트의 두 값을 붙여넣고 배포하세요. (설정 순서는 README 참고)</div>
-      <input class="ed-input" data-gbind="sbUrl" value="${esc(gEd.sbUrl)}" placeholder="프로젝트 URL (https://xxxx.supabase.co)">
-      <input class="ed-input" data-gbind="sbKey" value="${esc(gEd.sbKey)}" placeholder="anon public 키 (eyJ...)" style="margin-top:6px">
-      <div style="font-size:10.5px;color:#b8c2d2;margin-top:7px">${sbConf() ? '✅ 현재 이 기기에는 설정되어 있어요. 모든 기기에 적용하려면 배포하세요.' : '아직 설정되지 않았어요 — 설정 전에는 기록이 기기 안에만 남습니다.'}</div>
-    </div>
-
-    <div style="display:flex;align-items:center;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px">
-      ${dayChips}
-      <button data-act="edAddDay" class="ed-btn ghost" style="flex:none;padding:8px 13px;font-size:11.5px">＋ 새 Day</button>
-    </div>
-    ${ui.edMsg ? `<div style="font-size:11.5px;color:#1f7a4d;background:#e0f3ea;border-radius:10px;padding:9px 12px;margin-bottom:10px">${esc(ui.edMsg)}</div>` : ''}
-
-    <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">기본 정보</div>
-      <div class="ed-label">수업 날짜 (이 날짜부터 학생에게 보여요)</div>
-      <input type="date" class="ed-input" data-bind="date" value="${esc(d.date)}">
-      <div class="ed-label">라벨 (예: A반 Day 3)</div>
-      <input class="ed-input" data-bind="label" value="${esc(d.label)}">
-    </div>
-
-    <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">오늘 선생님이 고른 문장</div>
-      <div class="ed-label">영어 문장</div>
-      <input class="ed-input" data-bind="quote.en" value="${esc(d.quote.en)}">
-      <div class="ed-label">우리말 해석</div>
-      <input class="ed-input" data-bind="quote.ko" value="${esc(d.quote.ko)}">
-      <div class="ed-label">선생님 이름 / 한마디</div>
-      <div style="display:flex;gap:6px">
-        <input class="ed-input" data-bind="quote.teacher" value="${esc(d.quote.teacher)}" placeholder="김선생님" style="flex:.7">
-        <input class="ed-input" data-bind="quote.comment" value="${esc(d.quote.comment)}" placeholder="한마디" style="flex:1.3">
-      </div>
-    </div>
-
-    <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">책 정보</div>
-      <div class="ed-label">제목 / 저자 / 챕터</div>
-      <input class="ed-input" data-bind="book.title" value="${esc(d.book.title)}" placeholder="책 제목">
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <input class="ed-input" data-bind="book.author" value="${esc(d.book.author)}" placeholder="저자" style="flex:1">
-        <input class="ed-input" data-bind="book.chapter" value="${esc(d.book.chapter)}" placeholder="챕터" style="flex:1.4">
-      </div>
-    </div>
-
-    <div class="ed-card" style="background:#f4f8fd;border-color:#cfe0f5">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:4px">📖 지문 · 표지 · 팝오버 어휘</div>
-      <div class="ed-label" style="margin-top:2px">긴 지문과 표지, 단어 팝오버는 <b>컴퓨터에서</b> 편집하는 게 편해요.
-      ${d.passageText && d.passageText.trim() ? `지금 지문 <b>${passageToReview(d.passageText).length}문단</b> · 팝오버 단어 <b>${d.words.length}개</b>가 저장돼 있어요.` : '아직 지문이 비어 있어요.'}
-      (이 화면에서 저장·배포해도 지문은 그대로 유지됩니다.)</div>
-      <a href="admin.html" style="display:block;margin-top:8px;text-align:center;background:#2f74e6;color:#fff;font-size:12.5px;font-weight:700;padding:11px;border-radius:11px;text-decoration:none">🖥️ 컴퓨터에서 지문 편집하기</a>
+      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:8px">📅 어떤 날을 띄울까요?</div>
+      <div style="display:flex;align-items:center;gap:7px;overflow-x:auto;padding-bottom:4px">${dayChips || '<span style="font-size:12px;color:#b8c2d2">아직 등록된 Day가 없어요</span>'}</div>
     </div>
 
     <div class="ed-card" style="background:linear-gradient(150deg,#0b243f,#123a63);border:none;color:#fff">
       <div style="font-size:13.5px;font-weight:700">🖥️ 수업용 전체화면 (PPT처럼)</div>
-      <div style="font-size:11.5px;opacity:.85;line-height:1.6;margin-top:5px">이 Day의 지문을 <b>한 화면에 한 문장씩</b> 크게 띄워요. 화면을 탭하거나 ← → 키로 넘기고, Esc로 닫습니다.
-      ${d.passageText && d.passageText.trim() ? `지금 <b>${passageToSentences(d.passageText).length}문장</b>을 띄울 수 있어요.` : '아직 지문이 비어 있어요 — 위에서 먼저 입력해 주세요.'}</div>
-      <button data-act="openPresent" class="ed-btn primary" style="width:100%;margin-top:10px;background:#2f74e6;box-shadow:0 4px 0 #1f57c4">▶ 전체화면으로 띄우기</button>
+      <div style="font-size:11.5px;opacity:.85;line-height:1.6;margin-top:5px">선택한 날${d.label ? `(<b>${esc(d.label)}</b>)` : ''}의 지문을 <b>한 화면에 한 문장씩</b> 크게 띄워요. 화면을 탭하거나 ← → 키로 넘기고, Esc로 닫습니다.
+      ${sentN ? `지금 <b>${sentN}문장</b>을 띄울 수 있어요.` : '이 날은 지문이 비어 있어요 — 컴퓨터에서 지문을 입력해 주세요.'}</div>
+      <button data-act="openPresent" class="ed-btn primary" style="width:100%;margin-top:10px;background:#2f74e6;box-shadow:0 4px 0 #1f57c4;${sentN ? '' : 'opacity:.5'}">▶ 전체화면으로 띄우기</button>
     </div>
-
-    <div style="font-size:14px;font-weight:700;color:#14243f;margin:18px 0 10px">퀴즈 문항</div>
-    ${Object.keys(QUIZ_META).map(qEditor).join('')}
-
-    <div style="display:flex;gap:8px;margin-top:6px">
-      <button data-act="edSaveDay" class="ed-btn dark" style="flex:1;padding:14px">💾 저장 (이 기기 미리보기)</button>
-      <button data-act="edDelDay" class="ed-btn danger" style="flex:none">Day 삭제</button>
-    </div>
-    <button data-act="edDiscardDraft" class="ed-btn ghost" style="width:100%;margin-top:8px;font-size:11.5px;padding:9px">↩︎ 초안 버리고 배포본으로 되돌리기</button>
     <div style="height:20px"></div>`;
 }
 
@@ -2032,6 +2086,10 @@ function render() {
 
   let html = '';
   if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
+  if (isTeacherUser() && ui.asStudent && state.role === 'student'
+      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead'].includes(state.screen)) {
+    html += previewClassBarHTML();  // 미리보기: 반 선택 바(몰입 화면 제외)
+  }
 
   if (state.hatchStage === 'cracking') html += hatchCinematicHTML();
 
@@ -2060,6 +2118,7 @@ function render() {
   else if (state.role === 'student' && needProfile()) html += profilePickerHTML();
   else if (state.intro && state.role === 'student') html += introHTML();
 
+  if (auth && ui.acct.open) html += accountHTML();  // 내 계정(비번 변경/탈퇴)
   if (ui.present.on) html += presentHTML();  // 수업용 전체화면 발표(최상단)
 
   document.getElementById('app').innerHTML = html;
@@ -2115,6 +2174,8 @@ document.addEventListener('fullscreenchange', () => {
 appEl.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'quiz-input' || el.id === 'gh-token') return;
+  if (el.id === 'acct-pw1') { ui.acct.pw1 = el.value; return; }
+  if (el.id === 'acct-pw2') { ui.acct.pw2 = el.value; return; }
   if (el.id === 'li-id') { ui.li.id = el.value; return; }
   if (el.id === 'li-pw') { ui.li.pw = el.value; return; }
   if (el.id === 'li-name') { ui.li.name = el.value; return; }

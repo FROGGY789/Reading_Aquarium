@@ -112,6 +112,35 @@ create policy "grants student apply" on public.er_grants
   for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- =========================================================
+-- v4: 계정 삭제 / 비밀번호 관리 지원용 정책
+-- (본인 탈퇴 + 교사의 학생 삭제 시 관련 데이터까지 정리)
+-- 이미 실행했어도 안전하게 재실행됩니다.
+-- =========================================================
+-- 본인은 자기 프로필 삭제(탈퇴) 가능 / 교사 삭제는 위에서 이미 허용
+drop policy if exists "profiles self delete" on public.er_profiles;
+create policy "profiles self delete" on public.er_profiles
+  for delete to authenticated using (id = auth.uid());
+
+-- 학습 기록: 본인 또는 교사가 삭제 가능
+drop policy if exists "records delete own or teacher" on public.er_records;
+create policy "records delete own or teacher" on public.er_records
+  for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
+
+-- 진행 상황: 본인 또는 교사가 삭제 가능
+drop policy if exists "progress delete own or teacher" on public.er_progress;
+create policy "progress delete own or teacher" on public.er_progress
+  for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
+
+-- 보상 부여: 본인 또는 교사가 삭제 가능(계정 정리용)
+drop policy if exists "grants delete own or teacher" on public.er_grants;
+create policy "grants delete own or teacher" on public.er_grants
+  for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
+
+-- ℹ️ 참고: 위 삭제는 프로필·학습기록·진행·부여를 지웁니다. '로그인 계정(auth.users)'
+--    자체의 완전 삭제는 관리자 권한이 필요해요 — Supabase 대시보드 → Authentication →
+--    Users 에서 해당 사용자를 삭제하면 (on delete cascade로) 프로필·진행도 함께 지워집니다.
+
+-- =========================================================
 -- 교사 계정 지정 (최초 1회):
 -- 앱에서 선생님도 학생처럼 가입한 뒤, 아래에서 아이디만 바꿔 실행하세요.
 -- (교사 계정은 승인 대기 없이 바로 사용됩니다)
