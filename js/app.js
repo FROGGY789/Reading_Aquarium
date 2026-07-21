@@ -30,14 +30,25 @@ function todayKey() {
 
 /* ---------- 콘텐츠 ---------- */
 let PUBLISHED = null;                    // data/content.json에서 가져온 배포본
-let DRAFT = loadJSON(DRAFT_KEY);         // 교사가 이 기기에서 편집 중인 초안
+// 편집·배포는 데스크톱(admin.html)에서만 해요. 이 기기(폰)에 남아있던 옛 초안은
+// 배포본을 덮어써서 옛 콘텐츠가 보이는 문제를 일으키므로 더 이상 사용하지 않고 정리합니다.
+let DRAFT = null;
+try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* 무시 */ }
 
 function loadJSON(key) {
   try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
 }
 function contentSource() {
-  const c = DRAFT || PUBLISHED || DEFAULT_CONTENT;
+  const c = PUBLISHED || DEFAULT_CONTENT;   // 항상 배포본 기준(초안 사용 안 함)
   return (c && Array.isArray(c.days) && c.days.length) ? c : DEFAULT_CONTENT;
+}
+// 배포된 Day들(날짜 오름차순) + 오늘에 가장 가까운 과거 Day 인덱스
+function deployedDays() { return contentSource().days.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')); }
+function bestDeployedDayIndex(days) {
+  const today = todayKey();
+  let best = 0;
+  days.forEach((d, i) => { if ((d.date || '') <= today) best = i; });
+  return best;
 }
 
 /* ---------- 학생 프로필(로그인 없는 이름 선택 — Supabase 미설정 시) ---------- */
@@ -459,6 +470,7 @@ const ui = {
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
   dashClass: '',   // 교사 대시보드: 반별 보기 필터('' = 전체)
   viewClass: '',   // 교사가 학생 미리보기 시 볼 반('' = 공통만)
+  presDay: null,   // 핸드폰 발표: 선택한 배포 Day 인덱스
   acct: { open: false, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false },   // 내 계정(비번 변경/탈퇴)
   present: { on: false, i: 0, sents: [], title: '' }   // 수업용 전체화면 발표(PPT처럼 한 문장씩)
 };
@@ -749,7 +761,7 @@ const actions = {
   delStudent(arg) { teacherDeleteStudent(arg); },  // 교사: 학생 삭제
 
   teacherTabDash() { ui.teacherTab = 'dash'; render(); if (sbConf() && isTeacherUser()) loadRecords(); },
-  teacherTabContent() { ui.teacherTab = 'content'; ensureEditor(); render(); },
+  teacherTabContent() { ui.teacherTab = 'content'; render(); },
   dashRefresh() { loadRecords(); },
   approveStudent(id) { approveStudent(id, true); },
   rejectStudent(id) { if (confirm('이 학생의 가입 신청을 거절할까요?')) approveStudent(id, false); },
@@ -757,11 +769,12 @@ const actions = {
 
   /* ---- 수업용 전체화면 발표(PPT처럼 한 문장씩) ---- */
   openPresent() {
-    ensureEditor();
-    const passage = (ed && ed.day && ed.day.passageText) || dayPassage(activeDay());
-    const sents = passageToSentences(passage);
-    if (!sents.length) { ui.edMsg = '띄울 지문이 없어요. 먼저 지문을 입력하고 저장해 주세요.'; render(); return; }
-    ui.present = { on: true, i: 0, sents, title: (ed && ed.day && ed.day.label) || (activeDay().label || '') };
+    const days = deployedDays();
+    const idx = (ui.presDay == null || ui.presDay >= days.length) ? bestDeployedDayIndex(days) : ui.presDay;
+    const d = days[idx] || activeDay();
+    const sents = passageToSentences(dayPassage(d));
+    if (!sents.length) return;   // 지문이 없으면 버튼이 이미 비활성 안내 상태
+    ui.present = { on: true, i: 0, sents, title: d.label || '' };
     requestFS();
     render();
   },
@@ -771,7 +784,7 @@ const actions = {
   presentClose() { ui.present.on = false; exitFS(); render(); },
 
   edSelectDay(arg) { commitDayEdit(); openDay(Number(arg)); render(); },
-  edSelectDayView(arg) { ensureEditor(); openDay(Number(arg)); render(); },  // 발표용: 편집 없이 날짜만 전환
+  edSelectDayView(arg) { ui.presDay = Number(arg); render(); },  // 발표용: 배포 Day 선택
   edAddDay() {
     commitDayEdit();
     const days = DRAFT.days;
@@ -1966,30 +1979,32 @@ function liveDashHTML(day) {
     <div style="font-size:10.5px;color:#b8c2d2;margin-top:8px">경험치·알 버튼을 누르면 학생이 다음에 접속할 때 자동으로 반영돼요.</div>`;
 }
 
-/* ---- 콘텐츠 관리(핸드폰): 편집은 컴퓨터에서, 여기선 발표만 ---- */
+/* ---- 콘텐츠 관리(핸드폰): 편집은 컴퓨터에서, 여기선 배포본 발표만 ---- */
 function editorHTML() {
-  ensureEditor();
-  const d = ed.day;
+  const days = deployedDays();
+  if (ui.presDay == null || ui.presDay >= days.length) ui.presDay = bestDeployedDayIndex(days);
+  const d = days[ui.presDay] || days[0] || {};
+  const passage = dayPassage(d);
+  const sentN = passage.trim() ? passageToSentences(passage).length : 0;
 
-  // 발표할 날짜 고르기(편집 없이 보기만 전환)
-  const dayChips = DRAFT.days.map((day, i) => {
-    const on = i === ed.dayIndex;
+  // 발표할 날짜 고르기(배포된 Day 기준)
+  const dayChips = days.map((day, i) => {
+    const on = i === ui.presDay;
     const md = (day.date || '').slice(5).replace('-', '/');
-    return `<div data-act="edSelectDayView" data-arg="${i}" style="flex:none;font-size:11.5px;font-weight:700;padding:8px 13px;border-radius:11px;cursor:pointer;white-space:nowrap;color:${on ? '#fff' : '#4a5a72'};background:${on ? '#14243f' : '#fff'};border:1px solid ${on ? '#14243f' : '#e2e9f2'}">${esc(md)}${day.label ? ' · ' + esc(day.label) : ''}</div>`;
+    const ct = day.class ? ` 〔${esc(day.class)}〕` : '';
+    return `<div data-act="edSelectDayView" data-arg="${i}" style="flex:none;font-size:11.5px;font-weight:700;padding:8px 13px;border-radius:11px;cursor:pointer;white-space:nowrap;color:${on ? '#fff' : '#4a5a72'};background:${on ? '#14243f' : '#fff'};border:1px solid ${on ? '#14243f' : '#e2e9f2'}">${esc(md)}${day.label ? ' · ' + esc(day.label) : ''}${ct}</div>`;
   }).join('');
-
-  const sentN = d.passageText && d.passageText.trim() ? passageToSentences(d.passageText).length : 0;
 
   return `
     <div class="ed-card" style="background:linear-gradient(150deg,#14243f,#1f3a63);border:none;color:#fff">
       <div style="font-size:14px;font-weight:800">🖥️ 콘텐츠 편집은 컴퓨터에서</div>
-      <div style="font-size:12px;opacity:.88;line-height:1.75;margin-top:7px">문제·지문·책 정보 편집과 <b>배포</b>는 화면이 넓은 <b>컴퓨터</b>에서 하는 게 편해요.<br>핸드폰에서는 <b>학생 현황(대시보드)</b> 확인과, 아래 <b>수업용 전체화면 발표</b>를 하세요.</div>
+      <div style="font-size:12px;opacity:.88;line-height:1.75;margin-top:7px">문제·지문·책 정보 편집과 <b>배포</b>는 화면이 넓은 <b>컴퓨터</b>에서 하는 게 편해요.<br>핸드폰에서는 <b>학생 현황(대시보드)</b> 확인과, 아래 <b>수업용 전체화면 발표</b>를 하세요.<br><span style="opacity:.75">여기 목록은 <b>지금 배포된</b> 콘텐츠예요.</span></div>
       <a href="admin.html" style="display:block;margin-top:12px;text-align:center;background:#2f74e6;color:#fff;font-size:13px;font-weight:800;padding:13px;border-radius:12px;text-decoration:none">🖥️ 컴퓨터에서 편집하기 (콘텐츠 관리 페이지)</a>
     </div>
 
     <div class="ed-card">
       <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:8px">📅 어떤 날을 띄울까요?</div>
-      <div style="display:flex;align-items:center;gap:7px;overflow-x:auto;padding-bottom:4px">${dayChips || '<span style="font-size:12px;color:#b8c2d2">아직 등록된 Day가 없어요</span>'}</div>
+      <div style="display:flex;align-items:center;gap:7px;overflow-x:auto;padding-bottom:4px">${dayChips || '<span style="font-size:12px;color:#b8c2d2">아직 배포된 Day가 없어요</span>'}</div>
     </div>
 
     <div class="ed-card" style="background:linear-gradient(150deg,#0b243f,#123a63);border:none;color:#fff">
