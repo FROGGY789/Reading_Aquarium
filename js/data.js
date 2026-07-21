@@ -237,7 +237,10 @@ function dayToEdit(day) {
     book: Object.assign({ title: '', author: '', chapter: '', cover: '', spine: '' }, day.book || {}),
     passageText,
     words,
-    previewCoreText: ((day.previewCore) || []).join('\n'),  // 보통 난이도: 핵심 문장(줄바꿈 구분)
+    // 핵심 문장(리치): 저장값이 있으면 그걸, 없으면 빈 배열(자동생성은 학생 화면에서만)
+    core: (day.coreSentences && day.coreSentences.length)
+      ? day.coreSentences.map(normCore)
+      : (day.previewCore || []).map(t => normCore({ text: t })),
     quiz
   };
 }
@@ -265,7 +268,13 @@ function editToDay(e) {
       })
       .filter(q => q.type === 'mc' ? q.options.length >= 2 : q.accept.length >= 1);
   });
-  const previewCore = (e.previewCoreText || '').split('\n').map(t => t.trim()).filter(Boolean);
+  // 핵심 문장(리치): 빈 문장 제거, 마크 인덱스는 현재 단어 수 범위로 정리
+  const coreSentences = (e.core || []).map(c => {
+    const n = normCore(c);
+    const cnt = n.text.split(/\s+/).filter(Boolean).length;
+    const clamp = a => a.filter(x => x >= 0 && x < cnt);
+    return { text: n.text, subject: clamp(n.subject), verb: clamp(n.verb), bold: clamp(n.bold), italic: clamp(n.italic), ko: n.ko };
+  }).filter(c => c.text);
   const out = {
     date: e.date || _todayKey(),
     label: (e.label || '').trim(),
@@ -273,7 +282,7 @@ function editToDay(e) {
     book: { title: e.book.title.trim(), author: e.book.author.trim(), chapter: e.book.chapter.trim(), cover: (e.book.cover || '').trim(), spine: (e.book.spine || '').trim() },
     passage: (e.passageText || '').trim(),
     vocab,
-    previewCore,
+    coreSentences,
     quiz
   };
   const cls = (e.classTarget || '').trim();
@@ -282,13 +291,28 @@ function editToDay(e) {
 }
 
 /* ---- 지문 예습 3단계 헬퍼 ---- */
-// 보통 난이도 핵심 문장: previewCore가 있으면 그걸, 없으면 지문 앞부분 문장 6개
-function dayCoreSentences(day) {
-  if (day && Array.isArray(day.previewCore) && day.previewCore.length) return day.previewCore;
+// 핵심 문장 1개 정규화: {text, subject[], verb[], bold[], italic[], ko}
+function normCore(c) {
+  c = c || {};
+  return {
+    text: (c.text || '').trim(),
+    subject: Array.isArray(c.subject) ? c.subject.slice() : [],
+    verb: Array.isArray(c.verb) ? c.verb.slice() : [],
+    bold: Array.isArray(c.bold) ? c.bold.slice() : [],
+    italic: Array.isArray(c.italic) ? c.italic.slice() : [],
+    ko: (c.ko || '').trim()
+  };
+}
+// 핵심 문장(리치): 교사가 지정한 coreSentences → 구버전 previewCore → 지문 앞 문장 6개
+function dayCoreSentencesRich(day) {
+  if (day && Array.isArray(day.coreSentences) && day.coreSentences.length) return day.coreSentences.map(normCore).filter(c => c.text);
+  if (day && Array.isArray(day.previewCore) && day.previewCore.length) return day.previewCore.map(t => normCore({ text: t }));
   const plain = stripBrackets(passageToReview(dayPassage(day)).join(' '));
   const sents = plain.match(/[^.!?]+[.!?]+/g) || (plain ? [plain] : []);
-  return sents.map(s => s.trim()).filter(Boolean).slice(0, 6);
+  return sents.map(s => s.trim()).filter(Boolean).slice(0, 6).map(t => normCore({ text: t }));
 }
+// 보통 난이도 핵심 문장(텍스트만) — 기존 호출부 호환
+function dayCoreSentences(day) { return dayCoreSentencesRich(day).map(c => c.text); }
 // 살살 난이도 어휘 카드: [{word,pos,def,ex}]
 function dayVocabCards(day) {
   const v = dayVocab(day);
