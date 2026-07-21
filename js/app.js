@@ -482,6 +482,18 @@ function topPad() {
 let ed = null;  // 콘텐츠 편집기 상태 {dayIndex, day(편집용 형태)}
 let gEd = null; // 전역 설정 편집(학생 명단·Supabase)
 
+// 등장 애니메이션은 '화면이 바뀔 때'만 재생. 같은 화면의 클릭 리렌더에는 재생 안 함(위아래 움찔 방지)
+let freshView = true;
+let _prevViewKey = null;
+function currentViewKey() {
+  if (state.intro && state.role === 'student') return 'intro';
+  if (state.role === 'student' && needLogin()) return 'login';
+  if (state.role === 'student' && needApproval()) return 'pending';
+  if (state.role === 'student' && needProfile()) return 'profile';
+  if (state.role === 'teacher') return 'teacher:' + ui.teacherTab;
+  return 'student:' + state.screen;
+}
+
 function loadState() {
   const saved = loadJSON(storeKey());
   const s = Object.assign({}, DEFAULT_STATE, saved || {});
@@ -1064,7 +1076,7 @@ function introHTML() {
   return `<div data-act="startApp" style="position:absolute;inset:0;z-index:80;cursor:pointer;overflow:hidden;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;${leaving}">
     <div style="position:absolute;inset:0">${introBubblesHTML()}</div>
     <div style="position:absolute;top:-10%;left:18%;width:60%;height:80%;background:linear-gradient(180deg,rgba(255,255,255,.22),transparent);transform:skewX(-13deg);filter:blur(10px)"></div>
-    <div style="position:relative;text-align:center;animation:fadeup 1.3s ease-out">
+    <div style="position:relative;text-align:center;${freshView ? 'animation:fadeup 1.3s ease-out' : ''}">
       <div style="font-size:12px;letter-spacing:.38em;opacity:.8;text-transform:uppercase">Reading Companion</div>
       <div style="font-family:'Lora',serif;font-size:47px;font-weight:600;line-height:1.03;margin:14px 0 0;text-shadow:0 6px 26px rgba(0,0,0,.45)">Reading<br>Aquarium</div>
       <div style="font-size:12.5px;opacity:.85;margin-top:14px;font-style:italic;font-family:'Lora',serif">나와 함께 성장하는 아쿠아리움</div>
@@ -1110,13 +1122,13 @@ function loginScreenHTML() {
   return `<div style="position:absolute;inset:0;z-index:58;overflow-y:auto;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%)">
     <div style="position:absolute;inset:0;pointer-events:none">${introBubblesHTML()}</div>
     <div style="position:relative;min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:44px 30px 20px">
-      <div style="text-align:center;color:#fff;margin-bottom:26px;animation:fadeup 1s ease-out">
+      <div style="text-align:center;color:#fff;margin-bottom:26px;${freshView ? 'animation:fadeup 1s ease-out' : ''}">
         <div style="font-size:11px;letter-spacing:.34em;opacity:.8;text-transform:uppercase">Reading Companion</div>
         <div style="font-family:'Lora',serif;font-size:38px;font-weight:600;line-height:1.05;margin-top:12px;text-shadow:0 4px 18px rgba(0,0,0,.4)">Reading<br>Aquarium</div>
         <div style="font-size:12.5px;opacity:.9;margin-top:12px;font-style:italic;font-family:'Lora',serif">나와 함께 성장하는 아쿠아리움</div>
         <div style="font-size:12px;opacity:.8;margin-top:16px">${ui.signupMode ? '아이디를 만들면 나만의 아쿠아리움이 생겨요 🐠' : '내 계정으로 이어서 키워요'}</div>
       </div>
-      <div style="animation:fadeup 1.2s ease-out">${loginFormHTML(false)}</div>
+      <div style="${freshView ? 'animation:fadeup 1.2s ease-out' : ''}">${loginFormHTML(false)}</div>
       <div style="text-align:center;color:#fff;opacity:.6;font-size:11px;margin-top:26px;letter-spacing:.02em">신당고등학교 · 최유림T</div>
     </div>
   </div>`;
@@ -1154,12 +1166,12 @@ function profilePickerHTML() {
   return `<div style="position:absolute;inset:0;z-index:58;overflow-y:auto;background:linear-gradient(180deg,#5aa7de 0%,#2f6fae 28%,#134279 60%,#07203f 100%)">
     <div style="position:absolute;inset:0;pointer-events:none">${introBubblesHTML()}</div>
     <div style="position:relative;padding:80px 26px 40px">
-      <div style="text-align:center;color:#fff;margin-bottom:26px;animation:fadeup 1s ease-out">
+      <div style="text-align:center;color:#fff;margin-bottom:26px;${freshView ? 'animation:fadeup 1s ease-out' : ''}">
         <div style="font-size:11px;letter-spacing:.34em;opacity:.8;text-transform:uppercase">Reading Aquarium</div>
         <div style="font-size:23px;font-weight:700;margin-top:10px">누구인가요?</div>
         <div style="font-size:12.5px;opacity:.85;margin-top:6px">이름을 고르면 나만의 아쿠아리움이 열려요 🐠</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:11px;animation:fadeup 1.2s ease-out">${cards}</div>
+      <div style="display:flex;flex-direction:column;gap:11px;${freshView ? 'animation:fadeup 1.2s ease-out' : ''}">${cards}</div>
       <div style="text-align:center;color:#fff;opacity:.6;font-size:11px;margin-top:26px">신당고등학교 · 최유림T</div>
     </div>
   </div>`;
@@ -1230,7 +1242,7 @@ function homeHTML() {
 
   const req = requiredKeys();
   const done = doneCount();
-  const enter = !state.intro ? 'animation:riseIn .8s cubic-bezier(.2,.7,.2,1) both' : '';
+  const enter = (!state.intro && freshView) ? 'animation:riseIn .8s cubic-bezier(.2,.7,.2,1) both' : '';
 
   const eggBanner = state.eggs > 0 ? `
     <div data-act="goHatch" style="display:flex;align-items:center;gap:13px;background:#fff8e6;border:1.5px solid #f0c65a;border-radius:18px;padding:14px 16px;margin-bottom:18px;cursor:pointer;box-shadow:0 8px 20px -12px rgba(240,169,46,.6)">
@@ -2099,6 +2111,11 @@ function render() {
   // 역할은 계정으로 자동 결정. 교사는 '학생' 토글로 학생 화면을 미리 볼 수 있음.
   if (authMode()) state.role = (isTeacherUser() && !ui.asStudent) ? 'teacher' : 'student';
 
+  // 화면이 바뀌었을 때만 등장 애니메이션 재생(같은 화면 클릭 리렌더는 애니메이션·스크롤 유지)
+  const vk = currentViewKey();
+  freshView = (vk !== _prevViewKey);
+  _prevViewKey = vk;
+
   let html = '';
   if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
   if (isTeacherUser() && ui.asStudent && state.role === 'student'
@@ -2136,7 +2153,15 @@ function render() {
   if (auth && ui.acct.open) html += accountHTML();  // 내 계정(비번 변경/탈퇴)
   if (ui.present.on) html += presentHTML();  // 수업용 전체화면 발표(최상단)
 
-  document.getElementById('app').innerHTML = html;
+  const appEl = document.getElementById('app');
+  // 같은 화면의 리렌더면 스크롤 위치 보존(초기화되는 느낌 방지)
+  const oldScroller = appEl.querySelector('.scroll');
+  const savedTop = oldScroller ? oldScroller.scrollTop : 0;
+  appEl.innerHTML = html;
+  if (!freshView && savedTop) {
+    const newScroller = appEl.querySelector('.scroll');
+    if (newScroller) newScroller.scrollTop = savedTop;
+  }
   bindQuizInput();
 }
 
