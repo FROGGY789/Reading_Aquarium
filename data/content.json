@@ -1,7 +1,9 @@
 {
   "version": 1,
   "students": [],
-  "classes": [],
+  "classes": [
+    "2026 여름방학 영방반"
+  ],
   "supabase": {
     "url": "https://jhmglwmxhpsgfskuvmzg.supabase.co",
     "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpobWdsd214aHBzZ2Zza3V2bXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMDMwMDUsImV4cCI6MjA5OTY3OTAwNX0.VxBQU-B-yn2-rNnW4TxcuInbHqLnEcIcNOngintPEEY"
