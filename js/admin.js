@@ -100,8 +100,14 @@ const actions = {
     toast(kept.length ? `[단어] ${kept.length}개를 불러왔어요. 뜻을 채워주세요.` : '지문에 [대괄호] 단어가 없어요.', 'ok');
     render();
   },
-  addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', explain: '' }); render(); },
+  addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', explain: '' }); render(); },
   delQ(arg) { const [cat, i] = arg.split(':'); ed.day.quiz[cat].splice(Number(i), 1); render(); },
+  qFixWrong(arg) {   // 오류 고치기: 틀린 단어 클릭 표시
+    const [cat, i, wi] = arg.split(':');
+    const q = ed.day.quiz[cat][Number(i)]; if (!q) return;
+    q.wrong = Number(q.wrong) === Number(wi) ? -1 : Number(wi);
+    render();
+  },
   /* 핵심 문장(리치) 편집 */
   coreMode(m) { ui.coreMode = m; render(); },
   coreTogglePicker() { ui.corePickOpen = !ui.corePickOpen; render(); },
@@ -243,7 +249,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v15 (어법복습 7a)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v16 (어법 4유형)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -441,13 +447,15 @@ function qcat(cat) {
         <select class="inp" style="width:auto;padding:6px 8px" data-bind="${base}.type" data-rerender="1">
           <option value="mc" ${q.type === 'mc' ? 'selected' : ''}>A~D 고르기(객관식)</option>
           <option value="ab" ${q.type === 'ab' ? 'selected' : ''}>[A/B] 고르기</option>
+          <option value="fix" ${q.type === 'fix' ? 'selected' : ''}>오류 고치기</option>
+          <option value="scramble" ${q.type === 'scramble' ? 'selected' : ''}>Scramble</option>
           <option value="input" ${q.type === 'input' ? 'selected' : ''}>주관식</option>
         </select>
         <div style="flex:1"></div>
         <button class="btn danger sm" data-act="delQ" data-arg="${cat}:${i}">삭제</button>
       </div>
-      <input class="inp" data-bind="${base}.prompt" value="${esc(q.prompt)}" placeholder="문제 ${q.type === 'ab' ? '(비워도 됨)' : ''}">
-      <input class="inp" style="margin-top:7px" data-bind="${base}.sentence" value="${esc(q.sentence)}" placeholder="${q.type === 'ab' ? '문장에 [정답/오답] 넣기 — 예: She [was/were] happy.' : '예문/제시 문장 (선택)'}">
+      <input class="inp" data-bind="${base}.prompt" value="${esc(q.prompt)}" placeholder="문제 ${(q.type === 'ab' || q.type === 'scramble') ? '(비워도 됨)' : ''}">
+      ${q.type === 'scramble' ? '' : `<input class="inp" style="margin-top:7px" data-bind="${base}.sentence" data-rerender="1" value="${esc(q.sentence)}" placeholder="${q.type === 'ab' ? '문장에 [정답/오답] 넣기 — 예: She [was/were] happy.' : q.type === 'fix' ? '틀린 부분이 든 문장 — 예: She go to school.' : '예문/제시 문장 (선택)'}">`}
       ${q.type === 'mc'
         ? `<div class="label" style="margin-bottom:2px">보기 (동그라미로 정답 선택, 2개 이상)</div>${opts}`
         : q.type === 'ab'
@@ -456,7 +464,14 @@ function qcat(cat) {
                <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ab-${cat}-${i}" value="0" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === 0 ? 'checked' : ''}> 앞[A] 정답</label>
                <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ab-${cat}-${i}" value="1" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === 1 ? 'checked' : ''}> 뒤[B] 정답</label>
              </div>`
-          : `<input class="inp" style="margin-top:7px" data-bind="${base}.accept" value="${esc(q.accept)}" placeholder="정답 (여러 개면 쉼표: retreat, 후퇴하다)">`}
+          : q.type === 'fix'
+            ? `<div class="label" style="margin:6px 0 2px">문장에서 <b>틀린 단어를 클릭</b>하세요 ${Number(q.wrong) >= 0 ? '✅' : ''}</div>
+               <div style="line-height:2.1">${(q.sentence || '').split(/\s+/).filter(Boolean).map((w, wi) => `<span data-act="qFixWrong" data-arg="${cat}:${i}:${wi}" style="display:inline-block;margin:2px;padding:3px 8px;border-radius:8px;border:1.5px solid ${Number(q.wrong) === wi ? '#e2564d' : '#e2e9f2'};background:${Number(q.wrong) === wi ? '#fbe4e2' : '#fff'};cursor:pointer;font-family:'Lora',serif;font-size:15px">${esc(w)}</span>`).join('') || '<span class="hint" style="margin:0">위 칸에 문장을 먼저 입력하세요</span>'}</div>
+               <input class="inp" style="margin-top:7px" data-bind="${base}.accept" value="${esc(q.accept)}" placeholder="바른 표현 (여러 개면 쉼표: goes, went)">`
+            : q.type === 'scramble'
+              ? `<div class="label" style="margin:6px 0 2px">조각을 <b>정답 순서대로</b>, <b>/</b> 로 구분 (2~3단어씩)</div>
+                 <input class="inp" data-bind="${base}.chunksText" value="${esc(q.chunksText || '')}" placeholder="The sea / has always / drawn people.">`
+              : `<input class="inp" style="margin-top:7px" data-bind="${base}.accept" value="${esc(q.accept)}" placeholder="정답 (여러 개면 쉼표: retreat, 후퇴하다)">`}
       <input class="inp" style="margin-top:7px" data-bind="${base}.explain" value="${esc(q.explain)}" placeholder="해설">
     </div>`;
   }).join('');
