@@ -596,8 +596,23 @@ const DEFAULT_STATE = {
   pop: null,
   dexOpen: false,
   readerPage: 0,
-  wordbook: []              // '몰라요' 한 단어 모음 [{word,def,pos,ex,ts}] (5번에서 클라우드 동기화)
+  wordbook: [],             // '몰라요' 한 단어 모음 [{word,def,pos,ex,ts}] (5번에서 클라우드 동기화)
+  presentTheme: 'deep'      // 수업용 발표 화면 배경 그라디언트 테마
 };
+
+/* ---- 수업용 발표 배경 테마(교사가 발표 화면에서 색 조정) ---- */
+const PRESENT_THEMES = [
+  { id: 'deep',     name: '딥블루',   swatch: '#153f6e', bg: 'radial-gradient(120% 130% at 50% -10%,#123a63 0%,#0b243f 46%,#061627 100%)', accent: '#7db4ff', fg: '#ffffff', dim: '255,255,255' },
+  { id: 'midnight', name: '미드나잇', swatch: '#1b2029', bg: 'radial-gradient(120% 130% at 50% -10%,#2a2f3a 0%,#161a22 46%,#080a0f 100%)', accent: '#9db4d6', fg: '#ffffff', dim: '255,255,255' },
+  { id: 'forest',   name: '딥그린',   swatch: '#124a3a', bg: 'radial-gradient(120% 130% at 50% -10%,#124a3a 0%,#0b2f26 46%,#05130e 100%)', accent: '#6ee0b0', fg: '#ffffff', dim: '255,255,255' },
+  { id: 'plum',     name: '자주',     swatch: '#3a2263', bg: 'radial-gradient(120% 130% at 50% -10%,#3a2263 0%,#241040 46%,#110624 100%)', accent: '#c39bff', fg: '#ffffff', dim: '255,255,255' },
+  { id: 'sunset',   name: '노을',     swatch: '#7a3320', bg: 'radial-gradient(120% 130% at 50% -10%,#7a3320 0%,#4a1c12 46%,#280d08 100%)', accent: '#ffb27d', fg: '#ffffff', dim: '255,255,255' },
+  { id: 'slate',    name: '차분한 회색', swatch: '#3a4250', bg: 'radial-gradient(120% 130% at 50% -10%,#3a4250 0%,#252b35 46%,#12151b 100%)', accent: '#b9c4d4', fg: '#ffffff', dim: '255,255,255' },
+  { id: 'paper',    name: '밝은 종이', swatch: '#e7edf5', bg: 'radial-gradient(120% 130% at 50% -10%,#ffffff 0%,#eef2f7 46%,#d9e2ee 100%)', accent: '#2f74e6', fg: '#12243f', dim: '20,42,75' }
+];
+function presentThemeObj() {
+  return PRESENT_THEMES.find(t => t.id === state.presentTheme) || PRESENT_THEMES[0];
+}
 
 let state = loadState();
 let hatchTimer = null;
@@ -1099,7 +1114,9 @@ const actions = {
   presentNext() { const p = ui.present; if (p.on && p.i < p.sents.length - 1) { p.i++; render(); } },
   presentPrev() { const p = ui.present; if (p.on && p.i > 0) { p.i--; render(); } },
   presentGo(arg) { const p = ui.present; const i = Number(arg); if (p.on && i >= 0 && i < p.sents.length) { p.i = i; render(); } },
-  presentClose() { ui.present.on = false; exitFS(); render(); },
+  presentClose() { ui.present.on = false; ui.present.palette = false; exitFS(); render(); },
+  presentPalette() { ui.present.palette = !ui.present.palette; render(); },
+  presentSetTheme(arg) { state.presentTheme = arg; ui.present.palette = false; save(); render(); },
 
   edSelectDay(arg) { commitDayEdit(); openDay(Number(arg)); render(); },
   edSelectDayView(arg) { ui.presDay = Number(arg); render(); },  // 발표용: 배포 Day 선택
@@ -2692,29 +2709,45 @@ function presentHTML() {
   const atFirst = i <= 0;
   const atLast = i >= total - 1;
 
+  const th = presentThemeObj();
+  const fg = th.fg, dim = th.dim, accent = th.accent;
+
   // 진행 점(문장이 많으면 막대로 대체)
   const progress = total <= 24
     ? `<div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:70vw">
-        ${p.sents.map((_, k) => `<div data-act="presentGo" data-arg="${k}" style="width:${k === i ? '22px' : '8px'};height:8px;border-radius:99px;background:${k === i ? '#7db4ff' : 'rgba(255,255,255,.28)'};cursor:pointer;transition:width .2s"></div>`).join('')}
+        ${p.sents.map((_, k) => `<div data-act="presentGo" data-arg="${k}" style="width:${k === i ? '22px' : '8px'};height:8px;border-radius:99px;background:${k === i ? accent : `rgba(${dim},.28)`};cursor:pointer;transition:width .2s"></div>`).join('')}
       </div>`
-    : `<div style="width:min(60vw,520px);height:6px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden">
-        <div style="width:${((i + 1) / total) * 100}%;height:100%;background:#7db4ff;transition:width .2s"></div>
+    : `<div style="width:min(60vw,520px);height:6px;border-radius:99px;background:rgba(${dim},.16);overflow:hidden">
+        <div style="width:${((i + 1) / total) * 100}%;height:100%;background:${accent};transition:width .2s"></div>
       </div>`;
 
-  const navBtn = (act, label, disabled) => `<div ${disabled ? '' : `data-act="${act}"`} style="display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,${disabled ? '.05' : '.14'});color:#fff;font-size:22px;cursor:${disabled ? 'default' : 'pointer'};opacity:${disabled ? '.3' : '1'};-webkit-user-select:none;user-select:none">${label}</div>`;
+  const navBtn = (act, label, disabled) => `<div ${disabled ? '' : `data-act="${act}"`} style="display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:rgba(${dim},${disabled ? '.05' : '.14'});color:${fg};font-size:22px;cursor:${disabled ? 'default' : 'pointer'};opacity:${disabled ? '.3' : '1'};-webkit-user-select:none;user-select:none">${label}</div>`;
 
-  return `<div style="position:fixed;inset:0;z-index:2147483000;background:radial-gradient(120% 130% at 50% -10%,#123a63 0%,#0b243f 46%,#061627 100%);color:#fff;overflow:hidden">
+  // 배경색(그라디언트) 팔레트
+  const palette = p.palette ? `
+    <div style="position:absolute;top:56px;right:20px;z-index:4;background:rgba(20,30,50,.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:12px;pointer-events:auto;box-shadow:0 12px 30px -10px rgba(0,0,0,.6)">
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.65);margin-bottom:9px">배경색 고르기</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        ${PRESENT_THEMES.map(t => `<div data-act="presentSetTheme" data-arg="${t.id}" title="${t.name}" style="width:44px;height:44px;border-radius:10px;background:${t.bg};cursor:pointer;border:2px solid ${t.id === th.id ? '#7db4ff' : 'rgba(255,255,255,.18)'};display:flex;align-items:flex-end;justify-content:center;overflow:hidden">
+          ${t.id === th.id ? '<div style="color:#7db4ff;font-size:12px;font-weight:900;text-shadow:0 1px 3px rgba(0,0,0,.7);margin-bottom:2px">✓</div>' : ''}
+        </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  return `<div style="position:fixed;inset:0;z-index:2147483000;background:${th.bg};color:${fg};overflow:hidden">
     <!-- 좌우 탭 영역: 왼쪽 30% 이전, 오른쪽 70% 다음 -->
     <div ${atFirst ? '' : 'data-act="presentPrev"'} style="position:absolute;top:0;left:0;width:30%;height:100%;z-index:1;cursor:${atFirst ? 'default' : 'w-resize'}"></div>
     <div ${atLast ? '' : 'data-act="presentNext"'} style="position:absolute;top:0;right:0;width:70%;height:100%;z-index:1;cursor:${atLast ? 'default' : 'e-resize'}"></div>
 
     <!-- 상단 바 -->
     <div style="position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:16px 20px;pointer-events:none">
-      <div style="font-size:13px;font-weight:600;letter-spacing:.3px;color:rgba(255,255,255,.6)">${esc(p.title) || '수업 자료'}</div>
+      <div style="font-size:13px;font-weight:600;letter-spacing:.3px;color:rgba(${dim},.6)">${esc(p.title) || '수업 자료'}</div>
       <div style="display:flex;gap:9px;pointer-events:auto">
-        <div data-act="presentClose" title="닫기 (Esc)" style="display:flex;align-items:center;gap:6px;padding:0 15px;height:40px;border-radius:12px;background:rgba(255,255,255,.12);cursor:pointer;font-size:13px;font-weight:700">✕ 닫기</div>
+        <div data-act="presentPalette" title="배경색 조정" style="display:flex;align-items:center;gap:6px;padding:0 14px;height:40px;border-radius:12px;background:rgba(${dim},${p.palette ? '.22' : '.12'});cursor:pointer;font-size:13px;font-weight:700">🎨 배경색</div>
+        <div data-act="presentClose" title="닫기 (Esc)" style="display:flex;align-items:center;gap:6px;padding:0 15px;height:40px;border-radius:12px;background:rgba(${dim},.12);cursor:pointer;font-size:13px;font-weight:700">✕ 닫기</div>
       </div>
     </div>
+    ${palette}
 
     <!-- 문장(가운데, 크고 깔끔하게) -->
     <div style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:9vh 8vw;pointer-events:none">
@@ -2725,11 +2758,11 @@ function presentHTML() {
     <div style="position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;flex-direction:column;align-items:center;gap:14px;padding:0 20px 26px;pointer-events:none">
       <div style="display:flex;align-items:center;gap:26px;pointer-events:auto">
         ${navBtn('presentPrev', '‹', atFirst)}
-        <div style="font-size:14px;font-weight:700;color:rgba(255,255,255,.75);min-width:64px;text-align:center;font-variant-numeric:tabular-nums">${i + 1} / ${total}</div>
+        <div style="font-size:14px;font-weight:700;color:rgba(${dim},.75);min-width:64px;text-align:center;font-variant-numeric:tabular-nums">${i + 1} / ${total}</div>
         ${navBtn('presentNext', '›', atLast)}
       </div>
       <div style="pointer-events:auto">${progress}</div>
-      <div style="font-size:11.5px;color:rgba(255,255,255,.4)">← → 또는 화면 탭으로 넘기기 · Esc 닫기</div>
+      <div style="font-size:11.5px;color:rgba(${dim},.4)">← → 또는 화면 탭으로 넘기기 · Esc 닫기</div>
     </div>
   </div>`;
 }
