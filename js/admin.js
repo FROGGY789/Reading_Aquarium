@@ -87,6 +87,21 @@ const actions = {
     const inner = s + marker.length;
     ta.setSelectionRange(inner, inner + sel.length);
   },
+  // 어려운(B2+) 단어 자동 [ ] / 대괄호 모두 지우기
+  autoBracket() {
+    const ta = document.getElementById(ui.expand ? 'pv-textarea' : 'passage-textarea');
+    const cur = ta ? ta.value : (ed.day.passageText || '');
+    ed.day.passageText = autoBracketHard(cur);
+    toast("어려운 단어에 [ ]를 자동 표시했어요. 이름 등 잘못 표시된 건 지우고, 아래 '🔄 지문에서 [단어] 불러오기'로 뜻을 채우세요.", 'ok');
+    render();
+  },
+  clearBrackets() {
+    const ta = document.getElementById(ui.expand ? 'pv-textarea' : 'passage-textarea');
+    const cur = ta ? ta.value : (ed.day.passageText || '');
+    ed.day.passageText = stripBrackets(cur);
+    toast('지문의 [ ] 표시를 모두 지웠어요.', 'ok');
+    render();
+  },
   selectDay(i) { commit(); openDay(Number(i)); toast(''); render(); },
   addDay() {
     commit();
@@ -250,6 +265,8 @@ function passageEditorOverlay(d) {
       <div style="font-size:12px;color:#7d8aa0">문단=빈 줄 · 페이지=<span class="mono">---</span> · 팝오버=<span class="mono">[단어]</span></div>
       <button class="btn ghost sm" data-act="markPassage" data-arg="**" title="선택한 부분을 굵게 강조"><b>B</b> 강조</button>
       <button class="btn ghost sm" data-act="markPassage" data-arg="==" title="선택한 부분에 형광펜 색">🖍 형광펜</button>
+      <button class="btn primary sm" data-act="autoBracket" title="어려운(B2+) 단어 자동 [ ]">🔎 자동 [ ]</button>
+      <button class="btn ghost sm" data-act="clearBrackets" title="[ ] 모두 지우기">⌫ [ ]</button>
       <div style="flex:1"></div>
       <span style="font-size:12px;color:#7d8aa0;white-space:nowrap">${paras}문단 · ${chars.toLocaleString()}자</span>
       <button class="btn ghost sm" data-act="expandFontDown" title="글자 작게">가－</button>
@@ -266,7 +283,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v22 (발표 글씨크기·본문 강조/형광펜)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v23 (어려운 단어 자동 [ ])</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -333,12 +350,16 @@ function passageTab(d) {
           · e-북 페이지는 <span class="mono">---</span> 를 한 줄에 넣어 구분<br>
           · 팝오버로 뜻을 보여줄 단어는 <span class="mono">[대괄호]</span>로 감싸기 (예: a <span class="mono">[restless]</span> horizon)<br>
           · <b>강조/색</b>: 굵게는 <span class="mono">**이렇게**</span>, 형광펜은 <span class="mono">==이렇게==</span> — 발표·리더·복습에 그대로 나와요<br>
+          · <b>🔎 어려운 단어 자동 [ ]</b>: 대략 B2 이상으로 보이는 단어에 자동으로 대괄호를 쳐요(근사치 — 이름 등은 확인 후 지우세요)<br>
           이 지문 하나에서 <b>e-북 리더</b>와 <b>지문 복습(팝오버)</b>이 모두 나와요.
         </div>
-        <div style="display:flex;gap:7px;margin:10px 0 8px">
+        <div style="display:flex;gap:7px;margin:10px 0 8px;flex-wrap:wrap;align-items:center">
           <button class="btn ghost sm" data-act="markPassage" data-arg="**" title="선택한 부분을 굵게 강조 (**...**)"><b>B</b> 강조</button>
           <button class="btn ghost sm" data-act="markPassage" data-arg="==" title="선택한 부분에 형광펜 색 (==...==)">🖍 형광펜</button>
-          <span class="hint" style="margin:0;align-self:center">← 지문에서 <b>드래그해 선택</b>한 뒤 눌러요</span>
+          <span class="hint" style="margin:0">← <b>드래그 선택</b> 후 누르기</span>
+          <span style="flex:1"></span>
+          <button class="btn primary sm" data-act="autoBracket" title="B2 이상으로 보이는 어려운 단어에 자동으로 [ ] 표시">🔎 어려운 단어 자동 [ ]</button>
+          <button class="btn ghost sm" data-act="clearBrackets" title="지문의 모든 [ ]를 지우기">⌫ [ ] 지우기</button>
         </div>
         <textarea id="passage-textarea" class="inp" data-bind="passageText" rows="20" placeholder="여기에 그날 읽을 지문을 붙여넣으세요. 아주 길어도 괜찮아요.">${esc(d.passageText)}</textarea>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
