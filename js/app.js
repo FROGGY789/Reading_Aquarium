@@ -478,6 +478,12 @@ function dueWords() {
     .sort((a, b) => (a.due || '').localeCompare(b.due || ''));
 }
 function shuffleArr(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+// 2단계 보통: 다음 문장으로(마지막이면 예습 완료)
+function pmAdvance() {
+  const sents = dayCoreSentencesRich(activeDay());
+  if ((state.pmIndex || 0) >= sents.length - 1) { completeTask('preview'); return; }
+  set({ pmIndex: (state.pmIndex || 0) + 1, pmPhaseIdx: 0, pmSel: [], pmMsg: '' });
+}
 // '몰라요' 단어를 내 단어장에 담기(중복 제거) + 클라우드 저장
 function addToWordbook(card) {
   if (!card || !card.word) return;
@@ -776,8 +782,32 @@ const actions = {
   },
   // 지문 예습 난이도 선택 — 살살: 다음날 어휘 플래시카드
   previewEasy() { if (flashcardCards('preview').length) set({ screen: 'previewVocab', fcI: 0, fcFlipped: false, fcHint: false }); },
-  previewMedium() { set({ screen: 'previewRead' }); },
+  previewMedium() {
+    if (!dayCoreSentencesRich(activeDay()).length) return;
+    set({ screen: 'previewMedium', pmIndex: 0, pmPhaseIdx: 0, pmSel: [], pmMsg: '' });
+  },
   previewHard() { set({ screen: 'reader', readerBurning: true, readerPage: 0 }); },
+  // 2단계 보통: 주어/동사 클릭 채점
+  pmToggle(arg) {
+    const wi = Number(arg);
+    const sel = (state.pmSel || []).slice();
+    const p = sel.indexOf(wi);
+    if (p >= 0) sel.splice(p, 1); else sel.push(wi);
+    set({ pmSel: sel, pmMsg: '' });
+  },
+  pmCheck() {
+    const sents = dayCoreSentencesRich(activeDay());
+    const c = sents[state.pmIndex]; if (!c) return;
+    const phases = ['subject', 'verb'].filter(k => (c[k] || []).length);
+    const phase = phases[state.pmPhaseIdx];
+    const target = (c[phase] || []).slice().sort((a, b) => a - b);
+    const sel = (state.pmSel || []).slice().sort((a, b) => a - b);
+    const ok = target.length === sel.length && target.every((v, i) => v === sel[i]);
+    if (!ok) { set({ pmMsg: 'wrong' }); return; }
+    if (state.pmPhaseIdx < phases.length - 1) { set({ pmPhaseIdx: state.pmPhaseIdx + 1, pmSel: [], pmMsg: '' }); return; }
+    pmAdvance();
+  },
+  pmNext() { pmAdvance(); },   // 표시 마크가 없는 문장: 읽고 다음
   // 어휘 복습: 개수 선택
   vrPick(n) {
     const total = dayVocabCards(activeDay()).length;
@@ -1856,7 +1886,7 @@ function previewLevelsHTML() {
     </div>
     <div style="display:flex;flex-direction:column;gap:12px">
       ${card('previewEasy', 1, '🟢', '#2fa36b', '살살', 'EASY', easyN ? `다음 수업 어휘 ${easyN}개 미리보기 (플래시카드)` : '다음 수업 어휘가 아직 없어요', easyN === 0)}
-      ${card('previewMedium', 2, '🟡', '#e0a41a', '보통', 'MEDIUM', coreN ? `핵심 문장 ${coreN}개 읽기` : '읽을 문장이 없어요', coreN === 0)}
+      ${card('previewMedium', 2, '🟡', '#e0a41a', '보통', 'MEDIUM', coreN ? `핵심 문장 ${coreN}개 · 주어·동사 찾기` : '핵심 문장이 없어요', coreN === 0)}
       ${card('previewHard', 3, '🔴', '#e2564d', '버닝', 'BURNING', `지문 전체 읽기${compN ? ` + 이해도 확인 ${compN}문항` : ''}`, dayPassage(d).trim() === '')}
     </div>
   </div>`;
@@ -1977,7 +2007,55 @@ function vocabReviewHTML() {
   </div>`;
 }
 
-/* ---- 지문 예습: 보통(핵심 문장 읽기) ---- */
+/* ---- 지문 예습: 보통(2단계) — 주어/동사 클릭 채점 ---- */
+function previewMediumHTML() {
+  const sents = dayCoreSentencesRich(activeDay());
+  const total = sents.length || 1;
+  const i = Math.min(state.pmIndex || 0, total - 1);
+  const c = sents[i] || { text: '', subject: [], verb: [] };
+  const toks = (c.text || '').split(/\s+/).filter(Boolean);
+  const phases = ['subject', 'verb'].filter(k => (c[k] || []).length);
+  const grading = phases.length > 0;
+  const phase = phases[state.pmPhaseIdx || 0];   // 'subject' | 'verb' | undefined
+  const sel = state.pmSel || [];
+  const phaseColor = phase === 'verb' ? '#2fa36b' : '#2f74e6';
+  const subPassed = phases.indexOf('subject') > -1 && phases.indexOf('subject') < (state.pmPhaseIdx || 0);
+
+  const chip = (w, wi) => {
+    const isSel = !!phase && sel.includes(wi);
+    const isConfSub = subPassed && (c.subject || []).includes(wi);
+    let bg = '#fff', bd = '#e2e9f2';
+    if (isConfSub) { bg = '#dbeafe'; bd = '#2f74e6'; }
+    if (isSel) { bg = phase === 'verb' ? '#dcfce7' : '#dbeafe'; bd = phaseColor; }
+    return `<span ${phase ? `data-act="pmToggle" data-arg="${wi}"` : ''} style="display:inline-block;margin:3px;padding:5px 10px;border-radius:9px;border:1.5px solid ${bd};background:${bg};color:#26303f;font-family:'Lora',serif;font-size:18px;cursor:${phase ? 'pointer' : 'default'}">${esc(w)}</span>`;
+  };
+  const prompt = !grading ? '문장을 소리 내어 읽어보세요'
+    : phase === 'subject' ? '👆 주어(주부)를 모두 클릭하세요'
+      : '👆 동사를 클릭하세요';
+  const btn = grading
+    ? `<button data-act="pmCheck" style="width:100%;border:none;background:${phaseColor};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${phase === 'verb' ? '#1f7a4d' : '#1f57c4'};cursor:pointer">확인</button>`
+    : `<button data-act="pmNext" style="width:100%;border:none;background:${i >= total - 1 ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${i >= total - 1 ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${i >= total - 1 ? '예습 완료 ✓' : '다음 문장 →'}</button>`;
+  const feedback = state.pmMsg === 'wrong'
+    ? `<div style="text-align:center;font-size:13px;font-weight:700;color:#c0392b;background:#fbe4e2;border-radius:12px;padding:10px;margin-top:12px">다시 체크해 보세요 🤔</div>` : '';
+
+  return `<div style="padding:${topPad()} 20px 30px;min-height:100%;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div data-act="goPreview" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#fdf3dd;color:#a5760f;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🟡 2단계 보통 · 문장 구조</span>
+      <span style="font-size:12px;font-weight:700;color:#14243f">${i + 1}/${total}</span>
+    </div>
+    <div style="text-align:center;font-size:13.5px;font-weight:700;color:${phase === 'verb' ? '#2fa36b' : (grading ? '#2f74e6' : '#7d8aa0')};margin:6px 0 4px">${prompt}</div>
+    ${subPassed ? `<div style="text-align:center;font-size:10.5px;color:#9aa8bd;margin-bottom:2px">🔵 주어 완료 — 이제 동사예요</div>` : ''}
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+      <div style="text-align:center;line-height:2.2">${toks.map(chip).join('')}</div>
+      ${c.ko ? `<div style="text-align:center;font-size:13px;color:#9aa8bd;margin-top:14px;font-family:'IBM Plex Sans KR',sans-serif">${esc(c.ko)}</div>` : ''}
+      ${feedback}
+    </div>
+    <div style="margin-top:12px">${btn}</div>
+  </div>`;
+}
+
+/* ---- 지문 예습: 보통(핵심 문장 읽기 — 구버전 폴백) ---- */
 function previewReadHTML() {
   const sents = dayCoreSentences(activeDay());
   return `<div style="padding:${topPad()} 20px 40px">
@@ -2379,7 +2457,7 @@ function render() {
   let html = '';
   if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
   if (isTeacherUser() && ui.asStudent && state.role === 'student'
-      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead', 'vocabReview', 'wordTest'].includes(state.screen)) {
+      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead', 'previewMedium', 'vocabReview', 'wordTest'].includes(state.screen)) {
     html += previewClassBarHTML();  // 미리보기: 반 선택 바(몰입 화면 제외)
   }
 
@@ -2395,6 +2473,7 @@ function render() {
       case 'previewVocab': screen = previewVocabHTML(); break;
       case 'vocabReview': screen = vocabReviewHTML(); break;
       case 'wordTest': screen = wordTestHTML(); break;
+      case 'previewMedium': screen = previewMediumHTML(); break;
       case 'previewRead': screen = previewReadHTML(); break;
       case 'quiz': screen = quizHTML(); break;
       case 'result': screen = resultHTML(); break;
