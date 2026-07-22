@@ -425,12 +425,26 @@ function nextDayAfterActive() {
   const after = days.filter(d => (d.date || '') > (cur.date || ''));
   return after.length ? after[0] : null;
 }
-// 브라우저 내장 음성으로 영어 발음 재생
+// 영어(미국) 음성 선택 — 한국어 음성이 영어를 읽어 어색해지는 문제 방지
+let _enVoice = null;
+function pickEnVoice() {
+  try {
+    const vs = window.speechSynthesis.getVoices() || [];
+    _enVoice = vs.find(v => /en[-_]US/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+  } catch (e) { /* 무시 */ }
+}
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  pickEnVoice();
+  try { window.speechSynthesis.onvoiceschanged = pickEnVoice; } catch (e) { /* 무시 */ }
+}
+// 브라우저 내장 음성으로 영어 발음 재생(미국 영어 음성 우선)
 function speak(text) {
   try {
     if (!window.speechSynthesis || !text) return;
+    if (!_enVoice) pickEnVoice();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'en-US'; u.rate = 0.9;
+    if (_enVoice) u.voice = _enVoice;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
   } catch (e) { /* 미지원 브라우저 무시 */ }
@@ -535,15 +549,15 @@ async function loadWordbook() {
 
 // 오늘 할 일 구성(문항이 있는 카테고리만 노출)
 const MAIN_TASKS = [
-  { key: 'review',   icon: '📖',  bg: '#e0f3ea', sub: () => '단어 팝오버로 다시 읽기' },
-  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', sub: n => `어법 유형 문제 ${n}문항` },
-  { key: 'vocab',    icon: '🔤',  bg: '#fdeede', sub: () => `플래시카드로 단어 복습 (알아요/몰라요)` },
-  { key: 'preview',  icon: '👀',  bg: '#e7f0fd', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
+  { key: 'review',   icon: '📖',  bg: '#e0f3ea', time: '3분', sub: () => '단어 팝오버로 다시 읽기' },
+  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', time: '4분', sub: n => `어법 유형 문제 ${n}문항` },
+  { key: 'vocab',    icon: '🔤',  bg: '#fdeede', time: '3분', sub: () => `플래시카드로 단어 복습 (알아요/몰라요)` },
+  { key: 'preview',  icon: '👀',  bg: '#e7f0fd', time: '5분', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
 ];
 const BONUS_TASKS = [
-  { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', sub: n => `다음 수업 단어 미리보기 ${n}문항` },
-  { key: 'sentPrep',  icon: '✍️', bg: '#e0f3ea', sub: n => `핵심 문장 의미 미리보기 ${n}문항` },
-  { key: 'grammar',   icon: '📐', bg: '#fdeede', sub: n => `시제·관계사 등 어법 ${n}문항` }
+  { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', time: '2분', sub: n => `다음 수업 단어 미리보기 ${n}문항` },
+  { key: 'sentPrep',  icon: '✍️', bg: '#e0f3ea', time: '2분', sub: n => `핵심 문장 의미 미리보기 ${n}문항` },
+  { key: 'grammar',   icon: '📐', bg: '#fdeede', time: '2분', sub: n => `시제·관계사 등 어법 ${n}문항` }
 ];
 function taskAvailable(key) {
   if (key === 'review') return passageToReview(dayPassage(activeDay())).length > 0;
@@ -1494,7 +1508,10 @@ function homeHTML() {
     const n = dayQuiz(cfg.key).length;
     return `<div data-act="startTask" data-arg="${cfg.key}" style="${row(t[cfg.key])}">
       <div style="width:40px;height:40px;border-radius:12px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:19px">${cfg.icon}</div>
-      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#14243f">${QUIZ_META[cfg.key] ? QUIZ_META[cfg.key].name : '지문 복습'}</div><div style="font-size:11px;color:#7d8aa0;margin-top:1px">${cfg.sub(n)}</div></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:600;color:#14243f">${QUIZ_META[cfg.key] ? QUIZ_META[cfg.key].name : '지문 복습'}</span>${cfg.time ? `<span style="font-size:10px;font-weight:700;color:#7d8aa0;background:#eef2f8;border-radius:6px;padding:1px 6px">⏱ 약 ${cfg.time}</span>` : ''}</div>
+        <div style="font-size:11px;color:#7d8aa0;margin-top:1px">${cfg.sub(n)}</div>
+      </div>
       ${badge(t[cfg.key])}
     </div>`;
   };
