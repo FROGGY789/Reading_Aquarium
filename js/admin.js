@@ -249,7 +249,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v20 (발표 배경색)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v21 (어법 5유형·단어장·어휘예습)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -444,11 +444,12 @@ function qcat(cat) {
     return `<div class="qcard">
       <div class="qhead">
         <span class="qnum">Q${i + 1}</span>
+        <span style="font-size:11.5px;font-weight:700;color:#7d8aa0">형식</span>
         <select class="inp" style="width:auto;padding:6px 8px" data-bind="${base}.type" data-rerender="1">
           <option value="mc" ${q.type === 'mc' ? 'selected' : ''}>A~D 고르기(객관식)</option>
           <option value="ab" ${q.type === 'ab' ? 'selected' : ''}>[A/B] 고르기</option>
           <option value="fix" ${q.type === 'fix' ? 'selected' : ''}>오류 고치기</option>
-          <option value="scramble" ${q.type === 'scramble' ? 'selected' : ''}>Scramble</option>
+          <option value="scramble" ${q.type === 'scramble' ? 'selected' : ''}>Scramble(순서 맞추기)</option>
           <option value="input" ${q.type === 'input' ? 'selected' : ''}>주관식</option>
         </select>
         <div style="flex:1"></div>

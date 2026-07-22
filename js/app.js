@@ -456,15 +456,39 @@ function wordHintSentence(word) {
     || sents.find(s => new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(stripBrackets(s)));
   return hit ? stripBrackets(hit) : '';
 }
-// 플래시카드 덱: preview=다음날 어휘 10개 / vocab=오늘 어휘(선택 개수)
+// 다음 수업(다음 Day) 지문의 팝오버([단어]) 단어 카드 — 어휘 예습용
+// 대괄호로 표시되고 어휘 뜻이 등록된 단어(= 실제 팝오버가 뜨는 단어)만 모음
+function nextDayPopoverCards() {
+  const nd = nextDayAfterActive();
+  if (!nd) return [];
+  const passage = dayPassage(nd);
+  const v = dayVocab(nd);
+  const seen = {}, out = [];
+  const re = /\[([^\]]+)\]/g; let m;
+  while ((m = re.exec(passage))) {
+    const w = (m[1] || '').trim();
+    const key = w.toLowerCase();
+    if (!w || seen[key]) continue;
+    seen[key] = true;
+    if (v[w]) out.push(Object.assign({ word: w }, v[w]));   // 뜻이 있는 팝오버 단어만
+  }
+  return out;
+}
+// 플래시카드 덱: preview=다음날 어휘 10개 / vocabPrep=다음날 팝오버 단어 랜덤 10개 / vocab=오늘 어휘(선택 개수)
 function flashcardCards(mode) {
   if (mode === 'preview') return dayVocabCards(nextDayAfterActive() || activeDay()).slice(0, 10);
+  if (mode === 'vocabPrep') return state.vpDeck || [];   // 시작 시 랜덤 10개로 고정된 덱
   return dayVocabCards(activeDay()).slice(0, state.vrCount || 0);
+}
+// 화면 → 플래시카드 모드
+function fcModeFor(screen) {
+  if (screen === 'previewVocab') return 'preview';
+  if (screen === 'vocabPrepCard') return 'vocabPrep';
+  return 'vocab';
 }
 // 현재 보고 있는 플래시카드
 function fcCurrentCard() {
-  const mode = state.screen === 'previewVocab' ? 'preview' : 'vocab';
-  const cards = flashcardCards(mode);
+  const cards = flashcardCards(fcModeFor(state.screen));
   return cards[Math.min(state.fcI || 0, cards.length - 1)] || null;
 }
 // 오늘부터 n일 뒤 날짜키(YYYY-MM-DD)
@@ -563,13 +587,14 @@ const MAIN_TASKS = [
   { key: 'preview',  icon: '👀',  bg: '#e7f0fd', time: '5분', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
 ];
 const BONUS_TASKS = [
-  { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', time: '2분', sub: n => `다음 수업 단어 미리보기 ${n}문항` },
+  { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', time: '2분', sub: () => `다음 수업 팝오버 단어 · 플래시카드 ${Math.min(nextDayPopoverCards().length, 10)}개` },
   { key: 'sentPrep',  icon: '✍️', bg: '#e0f3ea', time: '2분', sub: n => `핵심 문장 의미 미리보기 ${n}문항` },
   { key: 'grammar',   icon: '📐', bg: '#fdeede', time: '2분', sub: n => `시제·관계사 등 어법 ${n}문항` }
 ];
 function taskAvailable(key) {
   if (key === 'review') return passageToReview(dayPassage(activeDay())).length > 0;
   if (key === 'vocab') return dayVocabCards(activeDay()).length > 0;   // 어휘 복습 = 플래시카드
+  if (key === 'vocabPrep') return nextDayPopoverCards().length > 0;    // 어휘 예습 = 다음날 팝오버 단어 플래시카드
   if (key === 'preview') {
     // 세 난이도 중 하나라도 가능하면 노출 (어휘/핵심문장/지문+이해도)
     const d = activeDay();
@@ -591,6 +616,7 @@ const DEFAULT_STATE = {
   xp: 0,
   pullCount: 0,
   quizTask: null, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {},
+  vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 10개로 고정)
   result: null,
   hatchStage: 'idle', hatchSpecies: null,
   pop: null,
@@ -639,7 +665,7 @@ const ui = {
   presDay: null,   // 핸드폰 발표: 선택한 배포 Day 인덱스
   revReady: false, // 지문 복습: 현재 문장 2초 경과(다음 버튼 활성)
   acct: { open: false, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false },   // 내 계정(비번 변경/탈퇴)
-  wb: { word: '', def: '', ex: '' }, wbConfirm: null, wbMsg: '',   // 학생 단어장: 추가 폼 입력값 / 삭제 확인 대상
+  wb: { word: '', def: '', ex: '' }, wbConfirm: null, wbMsg: '', wbAddOpen: false,   // 학생 단어장: 추가 폼 입력값 / 삭제 확인 대상 / 추가 폼 열림
   present: { on: false, i: 0, sents: [], title: '' }   // 수업용 전체화면 발표(PPT처럼 한 문장씩)
 };
 // 학생 화면 상단 여백: 교사 미리보기(토글 있음)일 때만 넉넉히, 실제 학생은 좁게
@@ -832,8 +858,10 @@ const actions = {
   goAqua() { set({ screen: 'aquarium', pop: null, dexOpen: false }); },
   goHatch() { set({ screen: 'hatchery', hatchStage: 'idle', hatchSpecies: null, pop: null, dexOpen: false }); },
   goAdvanced() { set({ screen: 'advanced', pop: null, dexOpen: false }); },
-  goWordbook() { ui.wbConfirm = null; ui.wbMsg = ''; set({ screen: 'wordbook', pop: null, dexOpen: false }); },
+  goWordbook() { ui.wbConfirm = null; ui.wbMsg = ''; ui.wbAddOpen = false; set({ screen: 'wordbook', pop: null, dexOpen: false }); },
 
+  // 단어장: 추가 폼 열고/닫기
+  wbToggleAdd() { ui.wbAddOpen = !ui.wbAddOpen; ui.wbMsg = ''; if (!ui.wbAddOpen) ui.wb = { word: '', def: '', ex: '' }; render(); },
   // 단어장: 추가 / 삭제(확인)
   wbAdd() {
     const f = ui.wb || {};
@@ -844,7 +872,7 @@ const actions = {
       ui.wbMsg = '이미 단어장에 있는 단어예요.'; render(); return;
     }
     addToWordbook({ word, def, pos: '', ex: (f.ex || '').trim() });
-    ui.wb = { word: '', def: '', ex: '' }; ui.wbMsg = '';
+    ui.wb = { word: '', def: '', ex: '' }; ui.wbMsg = ''; ui.wbAddOpen = false;
     save(); render();
   },
   wbAskDel(word) { ui.wbConfirm = word; render(); },
@@ -869,6 +897,11 @@ const actions = {
     if (t === 'review') { armReviewGate(); set({ screen: 'review', pop: null, revIndex: 0 }); }
     else if (t === 'preview') set({ screen: 'preview', pop: null });   // 3단계 난이도 선택
     else if (t === 'vocab') set({ screen: 'vocabReview', vrCount: null, fcI: 0, fcFlipped: false, fcHint: false });   // 어휘 복습(플래시카드)
+    else if (t === 'vocabPrep') {   // 어휘 예습(플래시카드) — 다음 수업 팝오버 단어 랜덤 10개
+      const deck = shuffleArr(nextDayPopoverCards()).slice(0, 10);
+      if (!deck.length) return;
+      set({ screen: 'vocabPrepCard', vpDeck: deck, fcI: 0, fcFlipped: false, fcHint: false });
+    }
     else set({ screen: 'quiz', quizTask: t, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {} });
   },
   // 지문 예습 난이도 선택 — 살살: 다음날 어휘 플래시카드
@@ -911,9 +944,10 @@ const actions = {
   fcSpeakWord(arg) { speak(arg); },
   fcHint() { set({ fcHint: !state.fcHint }); },
   fcNext() {
-    const mode = state.screen === 'previewVocab' ? 'preview' : 'vocab';
+    const mode = fcModeFor(state.screen);
     const cards = flashcardCards(mode);
-    if ((state.fcI || 0) >= cards.length - 1) { completeTask(mode === 'preview' ? 'preview' : 'vocab'); return; }
+    const doneTask = mode === 'preview' ? 'preview' : mode === 'vocabPrep' ? 'vocabPrep' : 'vocab';
+    if ((state.fcI || 0) >= cards.length - 1) { completeTask(doneTask); return; }
     set({ fcI: (state.fcI || 0) + 1, fcFlipped: false, fcHint: false });
   },
   // 오늘의 단어시험(보너스): 복습 예정 단어를 간격반복 순서로 30문항
@@ -1588,12 +1622,6 @@ function homeHTML() {
       <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#14243f">내 단어장</div><div style="font-size:11px;color:#7d8aa0;margin-top:1px">${wbN ? `${wbN}개 단어${dueN ? ` · 오늘 복습 ${dueN}개` : ''}` : '단어를 직접 추가하고 관리해요'}</div></div>
       <div style="font-size:11px;font-weight:700;color:#2f74e6">열기 →</div>
     </div>`;
-  const advanceCard = `
-    <div data-act="goAdvanced" style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 15px;cursor:pointer;box-shadow:0 6px 16px -12px rgba(20,50,90,.5)">
-      <div style="width:40px;height:40px;border-radius:12px;background:#efe7fd;display:flex;align-items:center;justify-content:center;font-size:19px">🚀</div>
-      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#14243f">심화 학습</div><div style="font-size:11px;color:#7d8aa0;margin-top:1px">더 해보기 · 단어시험 · 문장 작문 · 예습</div></div>
-      <div style="font-size:11px;font-weight:700;color:#7b52d6">가기 →</div>
-    </div>`;
 
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -1667,8 +1695,8 @@ function homeHTML() {
       ${MAIN_TASKS.map(taskRow).join('')}
     </div>
 
-    <div style="font-size:13px;font-weight:700;color:#14243f;margin:20px 0 11px">단어장 · 심화 학습</div>
-    <div style="display:flex;flex-direction:column;gap:10px">${wordbookCard}${advanceCard}</div>
+    <div style="font-size:13px;font-weight:700;color:#14243f;margin:20px 0 11px">단어장</div>
+    <div style="display:flex;flex-direction:column;gap:10px">${wordbookCard}</div>
 
     ${shelfHTML()}
 
@@ -1745,13 +1773,8 @@ function wordbookHTML() {
 
   const inStyle = 'width:100%;box-sizing:border-box;border:1px solid #dbe2ec;border-radius:10px;padding:10px 12px;font-size:13px;font-family:inherit;background:#fff;color:#14243f';
 
-  return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none">←</div>
-      <div style="flex:1"><div style="font-size:18px;font-weight:800;color:#14243f">📒 내 단어장</div><div style="font-size:11.5px;color:#7d8aa0;margin-top:1px">${wb.length}개 단어 · 직접 추가하고 관리해요</div></div>
-    </div>
-
-    <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:14px;margin-bottom:18px">
+  const addForm = ui.wbAddOpen ? `
+    <div style="background:#fff;border:1px solid #cfe0fb;border-radius:16px;padding:14px;margin-bottom:16px;box-shadow:0 8px 22px -14px rgba(20,50,90,.5)">
       <div style="font-size:12.5px;font-weight:700;color:#14243f;margin-bottom:9px">단어 추가</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <input id="wb-word" placeholder="단어 (예: brave)" value="${esc(f.word)}" style="${inStyle}">
@@ -1759,12 +1782,24 @@ function wordbookHTML() {
         <input id="wb-ex" placeholder="예문 (선택)" value="${esc(f.ex)}" style="${inStyle}">
       </div>
       ${ui.wbMsg ? `<div style="font-size:11.5px;color:#e0574f;margin-top:8px">${esc(ui.wbMsg)}</div>` : ''}
-      <button data-act="wbAdd" style="width:100%;margin-top:10px;border:none;background:#2f74e6;color:#fff;font-size:13px;font-weight:700;padding:11px;border-radius:12px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">＋ 단어장에 추가</button>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button data-act="wbToggleAdd" style="flex:none;border:1px solid #dbe2ec;background:#fff;color:#7d8aa0;font-size:13px;font-weight:700;padding:11px 16px;border-radius:12px;cursor:pointer">취소</button>
+        <button data-act="wbAdd" style="flex:1;border:none;background:#2f74e6;color:#fff;font-size:13px;font-weight:700;padding:11px;border-radius:12px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">＋ 단어장에 추가</button>
+      </div>
+    </div>` : '';
+
+  return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none">←</div>
+      <div style="flex:1"><div style="font-size:18px;font-weight:800;color:#14243f">📒 내 단어장</div><div style="font-size:11.5px;color:#7d8aa0;margin-top:1px">${wb.length}개 단어 · 직접 추가하고 관리해요</div></div>
+      <div data-act="wbToggleAdd" style="flex:none;display:flex;align-items:center;gap:5px;background:${ui.wbAddOpen ? '#eef2f8' : '#2f74e6'};color:${ui.wbAddOpen ? '#7d8aa0' : '#fff'};font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:12px;cursor:pointer;${ui.wbAddOpen ? '' : 'box-shadow:0 4px 0 #1f57c4'}" title="단어 추가">${ui.wbAddOpen ? '✕ 닫기' : '＋ 추가'}</div>
     </div>
+
+    ${addForm}
 
     ${wb.length
       ? `<div style="display:flex;flex-direction:column;gap:9px">${rows}</div>`
-      : `<div style="text-align:center;color:#9aa8bd;font-size:13px;padding:36px 0">아직 단어장이 비어 있어요.<br>위에서 단어를 추가하거나, 어휘 복습에서 '몰라요'를 누르면 담겨요 😊</div>`}
+      : `<div style="text-align:center;color:#9aa8bd;font-size:13px;padding:36px 0">아직 단어장이 비어 있어요.<br>오른쪽 위 <b>＋ 추가</b>로 단어를 넣거나, 어휘 복습에서 '몰라요'를 누르면 담겨요 😊</div>`}
   </div></div>`;
 }
 
@@ -2185,6 +2220,7 @@ function previewLevelsHTML() {
 /* ---- 플래시카드 화면 (예습 살살 · 어휘 복습 공용) ---- */
 function flashcardScreenHTML(mode) {
   const isPreview = mode === 'preview';
+  const isVocab = mode === 'vocab';   // 힌트/뒤로가기 등은 '어휘 복습'만 예외
   const cards = flashcardCards(mode);
   const total = cards.length || 1;
   const i = Math.min(state.fcI || 0, total - 1);
@@ -2192,10 +2228,12 @@ function flashcardScreenHTML(mode) {
   const last = i >= total - 1;
   const flipped = !!state.fcFlipped;
   const inWb = (state.wordbook || []).some(w => w.word === c.word);
-  const badge = isPreview
+  const badge = mode === 'preview'
     ? `<span style="display:inline-flex;align-items:center;gap:6px;background:#e0f3ea;color:#1f7a4d;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🟢 1단계 살살 · 다음 수업 어휘</span>`
-    : `<span style="display:inline-flex;align-items:center;gap:6px;background:#fdeede;color:#b8480f;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🔤 어휘 복습</span>`;
-  const hintSent = (!isPreview && state.fcHint) ? wordHintSentence(c.word) : '';
+    : mode === 'vocabPrep'
+      ? `<span style="display:inline-flex;align-items:center;gap:6px;background:#e7f0fd;color:#1f57c4;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">📘 어휘 예습 · 다음 수업 팝오버 단어</span>`
+      : `<span style="display:inline-flex;align-items:center;gap:6px;background:#fdeede;color:#b8480f;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🔤 어휘 복습</span>`;
+  const hintSent = (isVocab && state.fcHint) ? wordHintSentence(c.word) : '';
 
   const face = `<div style="width:100%;background:#fff;border:1px solid #e2e9f2;border-radius:22px;padding:30px 22px;text-align:center;box-shadow:0 16px 36px -20px rgba(20,50,90,.6);${flipped ? 'animation:pop .35s ease' : ''}">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px">
@@ -2215,8 +2253,8 @@ function flashcardScreenHTML(mode) {
   </div>`;
 
   const controls = flipped
-    ? `<button data-act="fcNext" style="width:100%;border:none;background:${last ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${last ? (isPreview ? '예습 완료 ✓' : '복습 완료 ✓') : '다음 →'}</button>`
-    : `${!isPreview ? `<button data-act="fcHint" style="width:100%;border:1.5px solid ${state.fcHint ? '#2f74e6' : '#dbe4ef'};background:#fff;color:${state.fcHint ? '#2f74e6' : '#5f7794'};font-size:12.5px;font-weight:700;padding:10px;border-radius:13px;cursor:pointer;margin-bottom:9px">💡 힌트 — 이 단어가 든 문장 보기</button>` : ''}
+    ? `<button data-act="fcNext" style="width:100%;border:none;background:${last ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${last ? (isVocab ? '복습 완료 ✓' : '예습 완료 ✓') : '다음 →'}</button>`
+    : `${isVocab ? `<button data-act="fcHint" style="width:100%;border:1.5px solid ${state.fcHint ? '#2f74e6' : '#dbe4ef'};background:#fff;color:${state.fcHint ? '#2f74e6' : '#5f7794'};font-size:12.5px;font-weight:700;padding:10px;border-radius:13px;cursor:pointer;margin-bottom:9px">💡 힌트 — 이 단어가 든 문장 보기</button>` : ''}
       <div style="display:flex;gap:10px">
         <button data-act="fcDontKnow" style="flex:1;border:1.5px solid #f3c7c2;background:#fff;color:#c0392b;font-size:15px;font-weight:700;padding:14px;border-radius:15px;cursor:pointer">🤔 몰라요</button>
         <button data-act="fcKnow" style="flex:1;border:none;background:#2fa36b;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f7a4d;cursor:pointer">🙂 알아요</button>
@@ -2234,6 +2272,7 @@ function flashcardScreenHTML(mode) {
   </div>`;
 }
 function previewVocabHTML() { return flashcardScreenHTML('preview'); }
+function vocabPrepCardHTML() { return flashcardScreenHTML('vocabPrep'); }
 /* ---- 문장 작문하기(보너스): 해석 → 영어 조각 순서 맞추기 ---- */
 function composeHTML() {
   const sents = composeSentences();
@@ -2800,7 +2839,7 @@ function render() {
   let html = '';
   if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
   if (isTeacherUser() && ui.asStudent && state.role === 'student'
-      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead', 'previewMedium', 'vocabReview', 'wordTest', 'compose'].includes(state.screen)) {
+      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'vocabPrepCard', 'previewRead', 'previewMedium', 'vocabReview', 'wordTest', 'compose'].includes(state.screen)) {
     html += previewClassBarHTML();  // 미리보기: 반 선택 바(몰입 화면 제외)
   }
 
@@ -2816,6 +2855,7 @@ function render() {
       case 'review': screen = reviewHTML(); break;
       case 'preview': screen = previewLevelsHTML(); break;
       case 'previewVocab': screen = previewVocabHTML(); break;
+      case 'vocabPrepCard': screen = vocabPrepCardHTML(); break;
       case 'vocabReview': screen = vocabReviewHTML(); break;
       case 'wordTest': screen = wordTestHTML(); break;
       case 'compose': screen = composeHTML(); break;
