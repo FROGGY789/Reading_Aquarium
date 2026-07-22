@@ -478,6 +478,20 @@ function dueWords() {
     .sort((a, b) => (a.due || '').localeCompare(b.due || ''));
 }
 function shuffleArr(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+// 문장을 2~3단어 조각으로 묶기(작문 scramble용)
+function chunkWords(text) {
+  const w = (text || '').split(/\s+/).filter(Boolean);
+  const out = []; let i = 0;
+  const firstThree = (w.length % 2 === 1) && w.length >= 3;
+  while (i < w.length) {
+    let size = (firstThree && i === 0) ? 3 : 2;
+    if (w.length - i === 1) size = 1;
+    out.push(w.slice(i, i + size).join(' ')); i += size;
+  }
+  return out;
+}
+// 작문 대상: 해석(ko)이 있는 핵심 문장
+function composeSentences() { return dayCoreSentencesRich(activeDay()).filter(c => c.ko && c.text); }
 // 2단계 보통: 다음 문장으로(마지막이면 예습 완료)
 function pmAdvance() {
   const sents = dayCoreSentencesRich(activeDay());
@@ -864,6 +878,33 @@ const actions = {
   wtNext() {
     if (state.wtI >= state.wtDeck.length - 1) { set({ wtDone: true }); return; }
     set({ wtI: state.wtI + 1, wtPick: null });
+  },
+  // 문장 작문(보너스): 해석 → 영어 조각(2~3단어) 순서 맞추기
+  startCompose() {
+    if (!composeSentences().length) return;
+    set({ screen: 'compose', cwIndex: 0, cwOrder: [], cwChecked: false, cwOk: false });
+  },
+  cwTap(arg) {
+    if (state.cwChecked) return;
+    const idx = Number(arg);
+    const cur = (state.cwOrder || []).slice();
+    const p = cur.indexOf(idx);
+    if (p >= 0) cur.splice(p, 1); else cur.push(idx);
+    set({ cwOrder: cur });
+  },
+  cwCheck() {
+    const c = composeSentences()[state.cwIndex]; if (!c) return;
+    const chunks = chunkWords(c.text);
+    const cur = state.cwOrder || [];
+    if (cur.length !== chunks.length) return;
+    const ok = cur.every((v, k) => v === k);
+    set({ cwChecked: true, cwOk: ok });
+  },
+  cwRetry() { set({ cwOrder: [], cwChecked: false, cwOk: false }); },
+  cwNext() {
+    const total = composeSentences().length;
+    if ((state.cwIndex || 0) >= total - 1) { set({ screen: 'home' }); return; }
+    set({ cwIndex: (state.cwIndex || 0) + 1, cwOrder: [], cwChecked: false, cwOk: false });
   },
   previewReadDone() { completeTask('preview'); },
   goPreview() { set({ screen: 'preview' }); },
@@ -1477,6 +1518,13 @@ function homeHTML() {
       <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#14243f">오늘의 단어시험</div><div style="font-size:11px;color:#7d8aa0;margin-top:1px">${dueN ? `복습할 단어 ${dueN}개 · 망각곡선 맞춤 출제` : '오늘 복습할 단어가 없어요 — 잘하고 있어요!'}</div></div>
       <div style="font-size:11px;font-weight:700;color:${dueN ? '#2f74e6' : '#b8c2d2'}">${dueN ? '시작 →' : '—'}</div>
     </div>` : '';
+  const composeN = composeSentences().length;
+  const composeCard = composeN ? `
+    <div data-act="startCompose" style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 15px;cursor:pointer">
+      <div style="width:40px;height:40px;border-radius:12px;background:#e0f3ea;display:flex;align-items:center;justify-content:center;font-size:19px">✍️</div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#14243f">문장 작문하기</div><div style="font-size:11px;color:#7d8aa0;margin-top:1px">해석 보고 영어 문장 만들기 · ${composeN}문장</div></div>
+      <div style="font-size:11px;font-weight:700;color:#2f74e6">시작 →</div>
+    </div>` : '';
 
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -1550,10 +1598,10 @@ function homeHTML() {
       ${MAIN_TASKS.map(taskRow).join('')}
     </div>
 
-    ${(bonusRows || wordTestCard) ? `
+    ${(bonusRows || wordTestCard || composeCard) ? `
     <div style="font-size:13px;font-weight:700;color:#14243f;margin:20px 0 4px">더 해보기</div>
     <div style="font-size:11px;color:#7d8aa0;margin-bottom:11px">보너스 학습 · 원할 때 자유롭게</div>
-    <div style="display:flex;flex-direction:column;gap:10px">${wordTestCard}${bonusRows}</div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:10px">${wordTestCard}${composeCard}${bonusRows}</div>` : ''}
 
     ${shelfHTML()}
 
@@ -1904,18 +1952,31 @@ function readerHTML() {
   const book = currentBook();
   const pages = readerPages();
   const page = Math.min(state.readerPage, Math.max(0, pages.length - 1));
-  const paras = pages[page] || [];
+  const burning = !!state.readerBurning;
+  const paras = burning ? (passageToPagesRaw(book.passage)[page] || []) : (pages[page] || []);
+  // 버닝: [단어] 팝오버 활성
+  const words = dayVocab(activeDay());
+  const wStyle = active => `background:${active ? '#c08a3a' : '#f0e2c4'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #c08a3a;border-radius:3px;padding:0 3px;cursor:pointer`;
+  const pop = burning && state.pop && words[state.pop] ? Object.assign({ word: state.pop }, words[state.pop]) : null;
+  const popHTML = pop ? `<div style="font-family:'IBM Plex Sans KR',sans-serif;background:#3a3222;color:#f5f0e6;border-radius:12px;padding:12px 14px;margin:2px 0 16px;box-shadow:0 12px 26px -12px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.word)}</span><span style="font-size:11px;color:#d8b878">${esc(pop.pos)}</span></div>
+      <div style="font-size:13px;color:#e7dcc4;margin-top:5px">${esc(pop.def)}</div>
+      ${pop.ex ? `<div style="font-size:12px;color:#bda880;margin-top:5px;font-style:italic;font-family:'Lora',serif">${esc(pop.ex)}</div>` : ''}
+    </div>` : '';
+  const renderPara = p => burning
+    ? esc(p).replace(/\[([^\]]+)\]/g, (m, w) => words[w] ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wStyle(state.pop === w)}">${esc(w)}</span>` : esc(w))
+    : esc(p);
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#f5f0e6">
     <div style="padding:48px 22px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e7dfce">
       <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#ece3d2;color:#7a6b52;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       <div style="text-align:center">
-        <div style="font-family:'Lora',serif;font-size:13px;font-weight:600;color:#3a3222">${esc(book.title)}</div>
-        <div style="font-size:10.5px;color:#9c8f76;margin-top:1px">${esc(book.chapter || book.author || '')}</div>
+        <div style="font-family:'Lora',serif;font-size:13px;font-weight:600;color:#3a3222">${burning ? '🔴 버닝 · 지문 전체' : esc(book.title)}</div>
+        <div style="font-size:10.5px;color:#9c8f76;margin-top:1px">${burning ? '단어를 탭하면 뜻이 나와요' : esc(book.chapter || book.author || '')}</div>
       </div>
       <div style="width:30px;height:30px;border-radius:10px;background:#ece3d2;color:#7a6b52;display:flex;align-items:center;justify-content:center;font-size:13px">Aa</div>
     </div>
     <div style="flex:1;overflow-y:auto;padding:26px 26px 20px;font-family:'Lora',serif;font-size:18px;line-height:2;color:#33302b">
-      ${paras.map(p => `<p style="margin:0 0 18px;text-indent:1.1em;text-wrap:pretty">${esc(p)}</p>`).join('')}
+      ${paras.map(p => `<p style="margin:0 0 ${burning && state.pop && p.includes('[' + state.pop + ']') ? '2' : '18'}px;text-indent:1.1em;text-wrap:pretty">${renderPara(p)}</p>` + (burning && state.pop && p.includes('[' + state.pop + ']') ? popHTML : '')).join('')}
     </div>
     <div style="padding:12px 22px 22px;border-top:1px solid #e7dfce;background:#f5f0e6">
       <div style="height:5px;border-radius:3px;background:#e3d9c6;overflow:hidden;margin-bottom:12px"><div style="height:100%;width:${readerProgress()};background:#c08a3a;border-radius:3px"></div></div>
@@ -2019,6 +2080,42 @@ function flashcardScreenHTML(mode) {
   </div>`;
 }
 function previewVocabHTML() { return flashcardScreenHTML('preview'); }
+/* ---- 문장 작문하기(보너스): 해석 → 영어 조각 순서 맞추기 ---- */
+function composeHTML() {
+  const sents = composeSentences();
+  const total = sents.length || 1;
+  const i = Math.min(state.cwIndex || 0, total - 1);
+  const c = sents[i] || { text: '', ko: '' };
+  const chunks = chunkWords(c.text);
+  const order = state.cwOrder || [];
+  const shuffled = seededShuffle(chunks.map((_, k) => k), i + 7);
+  const checked = state.cwChecked, ok = state.cwOk;
+  const last = i >= total - 1;
+  const ansBd = checked ? (ok ? '#2fa36b' : '#e2564d') : '#cfe0f5';
+  const ansChip = ci => `<span ${checked ? '' : `data-act="cwTap" data-arg="${ci}"`} style="display:inline-block;margin:3px;padding:6px 11px;border-radius:10px;background:#2f74e6;color:#fff;font-family:'Lora',serif;font-size:16px;cursor:${checked ? 'default' : 'pointer'}">${esc(chunks[ci])}</span>`;
+  const poolChip = ci => `<span data-act="cwTap" data-arg="${ci}" style="display:inline-block;margin:3px;padding:6px 11px;border-radius:10px;border:1.5px solid #cfe0f5;background:#fff;color:#26303f;font-family:'Lora',serif;font-size:16px;cursor:pointer">${esc(chunks[ci])}</span>`;
+  const pool = shuffled.filter(ci => !order.includes(ci));
+  const ready = order.length === chunks.length;
+  let controls;
+  if (checked && ok) controls = `<button data-act="cwNext" style="width:100%;border:none;background:#2fa36b;color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f7a4d;cursor:pointer">${last ? '작문 완료 ✓' : '다음 →'}</button>`;
+  else if (checked) controls = `<div style="display:flex;gap:10px"><button data-act="cwRetry" style="flex:none;border:1.5px solid #dbe4ef;background:#fff;color:#5f7794;font-size:14px;font-weight:700;padding:14px 20px;border-radius:15px;cursor:pointer">다시</button><button data-act="cwNext" style="flex:1;border:none;background:#14243f;color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 #0a1526;cursor:pointer">${last ? '완료' : '다음 →'}</button></div>`;
+  else controls = `<button data-act="cwCheck" class="btn-check ${ready ? 'on' : ''}">확인</button>`;
+  return `<div style="padding:${topPad()} 20px 30px;min-height:100%;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#e0f3ea;color:#1f7a4d;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">✍️ 문장 작문</span>
+      <span style="font-size:12px;font-weight:700;color:#14243f">${i + 1}/${total}</span>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#7d8aa0;margin:6px 0 2px">이 뜻이 되도록 영어 문장을 만드세요</div>
+    <div style="text-align:center;font-size:17px;font-weight:700;color:#14243f;margin-bottom:6px;line-height:1.5">${esc(c.ko)}</div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+      <div style="min-height:64px;background:#f4f8fd;border:1.5px dashed ${ansBd};border-radius:14px;padding:10px 12px;text-align:center">${order.length ? order.map(ansChip).join('') : '<span style="color:#9aa8bd;font-size:12.5px;line-height:2.4">아래 조각을 눌러 순서대로 만드세요</span>'}</div>
+      ${!checked ? `<div style="text-align:center;margin-top:12px">${pool.map(poolChip).join('') || '<span style="color:#b8c2d2;font-size:12px">모든 조각을 놓았어요</span>'}</div>` : ''}
+      ${checked ? `<div style="text-align:center;margin-top:12px;font-size:13.5px;font-weight:700;color:${ok ? '#1f7a4d' : '#b23a32'}">${ok ? '정답이에요! 🎉' : '아쉬워요'}</div>${!ok ? `<div style="text-align:center;font-size:14px;color:#2fa36b;font-family:'Lora',serif;margin-top:6px">${esc(c.text)}</div>` : ''}` : ''}
+    </div>
+    <div style="margin-top:12px">${controls}</div>
+  </div>`;
+}
 /* ---- 오늘의 단어시험(보너스): 단어장 간격반복 ---- */
 function wordTestHTML() {
   const deck = state.wtDeck || [];
@@ -2532,7 +2629,7 @@ function render() {
   let html = '';
   if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
   if (isTeacherUser() && ui.asStudent && state.role === 'student'
-      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead', 'previewMedium', 'vocabReview', 'wordTest'].includes(state.screen)) {
+      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'previewRead', 'previewMedium', 'vocabReview', 'wordTest', 'compose'].includes(state.screen)) {
     html += previewClassBarHTML();  // 미리보기: 반 선택 바(몰입 화면 제외)
   }
 
@@ -2548,6 +2645,7 @@ function render() {
       case 'previewVocab': screen = previewVocabHTML(); break;
       case 'vocabReview': screen = vocabReviewHTML(); break;
       case 'wordTest': screen = wordTestHTML(); break;
+      case 'compose': screen = composeHTML(); break;
       case 'previewMedium': screen = previewMediumHTML(); break;
       case 'previewRead': screen = previewReadHTML(); break;
       case 'quiz': screen = quizHTML(); break;

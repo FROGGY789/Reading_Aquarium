@@ -185,6 +185,13 @@ function passageToPages(passage) {
     .map(pg => pg.split(/\n\s*\n/).map(p => stripBrackets(p.trim().replace(/\s*\n\s*/g, ' '))).filter(Boolean))
     .filter(pg => pg.length);
 }
+// 지문 → 리더 페이지 (대괄호 [단어] 유지 — 버닝 팝오버용)
+function passageToPagesRaw(passage) {
+  return (passage || '')
+    .split(/\n\s*-{3,}\s*\n/)
+    .map(pg => pg.split(/\n\s*\n/).map(p => p.trim().replace(/\s*\n\s*/g, ' ')).filter(Boolean))
+    .filter(pg => pg.length);
+}
 // 지문 → 복습 문단 [문단(대괄호 유지), ...] (페이지 구분 무시, 전체)
 function passageToReview(passage) {
   return (passage || '')
