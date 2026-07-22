@@ -162,7 +162,11 @@ create table if not exists public.er_wordbook (
 create index if not exists er_wordbook_due_idx on public.er_wordbook (user_id, due);
 alter table public.er_wordbook enable row level security;
 drop policy if exists "wordbook own all" on public.er_wordbook;
--- 본인 단어장만 읽고/쓰고/지움
+-- 본인 단어장만 읽고/쓰고/지움 (여러 번 실행해도 안전하도록 먼저 지우고 다시 생성)
+drop policy if exists "wordbook own select" on public.er_wordbook;
+drop policy if exists "wordbook own insert" on public.er_wordbook;
+drop policy if exists "wordbook own update" on public.er_wordbook;
+drop policy if exists "wordbook own delete" on public.er_wordbook;
 create policy "wordbook own select" on public.er_wordbook for select to authenticated using (user_id = auth.uid());
 create policy "wordbook own insert" on public.er_wordbook for insert to authenticated with check (user_id = auth.uid());
 create policy "wordbook own update" on public.er_wordbook for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
