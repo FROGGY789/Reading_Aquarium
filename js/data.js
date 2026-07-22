@@ -56,11 +56,18 @@ const RARITY = {
 const QUIZ_META = {
   preview:   {name:'지문 예습', tag:'예습'},
   vocab:     {name:'어휘 복습', tag:'어휘'},
-  sentence:  {name:'문장 복습', tag:'문장'},
+  sentence:  {name:'어법 복습', tag:'어법'},
   vocabPrep: {name:'어휘 예습', tag:'예습'},
   sentPrep:  {name:'문장 예습', tag:'예습'},
   grammar:   {name:'어법 퀴즈', tag:'어법'}
 };
+
+// [A/B] 고르기(어법) 문장 파싱: "She [was/were] happy." → {before,a,b,after,options}
+function abParse(sentence) {
+  const m = (sentence || '').match(/\[([^\]/]*)\/([^\]]*)\]/);
+  if (!m) return { before: sentence || '', a: '', b: '', after: '', options: [] };
+  return { before: sentence.slice(0, m.index), a: m[1].trim(), b: m[2].trim(), after: sentence.slice(m.index + m[0].length), options: [m[1].trim(), m[2].trim()] };
+}
 
 // 기본(내장) 콘텐츠 — 배포된 data/content.json이 없을 때 사용되는 예시 Day
 const DEFAULT_CONTENT = {
@@ -254,19 +261,23 @@ function editToDay(e) {
   const quiz = {};
   Object.keys(QUIZ_META).forEach(cat => {
     quiz[cat] = (e.quiz[cat] || [])
-      .filter(q => (q.prompt || '').trim())
+      .filter(q => (q.prompt || '').trim() || (q.sentence || '').trim())
       .map(q => {
-        const base = { type: q.type, prompt: q.prompt.trim(), explain: (q.explain || '').trim() };
+        const base = { type: q.type, prompt: (q.prompt || '').trim(), explain: (q.explain || '').trim() };
         if ((q.sentence || '').trim()) base.sentence = q.sentence.trim();
         if (q.type === 'mc') {
           base.options = q.options.map(o => (o || '').trim()).filter(Boolean);
           base.answer = Math.min(Math.max(0, Number(q.answer) || 0), Math.max(0, base.options.length - 1));
+        } else if (q.type === 'ab') {
+          base.answer = Math.min(1, Math.max(0, Number(q.answer) || 0));   // 0=A, 1=B
         } else {
           base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
         }
         return base;
       })
-      .filter(q => q.type === 'mc' ? q.options.length >= 2 : q.accept.length >= 1);
+      .filter(q => q.type === 'mc' ? q.options.length >= 2
+        : q.type === 'ab' ? /\[[^\]/]*\/[^\]]*\]/.test(q.sentence || '')
+          : q.accept.length >= 1);
   });
   // 핵심 문장(리치): 빈 문장 제거, 마크 인덱스는 현재 단어 수 범위로 정리
   const coreSentences = (e.core || []).map(c => {

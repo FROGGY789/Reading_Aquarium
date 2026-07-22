@@ -522,7 +522,7 @@ async function loadWordbook() {
 // 오늘 할 일 구성(문항이 있는 카테고리만 노출)
 const MAIN_TASKS = [
   { key: 'review',   icon: '📖',  bg: '#e0f3ea', sub: () => '단어 팝오버로 다시 읽기' },
-  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', sub: n => `구조 분석 + 해석 ${n}문항` },
+  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', sub: n => `어법 유형 문제 ${n}문항` },
   { key: 'vocab',    icon: '🔤',  bg: '#fdeede', sub: () => `플래시카드로 단어 복습 (알아요/몰라요)` },
   { key: 'preview',  icon: '👀',  bg: '#e7f0fd', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
 ];
@@ -734,14 +734,14 @@ function currentQs() { return state.quizTask ? dayQuiz(state.quizTask) : []; }
 function currentQ() { return currentQs()[state.quizQi] || null; }
 function isRight(q, i) {
   if (!q) return false;
-  if (q.type === 'mc') return state.picks[i] === q.answer;
+  if (q.type === 'mc' || q.type === 'ab') return state.picks[i] === q.answer;
   const v = NORM(state.inputs[i]);
   return !!v && (q.accept || []).some(a => NORM(a) === v || v.includes(NORM(a)));
 }
 function canCheck() {
   const cq = currentQ();
   if (!cq) return false;
-  return cq.type === 'mc'
+  return (cq.type === 'mc' || cq.type === 'ab')
     ? state.picks[state.quizQi] != null
     : !!(state.inputs[state.quizQi] && state.inputs[state.quizQi].trim());
 }
@@ -887,10 +887,14 @@ const actions = {
     let correct = 0; const wrongs = [];
     qs.forEach((qq, i) => {
       if (isRight(qq, i)) { correct++; return; }
+      const abo = qq.type === 'ab' ? abParse(qq.sentence).options : null;
       const your = qq.type === 'mc'
         ? (state.picks[i] != null ? qq.options[state.picks[i]] : '(무응답)')
-        : (state.inputs[i] || '(무응답)');
-      wrongs.push({ prompt: qq.prompt, your, correct: qq.type === 'mc' ? qq.options[qq.answer] : (qq.accept || [])[0] || '', explain: qq.explain });
+        : qq.type === 'ab'
+          ? (state.picks[i] != null ? abo[state.picks[i]] : '(무응답)')
+          : (state.inputs[i] || '(무응답)');
+      const corr = qq.type === 'mc' ? qq.options[qq.answer] : qq.type === 'ab' ? abo[qq.answer] : (qq.accept || [])[0] || '';
+      wrongs.push({ prompt: qq.prompt || qq.sentence, your, correct: corr, explain: qq.explain });
     });
     set({
       screen: 'result',
@@ -1726,6 +1730,20 @@ function quizHTML() {
         <div style="flex:1;font-size:14px;font-weight:500;color:#26303f;font-family:'Lora',serif">${esc(txt)}</div>
       </div>`;
     }).join('') + `</div>`;
+  } else if (cq.type === 'ab') {
+    const p = abParse(cq.sentence);
+    const opt = (idx, label) => {
+      const picked = state.picks[qi] === idx, correct = idx === cq.answer;
+      let bg = '#fff', bd = '#c8d4e2', color = '#26303f';
+      if (!checked && picked) { bg = '#e7f0fd'; bd = '#2f74e6'; color = '#1f57c4'; }
+      if (checked && correct) { bg = '#e0f3ea'; bd = '#2fa36b'; color = '#1f7a4d'; }
+      if (checked && picked && !correct) { bg = '#fbe4e2'; bd = '#e2564d'; color = '#b23a32'; }
+      return `<span ${checked ? '' : `data-act="pickOption" data-arg="${idx}"`} style="display:inline-block;margin:0 4px;padding:4px 12px;border-radius:10px;border:1.5px solid ${bd};background:${bg};color:${color};font-weight:700;cursor:${checked ? 'default' : 'pointer'}">${esc(label)}</span>`;
+    };
+    body = `<div style="background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:16px 16px;font-family:'Lora',serif;font-size:18px;line-height:2.1;color:#26303f;margin-top:10px;text-align:center">
+      ${esc(p.before)}${opt(0, p.a)}<span style="color:#b8c2d2;font-weight:700">/</span>${opt(1, p.b)}${esc(p.after)}
+    </div>
+    <div style="text-align:center;font-size:11px;color:#9aa8bd;margin-top:8px">둘 중 어법에 맞는 표현을 고르세요</div>`;
   } else {
     const ok = isRight(cq, qi);
     const inputBd = checked ? (ok ? '#2fa36b' : '#e2564d') : '#e2e9f2';
@@ -1755,7 +1773,7 @@ function quizHTML() {
     </div>
     <div style="display:inline-flex;align-items:center;gap:6px;background:${tagBg};color:${tagFg};font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">${esc(meta.tag)}</div>
     <div style="font-size:16px;font-weight:700;color:#14243f;margin:13px 0 4px;line-height:1.45">${esc(cq.prompt)}</div>
-    ${cq.sentence ? `<div style="background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:13px 16px;font-family:'Lora',serif;font-size:16px;line-height:1.7;color:#26303f;margin:10px 0 16px">${esc(cq.sentence)}</div>` : ''}
+    ${cq.sentence && cq.type !== 'ab' ? `<div style="background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:13px 16px;font-family:'Lora',serif;font-size:16px;line-height:1.7;color:#26303f;margin:10px 0 16px">${esc(cq.sentence)}</div>` : ''}
     ${body}
     ${feedback}
     <div style="margin-top:20px">${footer}</div>
