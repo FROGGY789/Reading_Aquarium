@@ -172,6 +172,14 @@ function dayPassage(day) {
 }
 function dayVocab(day) { return (day && day.vocab) || (day && day.review && day.review.words) || {}; }
 function stripBrackets(s) { return (s || '').replace(/\[([^\]]+)\]/g, '$1'); }
+// 본문 강조 마크업: **굵게 강조** / ==형광펜(색)== → HTML (입력은 이미 esc 처리된 문자열이어야 함)
+function renderMarks(escaped, emColor) {
+  return String(escaped == null ? '' : escaped)
+    .replace(/==([^=]+)==/g, '<mark style="background:#ffe35c;color:#1a1a1a;padding:0 .14em;border-radius:.14em;box-decoration-break:clone;-webkit-box-decoration-break:clone">$1</mark>')
+    .replace(/\*\*([^*]+)\*\*/g, `<strong style="color:${emColor || '#e0483d'};font-weight:800">$1</strong>`);
+}
+// 마크업 기호(**, ==) 제거 — 평문으로 보여줄 때
+function stripMarks(s) { return String(s == null ? '' : s).replace(/==([^=]+)==/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1'); }
 // 지문에서 [단어] 토큰을 순서대로(중복 제거) 뽑기
 function scanVocab(text) {
   const out = []; const re = /\[([^\]]+)\]/g; let m;

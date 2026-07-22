@@ -72,6 +72,21 @@ const actions = {
   collapsePassage() { ui.expand = false; render(); },
   expandFontUp() { ui.expandFont = Math.min(32, ui.expandFont + 2); render(); },
   expandFontDown() { ui.expandFont = Math.max(12, ui.expandFont - 2); render(); },
+  // 지문에서 드래그해 선택한 부분을 강조(**) / 형광펜(==)로 감싸기
+  markPassage(marker) {
+    const ta = document.getElementById(ui.expand ? 'pv-textarea' : 'passage-textarea');
+    if (!ta) return;
+    const s = ta.selectionStart | 0, e = ta.selectionEnd | 0;
+    const val = ta.value;
+    const hasSel = e > s;
+    const sel = hasSel ? val.slice(s, e) : (marker === '**' ? '강조할 내용' : '색칠할 내용');
+    const next = val.slice(0, s) + marker + sel + marker + val.slice(e);
+    setPath(ed.day, 'passageText', next);   // 편집 모델에 즉시 반영(리렌더 없이 포커스 유지)
+    ta.value = next;
+    ta.focus();
+    const inner = s + marker.length;
+    ta.setSelectionRange(inner, inner + sel.length);
+  },
   selectDay(i) { commit(); openDay(Number(i)); toast(''); render(); },
   addDay() {
     commit();
@@ -233,6 +248,8 @@ function passageEditorOverlay(d) {
     <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#fff;border-bottom:1px solid #e2e9f2;flex:none">
       <div style="font-size:15px;font-weight:800;color:#14243f;white-space:nowrap">📖 지문 크게 편집${d.label ? ' · ' + esc(d.label) : ''}</div>
       <div style="font-size:12px;color:#7d8aa0">문단=빈 줄 · 페이지=<span class="mono">---</span> · 팝오버=<span class="mono">[단어]</span></div>
+      <button class="btn ghost sm" data-act="markPassage" data-arg="**" title="선택한 부분을 굵게 강조"><b>B</b> 강조</button>
+      <button class="btn ghost sm" data-act="markPassage" data-arg="==" title="선택한 부분에 형광펜 색">🖍 형광펜</button>
       <div style="flex:1"></div>
       <span style="font-size:12px;color:#7d8aa0;white-space:nowrap">${paras}문단 · ${chars.toLocaleString()}자</span>
       <button class="btn ghost sm" data-act="expandFontDown" title="글자 작게">가－</button>
@@ -249,7 +266,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v21 (어법 5유형·단어장·어휘예습)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v22 (발표 글씨크기·본문 강조/형광펜)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -315,9 +332,15 @@ function passageTab(d) {
           · 문단은 <b>빈 줄</b>로 구분<br>
           · e-북 페이지는 <span class="mono">---</span> 를 한 줄에 넣어 구분<br>
           · 팝오버로 뜻을 보여줄 단어는 <span class="mono">[대괄호]</span>로 감싸기 (예: a <span class="mono">[restless]</span> horizon)<br>
+          · <b>강조/색</b>: 굵게는 <span class="mono">**이렇게**</span>, 형광펜은 <span class="mono">==이렇게==</span> — 발표·리더·복습에 그대로 나와요<br>
           이 지문 하나에서 <b>e-북 리더</b>와 <b>지문 복습(팝오버)</b>이 모두 나와요.
         </div>
-        <textarea class="inp" data-bind="passageText" rows="20" placeholder="여기에 그날 읽을 지문을 붙여넣으세요. 아주 길어도 괜찮아요.">${esc(d.passageText)}</textarea>
+        <div style="display:flex;gap:7px;margin:10px 0 8px">
+          <button class="btn ghost sm" data-act="markPassage" data-arg="**" title="선택한 부분을 굵게 강조 (**...**)"><b>B</b> 강조</button>
+          <button class="btn ghost sm" data-act="markPassage" data-arg="==" title="선택한 부분에 형광펜 색 (==...==)">🖍 형광펜</button>
+          <span class="hint" style="margin:0;align-self:center">← 지문에서 <b>드래그해 선택</b>한 뒤 눌러요</span>
+        </div>
+        <textarea id="passage-textarea" class="inp" data-bind="passageText" rows="20" placeholder="여기에 그날 읽을 지문을 붙여넣으세요. 아주 길어도 괜찮아요.">${esc(d.passageText)}</textarea>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
           <div class="cathead" style="margin:0"><div class="name">팝오버 어휘 <span class="cnt">${d.words.length}개</span></div></div>
           <button class="btn ghost sm" data-act="syncWords">🔄 지문에서 [단어] 불러오기</button>
