@@ -180,6 +180,100 @@ function renderMarks(escaped, emColor) {
 }
 // 마크업 기호(**, ==) 제거 — 평문으로 보여줄 때
 function stripMarks(s) { return String(s == null ? '' : s).replace(/==([^=]+)==/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1'); }
+
+/* =========================================================
+ * 어려운 단어 자동 [ ] — 대략 A1~B1(흔한 단어)를 빼고, B2 이상으로 보이는 단어에 대괄호
+ * (근사치: 빈도 기반 흔한 단어 목록 + 어미 제거로 판별. 편집기에서 손으로 수정 가능)
+ * ========================================================= */
+// 흔한(대략 A1~B1) 영단어 — 여기 없는 내용어를 '어려운 단어'로 봄
+const CEFR_COMMON_WORDS = (
+  // 기능어·대명사·전치사·접속사·조동사
+  "i you he she it we they me him her us them my your his its our their mine yours hers ours theirs myself yourself himself herself itself ourselves themselves " +
+  "this that these those who whom whose which what where when why how here there a an the some any no none every each all both half few little many much more most less least other another such same own several enough " +
+  "am is are was were be been being have has had having do does did done doing will would shall should can could may might must ought need dare used get gets got gotten " +
+  "of to in on at by for with from into onto up down out off over under above below across through between among around behind before after during since until till toward towards near beside besides against without within about along beyond upon inside outside " +
+  "and or but so because if though although while as than then that whether unless once yet nor either neither also too very just only even still again ever never always often sometimes usually rarely almost quite rather really perhaps maybe indeed however therefore thus instead " +
+  // 매우 흔한 동사(원형 위주)
+  "go come get make take see know think say tell give find want use work call ask try leave put keep begin seem help talk turn start show hear play run move live believe bring happen write provide sit stand lose pay meet include continue set learn change lead understand watch follow stop create speak read allow add spend grow open walk win offer remember love consider appear buy wait serve die send build stay fall cut reach kill remain suggest raise pass sell decide return explain hope develop carry break receive agree support hit produce eat cover catch draw choose look feel become let mean seem need face bring join wear pick lay push wish drop plan rise report pull carry save fill hold sound speak listen touch smile laugh cry sleep wake dream walk climb jump swim throw kick clean wash cook drink taste smell hurt drive ride fly count check share visit follow point spell learn teach study answer question " +
+  // 매우 흔한 명사
+  "time year people way day man woman child boy girl kid baby friend family father mother parent sister brother son daughter husband wife man men woman women person life world thing part place case week month hour minute second morning afternoon evening night home house room door window wall floor school class student teacher book word name number letter page story question answer group team game money food water bread milk egg meat fish fruit rice tea coffee tree flower grass sky sun moon star rain snow wind fire sea river lake mountain hill road street city town country land air ground animal dog cat bird horse cow work job business company office market shop store car bus train bike plane boat body head hand arm leg foot eye ear nose mouth face hair heart mind idea reason fact point kind sort side end top bottom front back left right color light dark sound voice music art color paper pen table chair bed bag box key ball toy clock phone computer picture film movie news paper problem answer help love hope feeling matter thing stuff " +
+  // 매우 흔한 형용사·부사
+  "good bad big small large little long short high low old new young early late fast slow hot cold warm cool easy hard difficult simple clear right wrong true false real full empty happy sad angry afraid tired sick well ill nice kind mean fair free busy quiet loud clean dirty rich poor strong weak heavy light soft dark light bright important great sure ready able open close near far deep wide narrow thick thin round flat straight sharp quick sweet sour salt bitter fresh whole main same other next last first second third final only own such certain sorry glad " +
+  // 색·숫자·시간·요일·달·계절
+  "red blue green yellow black white brown orange pink purple gray grey gold silver " +
+  "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred thousand million zero first second third once twice " +
+  "today tomorrow yesterday now soon later monday tuesday wednesday thursday friday saturday sunday january february march april may june july august september october november december spring summer autumn fall winter week weekend month year season " +
+  "yes no ok okay please thanks thank sorry hello hi bye goodbye mr mrs ms miss sir madam " +
+  // 흔한 불규칙 과거·과거분사(어미 제거로 못 잡는 것)
+  "was were been had said made went gone got gotten came come saw seen knew known took taken gave given found told thought became begun began ran run met paid held kept meant sat stood lost sent built spent sold heard read put cut set let grew grown drew drawn threw thrown flew flown chose chosen spoke spoken broke broken woke drove driven rode ridden rose risen fell fallen felt dealt bought caught taught fought sought brought understood won did done left brought wrote written swam swum sang sung rang rung drank drunk swore worn wore ate eaten fed led hid hidden shone shut spread struck stuck bit bitten"
+).split(/\s+/).filter(Boolean).reduce((s, w) => (s.add(w), s), new Set());
+
+// 어미를 제거한 후보들로 흔한 단어인지 판별
+function _stemCandidates(w) {
+  const c = [w];
+  const add = x => { if (x && x.length >= 2) c.push(x); };
+  if (/'s$/.test(w)) add(w.slice(0, -2));
+  if (/ies$/.test(w)) add(w.slice(0, -3) + 'y');
+  if (/(ches|shes|sses|xes|zes|oes)$/.test(w)) add(w.slice(0, -2));
+  if (/es$/.test(w)) add(w.slice(0, -2));
+  if (/s$/.test(w)) add(w.slice(0, -1));
+  if (/ied$/.test(w)) add(w.slice(0, -3) + 'y');
+  if (/ed$/.test(w)) { add(w.slice(0, -2)); add(w.slice(0, -1)); if (w.length > 4 && w[w.length - 3] === w[w.length - 4]) add(w.slice(0, -3)); }
+  if (/ing$/.test(w)) { add(w.slice(0, -3)); add(w.slice(0, -3) + 'e'); if (w.length > 5 && w[w.length - 4] === w[w.length - 5]) add(w.slice(0, -4)); }
+  if (/ily$/.test(w)) add(w.slice(0, -3) + 'y');
+  if (/ly$/.test(w)) add(w.slice(0, -2));
+  if (/ier$/.test(w)) add(w.slice(0, -3) + 'y');
+  if (/iest$/.test(w)) add(w.slice(0, -4) + 'y');
+  if (/er$/.test(w)) { add(w.slice(0, -2)); add(w.slice(0, -1)); }
+  if (/est$/.test(w)) { add(w.slice(0, -3)); add(w.slice(0, -2)); }
+  return c;
+}
+function isCommonWord(w) {
+  w = (w || '').toLowerCase().replace(/[’']/g, "'");
+  if (!w) return true;
+  return _stemCandidates(w).some(x => CEFR_COMMON_WORDS.has(x));
+}
+// 지문을 토큰으로 분해([단어]·마크업·낱말·기타 보존)
+function _passageTokens(text) {
+  const re = /(\[[^\]]*\])|(\*\*|==)|([A-Za-z]+(?:['’][A-Za-z]+)?)|([^A-Za-z]+)/g;
+  const toks = []; let m;
+  while ((m = re.exec(text)) !== null) {
+    if (m[1] != null) toks.push({ t: 'br', v: m[1] });
+    else if (m[2] != null) toks.push({ t: 'mk', v: m[2] });
+    else if (m[3] != null) toks.push({ t: 'w', v: m[3] });
+    else toks.push({ t: 'o', v: m[4] });
+  }
+  return toks;
+}
+// 지문에서 B2 이상으로 보이는 단어를 [ ]로 감싸기 (이미 [ ]·고유명사·흔한 단어·짧은 단어는 제외)
+function autoBracketHard(text) {
+  const toks = _passageTokens(String(text || ''));
+  // 문장 시작 여부(고유명사 판별용)
+  let atStart = true; const flags = [];
+  toks.forEach(tk => {
+    if (tk.t === 'w') { flags.push(atStart); atStart = false; }
+    else if (tk.t === 'br') atStart = false;
+    else if (tk.t === 'o') { if (/[.!?]/.test(tk.v)) atStart = true; }
+  });
+  // 문장 중간에 대문자로 나오는 낱말 = 고유명사(이름 등) → 어디서든 제외
+  const proper = new Set(); let wi = 0;
+  toks.forEach(tk => {
+    if (tk.t !== 'w') return;
+    const st = flags[wi++];
+    if (!st && /^[A-Z]/.test(tk.v) && !/^[A-Z]+$/.test(tk.v)) proper.add(tk.v.toLowerCase());
+  });
+  wi = 0;
+  return toks.map(tk => {
+    if (tk.t !== 'w') return tk.v;
+    const st = flags[wi++]; const w = tk.v;
+    if (w.length < 4) return w;                      // 짧은 단어는 대체로 쉬움
+    if (/^[A-Z]+$/.test(w)) return w;                // 전부 대문자(약어·제목)
+    if (proper.has(w.toLowerCase())) return w;       // 반복되는 고유명사
+    if (/^[A-Z]/.test(w) && !st) return w;           // 문장 중간 대문자(고유명사)
+    if (isCommonWord(w)) return w;                   // 흔한 단어(A1~B1)
+    return '[' + w + ']';
+  }).join('');
+}
 // 지문에서 [단어] 토큰을 순서대로(중복 제거) 뽑기
 function scanVocab(text) {
   const out = []; const re = /\[([^\]]+)\]/g; let m;
