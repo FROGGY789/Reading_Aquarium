@@ -230,6 +230,8 @@ function dayToEdit(day) {
       options: (q.options || []).concat(['', '', '', '']).slice(0, 4),
       answer: q.answer || 0,
       accept: (q.accept || []).join(', '),
+      wrong: q.wrong != null ? q.wrong : -1,            // 오류 고치기: 틀린 단어 인덱스
+      chunksText: (q.chunks || []).join(' / '),          // Scramble: 조각(정답 순서)
       explain: q.explain || ''
     }));
   });
@@ -270,6 +272,11 @@ function editToDay(e) {
           base.answer = Math.min(Math.max(0, Number(q.answer) || 0), Math.max(0, base.options.length - 1));
         } else if (q.type === 'ab') {
           base.answer = Math.min(1, Math.max(0, Number(q.answer) || 0));   // 0=A, 1=B
+        } else if (q.type === 'fix') {
+          base.wrong = Number(q.wrong);   // 틀린 단어 인덱스
+          base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
+        } else if (q.type === 'scramble') {
+          base.chunks = (q.chunksText || '').split('/').map(c => c.trim()).filter(Boolean);
         } else {
           base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
         }
@@ -277,7 +284,9 @@ function editToDay(e) {
       })
       .filter(q => q.type === 'mc' ? q.options.length >= 2
         : q.type === 'ab' ? /\[[^\]/]*\/[^\]]*\]/.test(q.sentence || '')
-          : q.accept.length >= 1);
+          : q.type === 'fix' ? ((q.sentence || '').trim() && q.accept.length >= 1 && q.wrong >= 0)
+            : q.type === 'scramble' ? q.chunks.length >= 2
+              : q.accept.length >= 1);
   });
   // 핵심 문장(리치): 빈 문장 제거, 마크 인덱스는 현재 단어 수 범위로 정리
   const coreSentences = (e.core || []).map(c => {

@@ -554,7 +554,7 @@ const DEFAULT_STATE = {
   animals: [],
   xp: 0,
   pullCount: 0,
-  quizTask: null, quizQi: 0, picks: {}, inputs: {}, checked: {},
+  quizTask: null, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {},
   result: null,
   hatchStage: 'idle', hatchSpecies: null,
   pop: null,
@@ -735,15 +735,30 @@ function currentQ() { return currentQs()[state.quizQi] || null; }
 function isRight(q, i) {
   if (!q) return false;
   if (q.type === 'mc' || q.type === 'ab') return state.picks[i] === q.answer;
+  if (q.type === 'fix') {
+    const v = NORM(state.inputs[i]);
+    return state.picks[i] === q.wrong && !!v && (q.accept || []).some(a => NORM(a) === v);
+  }
+  if (q.type === 'scramble') {
+    const cur = (state.scr && state.scr[i]) || [];
+    return cur.length === (q.chunks || []).length && cur.every((v, k) => v === k);
+  }
   const v = NORM(state.inputs[i]);
   return !!v && (q.accept || []).some(a => NORM(a) === v || v.includes(NORM(a)));
 }
 function canCheck() {
-  const cq = currentQ();
+  const cq = currentQ(); const qi = state.quizQi;
   if (!cq) return false;
-  return (cq.type === 'mc' || cq.type === 'ab')
-    ? state.picks[state.quizQi] != null
-    : !!(state.inputs[state.quizQi] && state.inputs[state.quizQi].trim());
+  if (cq.type === 'mc' || cq.type === 'ab') return state.picks[qi] != null;
+  if (cq.type === 'fix') return state.picks[qi] != null && !!(state.inputs[qi] && state.inputs[qi].trim());
+  if (cq.type === 'scramble') return ((state.scr && state.scr[qi]) || []).length === (cq.chunks || []).length;
+  return !!(state.inputs[qi] && state.inputs[qi].trim());
+}
+// 조각 순서 섞기(문항별 고정 — 리렌더에도 안 변함)
+function seededShuffle(arr, seed) {
+  const a = arr.slice(); let s = (seed + 1) * 9301 + 49297;
+  for (let i = a.length - 1; i > 0; i--) { s = (s * 9301 + 49297) % 233280; const j = Math.floor(s / 233280 * (i + 1));[a[i], a[j]] = [a[j], a[i]]; }
+  return a;
 }
 
 /* =========================================================
@@ -778,7 +793,7 @@ const actions = {
     if (t === 'review') { armReviewGate(); set({ screen: 'review', pop: null, revIndex: 0 }); }
     else if (t === 'preview') set({ screen: 'preview', pop: null });   // 3단계 난이도 선택
     else if (t === 'vocab') set({ screen: 'vocabReview', vrCount: null, fcI: 0, fcFlipped: false, fcHint: false });   // 어휘 복습(플래시카드)
-    else set({ screen: 'quiz', quizTask: t, quizQi: 0, picks: {}, inputs: {}, checked: {} });
+    else set({ screen: 'quiz', quizTask: t, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {} });
   },
   // 지문 예습 난이도 선택 — 살살: 다음날 어휘 플래시카드
   previewEasy() { if (flashcardCards('preview').length) set({ screen: 'previewVocab', fcI: 0, fcFlipped: false, fcHint: false }); },
@@ -854,7 +869,7 @@ const actions = {
   goPreview() { set({ screen: 'preview' }); },
   // 버닝: 리더 끝까지 읽고 → comprehension check(quiz.preview) → 없으면 바로 완료
   burnToComprehension() {
-    if (dayQuiz('preview').length) set({ screen: 'quiz', quizTask: 'preview', quizQi: 0, picks: {}, inputs: {}, checked: {}, readerBurning: false });
+    if (dayQuiz('preview').length) set({ screen: 'quiz', quizTask: 'preview', quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {}, readerBurning: false });
     else completeTask('preview');
   },
   tapWord(w) { set({ pop: state.pop === w ? null : w }); },
@@ -873,6 +888,15 @@ const actions = {
     picks[state.quizQi] = Number(arg);
     set({ picks });
   },
+  scrTap(arg) {   // Scramble: 조각(원본 인덱스)을 답 줄에 넣기/빼기
+    if (state.checked[state.quizQi]) return;
+    const qi = state.quizQi, idx = Number(arg);
+    const scr = Object.assign({}, state.scr);
+    const cur = (scr[qi] || []).slice();
+    const p = cur.indexOf(idx);
+    if (p >= 0) cur.splice(p, 1); else cur.push(idx);
+    scr[qi] = cur; set({ scr });
+  },
   quizCheck() {
     if (!canCheck() || state.checked[state.quizQi]) return;
     const checked = Object.assign({}, state.checked);
@@ -888,12 +912,18 @@ const actions = {
     qs.forEach((qq, i) => {
       if (isRight(qq, i)) { correct++; return; }
       const abo = qq.type === 'ab' ? abParse(qq.sentence).options : null;
-      const your = qq.type === 'mc'
-        ? (state.picks[i] != null ? qq.options[state.picks[i]] : '(무응답)')
-        : qq.type === 'ab'
-          ? (state.picks[i] != null ? abo[state.picks[i]] : '(무응답)')
-          : (state.inputs[i] || '(무응답)');
-      const corr = qq.type === 'mc' ? qq.options[qq.answer] : qq.type === 'ab' ? abo[qq.answer] : (qq.accept || [])[0] || '';
+      let your, corr;
+      if (qq.type === 'mc') { your = state.picks[i] != null ? qq.options[state.picks[i]] : '(무응답)'; corr = qq.options[qq.answer]; }
+      else if (qq.type === 'ab') { your = state.picks[i] != null ? abo[state.picks[i]] : '(무응답)'; corr = abo[qq.answer]; }
+      else if (qq.type === 'fix') {
+        const toks = (qq.sentence || '').split(/\s+/).filter(Boolean);
+        your = (state.picks[i] != null ? '[' + (toks[state.picks[i]] || '?') + '] → ' : '') + (state.inputs[i] || '(무응답)');
+        corr = '[' + (toks[qq.wrong] || '?') + '] → ' + ((qq.accept || [])[0] || '');
+      } else if (qq.type === 'scramble') {
+        const ord = (state.scr && state.scr[i]) || [];
+        your = ord.length ? ord.map(ci => qq.chunks[ci]).join(' ') : '(무응답)';
+        corr = (qq.chunks || []).join(' ');
+      } else { your = state.inputs[i] || '(무응답)'; corr = (qq.accept || [])[0] || ''; }
       wrongs.push({ prompt: qq.prompt || qq.sentence, your, correct: corr, explain: qq.explain });
     });
     set({
@@ -1744,6 +1774,33 @@ function quizHTML() {
       ${esc(p.before)}${opt(0, p.a)}<span style="color:#b8c2d2;font-weight:700">/</span>${opt(1, p.b)}${esc(p.after)}
     </div>
     <div style="text-align:center;font-size:11px;color:#9aa8bd;margin-top:8px">둘 중 어법에 맞는 표현을 고르세요</div>`;
+  } else if (cq.type === 'fix') {
+    const toks = (cq.sentence || '').split(/\s+/).filter(Boolean);
+    const chip = (w, wi) => {
+      const picked = state.picks[qi] === wi;
+      let bg = '#fff', bd = '#e2e9f2';
+      if (!checked && picked) { bg = '#fff7e6'; bd = '#e0a41a'; }
+      if (checked && wi === cq.wrong) { bg = '#e0f3ea'; bd = '#2fa36b'; }
+      if (checked && picked && wi !== cq.wrong) { bg = '#fbe4e2'; bd = '#e2564d'; }
+      return `<span ${checked ? '' : `data-act="pickOption" data-arg="${wi}"`} style="display:inline-block;margin:3px;padding:5px 9px;border-radius:9px;border:1.5px solid ${bd};background:${bg};color:#26303f;font-family:'Lora',serif;font-size:17px;cursor:${checked ? 'default' : 'pointer'}">${esc(w)}</span>`;
+    };
+    const ok = isRight(cq, qi);
+    const inputBd = checked ? (ok ? '#2fa36b' : '#e2564d') : '#e2e9f2';
+    body = `<div style="text-align:center;line-height:2.2;margin-top:8px">${toks.map(chip).join('')}</div>
+      <div style="text-align:center;font-size:11.5px;color:#9aa8bd;margin:8px 0 8px">틀린 부분을 <b>클릭</b>하고, 아래에 바르게 고쳐 쓰세요</div>
+      <input id="quiz-input" value="${esc(state.inputs[qi] || '')}" placeholder="바르게 고치기" ${checked ? 'readonly' : ''} style="width:100%;border:1.5px solid ${inputBd};background:#fff;border-radius:14px;padding:13px 15px;font-family:'Lora',serif;font-size:16px;color:#14243f;outline:none">`;
+  } else if (cq.type === 'scramble') {
+    const chunks = cq.chunks || [];
+    const order = (state.scr && state.scr[qi]) || [];
+    const shuffled = seededShuffle(chunks.map((_, k) => k), qi);
+    const ok = isRight(cq, qi);
+    const ansBd = checked ? (ok ? '#2fa36b' : '#e2564d') : '#cfe0f5';
+    const ansChip = ci => `<span ${checked ? '' : `data-act="scrTap" data-arg="${ci}"`} style="display:inline-block;margin:3px;padding:6px 11px;border-radius:10px;background:#2f74e6;color:#fff;font-family:'Lora',serif;font-size:16px;cursor:${checked ? 'default' : 'pointer'}">${esc(chunks[ci])}</span>`;
+    const poolChip = ci => `<span data-act="scrTap" data-arg="${ci}" style="display:inline-block;margin:3px;padding:6px 11px;border-radius:10px;border:1.5px solid #cfe0f5;background:#fff;color:#26303f;font-family:'Lora',serif;font-size:16px;cursor:pointer">${esc(chunks[ci])}</span>`;
+    const pool = shuffled.filter(ci => !order.includes(ci));
+    body = `<div style="min-height:64px;background:#f4f8fd;border:1.5px dashed ${ansBd};border-radius:14px;padding:10px 12px;margin-top:10px;text-align:center">${order.length ? order.map(ansChip).join('') : '<span style="color:#9aa8bd;font-size:12.5px;line-height:2.4">아래 조각을 눌러 순서대로 문장을 만드세요</span>'}</div>
+      ${!checked ? `<div style="text-align:center;margin-top:12px">${pool.map(poolChip).join('') || '<span style="color:#b8c2d2;font-size:12px">모든 조각을 놓았어요</span>'}</div>` : ''}
+      ${checked && !ok ? `<div style="text-align:center;font-size:13px;color:#2fa36b;font-family:'Lora',serif;margin-top:10px">정답: ${esc(chunks.join(' '))}</div>` : ''}`;
   } else {
     const ok = isRight(cq, qi);
     const inputBd = checked ? (ok ? '#2fa36b' : '#e2564d') : '#e2e9f2';
