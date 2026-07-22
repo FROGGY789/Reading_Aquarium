@@ -454,7 +454,7 @@ function wordHintSentence(word) {
   const sents = passageToReviewSentences(dayPassage(activeDay()));
   const hit = sents.find(s => s.includes('[' + word + ']'))
     || sents.find(s => new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(stripBrackets(s)));
-  return hit ? stripBrackets(hit) : '';
+  return hit ? stripMarks(stripBrackets(hit)) : '';
 }
 // 다음 수업(다음 Day) 지문의 팝오버([단어]) 단어 카드 — 어휘 예습용
 // 대괄호로 표시되고 어휘 뜻이 등록된 단어(= 실제 팝오버가 뜨는 단어)만 모음
@@ -623,7 +623,8 @@ const DEFAULT_STATE = {
   dexOpen: false,
   readerPage: 0,
   wordbook: [],             // '몰라요' 한 단어 모음 [{word,def,pos,ex,ts}] (5번에서 클라우드 동기화)
-  presentTheme: 'deep'      // 수업용 발표 화면 배경 그라디언트 테마
+  presentTheme: 'deep',     // 수업용 발표 화면 배경 그라디언트 테마
+  presentFont: 1            // 수업용 발표 글씨 배율(0.6~1.8)
 };
 
 /* ---- 수업용 발표 배경 테마(교사가 발표 화면에서 색 조정) ---- */
@@ -638,6 +639,12 @@ const PRESENT_THEMES = [
 ];
 function presentThemeObj() {
   return PRESENT_THEMES.find(t => t.id === state.presentTheme) || PRESENT_THEMES[0];
+}
+// 발표 글씨 배율(0.6~1.8, 기본 1.0)
+const PRESENT_FONT_MIN = 0.6, PRESENT_FONT_MAX = 1.8, PRESENT_FONT_STEP = 0.12;
+function presentFontScale() {
+  const v = Number(state.presentFont);
+  return Math.min(PRESENT_FONT_MAX, Math.max(PRESENT_FONT_MIN, isNaN(v) ? 1 : v));
 }
 
 let state = loadState();
@@ -1151,6 +1158,8 @@ const actions = {
   presentClose() { ui.present.on = false; ui.present.palette = false; exitFS(); render(); },
   presentPalette() { ui.present.palette = !ui.present.palette; render(); },
   presentSetTheme(arg) { state.presentTheme = arg; ui.present.palette = false; save(); render(); },
+  presentFontUp() { state.presentFont = Math.min(PRESENT_FONT_MAX, presentFontScale() + PRESENT_FONT_STEP); save(); render(); },
+  presentFontDown() { state.presentFont = Math.max(PRESENT_FONT_MIN, presentFontScale() - PRESENT_FONT_STEP); save(); render(); },
 
   edSelectDay(arg) { commitDayEdit(); openDay(Number(arg)); render(); },
   edSelectDayView(arg) { ui.presDay = Number(arg); render(); },  // 발표용: 배포 Day 선택
@@ -1941,10 +1950,10 @@ function reviewHTML() {
   const animate = _lastRevIndex !== i; _lastRevIndex = i;   // 문장 바뀔 때만 페이드
 
   const wordStyle = active => `background:${active ? '#2f74e6' : '#e7f0fd'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #2f74e6;border-radius:3px;padding:0 3px;cursor:pointer`;
-  const sentHTML = esc(sentence).replace(/\[([^\]]+)\]/g, (m, w) =>
+  const sentHTML = renderMarks(esc(sentence).replace(/\[([^\]]+)\]/g, (m, w) =>
     words[w]
       ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wordStyle(state.pop === w)}">${esc(w)}</span>`
-      : esc(w));
+      : esc(w)));
   const pop = state.pop && words[state.pop] && sentence.includes('[' + state.pop + ']')
     ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `
@@ -2152,9 +2161,9 @@ function readerHTML() {
       <div style="font-size:13px;color:#e7dcc4;margin-top:5px">${esc(pop.def)}</div>
       ${pop.ex ? `<div style="font-size:12px;color:#bda880;margin-top:5px;font-style:italic;font-family:'Lora',serif">${esc(pop.ex)}</div>` : ''}
     </div>` : '';
-  const renderPara = p => burning
+  const renderPara = p => renderMarks(burning
     ? esc(p).replace(/\[([^\]]+)\]/g, (m, w) => words[w] ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wStyle(state.pop === w)}">${esc(w)}</span>` : esc(w))
-    : esc(p);
+    : esc(p));
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#f5f0e6">
     <div style="padding:48px 22px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e7dfce">
       <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#ece3d2;color:#7a6b52;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
@@ -2750,6 +2759,7 @@ function presentHTML() {
 
   const th = presentThemeObj();
   const fg = th.fg, dim = th.dim, accent = th.accent;
+  const fs = presentFontScale();
 
   // 진행 점(문장이 많으면 막대로 대체)
   const progress = total <= 24
@@ -2782,6 +2792,11 @@ function presentHTML() {
     <div style="position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:16px 20px;pointer-events:none">
       <div style="font-size:13px;font-weight:600;letter-spacing:.3px;color:rgba(${dim},.6)">${esc(p.title) || '수업 자료'}</div>
       <div style="display:flex;gap:9px;pointer-events:auto">
+        <div style="display:flex;align-items:center;background:rgba(${dim},.12);border-radius:12px;height:40px;overflow:hidden">
+          <div data-act="presentFontDown" title="글씨 작게 (-)" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;cursor:${fs <= PRESENT_FONT_MIN ? 'default' : 'pointer'};opacity:${fs <= PRESENT_FONT_MIN ? '.35' : '1'};font-size:15px;font-weight:800">A−</div>
+          <div style="font-size:11px;font-weight:700;color:rgba(${dim},.7);min-width:34px;text-align:center;font-variant-numeric:tabular-nums">${Math.round(fs * 100)}%</div>
+          <div data-act="presentFontUp" title="글씨 크게 (+)" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;cursor:${fs >= PRESENT_FONT_MAX ? 'default' : 'pointer'};opacity:${fs >= PRESENT_FONT_MAX ? '.35' : '1'};font-size:19px;font-weight:800">A＋</div>
+        </div>
         <div data-act="presentPalette" title="배경색 조정" style="display:flex;align-items:center;gap:6px;padding:0 14px;height:40px;border-radius:12px;background:rgba(${dim},${p.palette ? '.22' : '.12'});cursor:pointer;font-size:13px;font-weight:700">🎨 배경색</div>
         <div data-act="presentClose" title="닫기 (Esc)" style="display:flex;align-items:center;gap:6px;padding:0 15px;height:40px;border-radius:12px;background:rgba(${dim},.12);cursor:pointer;font-size:13px;font-weight:700">✕ 닫기</div>
       </div>
@@ -2790,7 +2805,7 @@ function presentHTML() {
 
     <!-- 문장(가운데, 크고 깔끔하게) -->
     <div style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:9vh 8vw;pointer-events:none">
-      <div key="${i}" style="font-family:'Lora',Georgia,serif;font-weight:500;line-height:1.4;text-align:center;font-size:clamp(30px,5.4vw,68px);max-width:1100px;text-wrap:balance;animation:fadeup .4s ease">${esc(sentence)}</div>
+      <div key="${i}" style="font-family:'Lora',Georgia,serif;font-weight:500;line-height:1.4;text-align:center;font-size:clamp(${30 * fs}px,${(5.4 * fs).toFixed(2)}vw,${Math.round(68 * fs)}px);max-width:1100px;text-wrap:balance;animation:fadeup .4s ease">${renderMarks(esc(sentence), accent)}</div>
     </div>
 
     <!-- 하단 바: 이전/진행/다음 -->
@@ -2932,6 +2947,8 @@ document.addEventListener('keydown', e => {
   if (['ArrowRight', ' ', 'Spacebar', 'PageDown'].includes(e.key)) { e.preventDefault(); actions.presentNext(); }
   else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); actions.presentPrev(); }
   else if (e.key === 'Escape') { e.preventDefault(); actions.presentClose(); }
+  else if (e.key === '+' || e.key === '=') { e.preventDefault(); actions.presentFontUp(); }
+  else if (e.key === '-' || e.key === '_') { e.preventDefault(); actions.presentFontDown(); }
 });
 // 브라우저 전체화면을 사용자가 직접 끄면(F11/Esc) 발표 오버레이도 함께 닫기
 document.addEventListener('fullscreenchange', () => {
