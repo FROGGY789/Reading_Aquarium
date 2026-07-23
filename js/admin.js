@@ -283,7 +283,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v23 (어려운 단어 자동 [ ])</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v24 (지문창 확대·분량 표시)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -361,7 +361,13 @@ function passageTab(d) {
           <button class="btn primary sm" data-act="autoBracket" title="B2 이상으로 보이는 어려운 단어에 자동으로 [ ] 표시">🔎 어려운 단어 자동 [ ]</button>
           <button class="btn ghost sm" data-act="clearBrackets" title="지문의 모든 [ ]를 지우기">⌫ [ ] 지우기</button>
         </div>
-        <textarea id="passage-textarea" class="inp" data-bind="passageText" rows="20" placeholder="여기에 그날 읽을 지문을 붙여넣으세요. 아주 길어도 괜찮아요.">${esc(d.passageText)}</textarea>
+        <textarea id="passage-textarea" class="inp" data-bind="passageText" rows="30" style="min-height:560px;resize:vertical;line-height:1.7;font-size:15px" placeholder="여기에 그날 읽을 지문을 붙여넣으세요. 10쪽 이상 아주 길어도 괜찮아요 — 더 편하게 보려면 위 '⤢ 크게 편집'을 눌러요.">${esc(d.passageText)}</textarea>
+        ${(() => {
+          const words = (d.passageText.match(/[A-Za-z][A-Za-z'’]*/g) || []).length;
+          const ebookPages = (typeof passageToPagesRaw === 'function') ? passageToPagesRaw(d.passageText).length : 0;
+          const estPages = Math.max(1, Math.round(words / 280));
+          return `<div style="margin-top:8px;font-size:12px;color:#7d8aa0">약 <b style="color:#2f74e6">${words.toLocaleString()}단어</b> · 원서 기준 <b style="color:#2f74e6">약 ${estPages}쪽</b> 분량${ebookPages > 1 ? ` · e-북 <b>${ebookPages}페이지</b>(<span class="mono">---</span>로 나눔)` : ''}</div>`;
+        })()}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
           <div class="cathead" style="margin:0"><div class="name">팝오버 어휘 <span class="cnt">${d.words.length}개</span></div></div>
           <button class="btn ghost sm" data-act="syncWords">🔄 지문에서 [단어] 불러오기</button>
