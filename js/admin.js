@@ -43,6 +43,7 @@ function bestDayIndex() {
 }
 function openDay(i) { ed = { dayIndex: i, day: dayToEdit(content.days[i]) }; }
 function commit() {
+  syncEditor();   // 지문 편집기(contenteditable) 최신 내용을 편집 모델에 반영
   if (ed) {
     content.days[ed.dayIndex] = editToDay(ed.day);
     content.days.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
@@ -68,37 +69,32 @@ function toast(msg, type) { ui.msg = msg; ui.msgType = type || ''; }
 /* ---------- 액션 ---------- */
 const actions = {
   tab(t) { commit(); ui.tab = t; toast(''); render(); },
-  expandPassage() { ui.expand = true; render(); },   // 지문 크게 편집(전체화면)
-  collapsePassage() { ui.expand = false; render(); },
-  expandFontUp() { ui.expandFont = Math.min(32, ui.expandFont + 2); render(); },
-  expandFontDown() { ui.expandFont = Math.max(12, ui.expandFont - 2); render(); },
-  // 지문에서 드래그해 선택한 부분을 강조(**) / 형광펜(==)로 감싸기
-  markPassage(marker) {
-    const ta = document.getElementById(ui.expand ? 'pv-textarea' : 'passage-textarea');
-    if (!ta) return;
-    const s = ta.selectionStart | 0, e = ta.selectionEnd | 0;
-    const val = ta.value;
-    const hasSel = e > s;
-    const sel = hasSel ? val.slice(s, e) : (marker === '**' ? '강조할 내용' : '색칠할 내용');
-    const next = val.slice(0, s) + marker + sel + marker + val.slice(e);
-    setPath(ed.day, 'passageText', next);   // 편집 모델에 즉시 반영(리렌더 없이 포커스 유지)
-    ta.value = next;
-    ta.focus();
-    const inner = s + marker.length;
-    ta.setSelectionRange(inner, inner + sel.length);
+  expandPassage() { syncEditor(); ui.expand = true; render(); },   // 지문 크게 편집(전체화면)
+  collapsePassage() { syncEditor(); ui.expand = false; render(); },
+  expandFontUp() { syncEditor(); ui.expandFont = Math.min(32, ui.expandFont + 2); render(); },
+  expandFontDown() { syncEditor(); ui.expandFont = Math.max(12, ui.expandFont - 2); render(); },
+  // 선택 영역 서식: 굵게(토글) / 형광펜(토글) / 서식 지우기
+  fmtBold() { const el = activeEditorEl(); if (!el) return; el.focus(); document.execCommand('bold'); syncEditor(); },
+  fmtMark() {
+    const el = activeEditorEl(); if (!el) return; el.focus();
+    const sel = window.getSelection();
+    let inMark = false, n = sel && sel.anchorNode;
+    while (n && n !== el) { if (n.nodeType === 1 && _edMark(n)) { inMark = true; break; } n = n.parentNode; }
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('hiliteColor', false, inMark ? 'transparent' : '#ffe35c');
+    syncEditor();
   },
+  fmtClear() { const el = activeEditorEl(); if (!el) return; el.focus(); document.execCommand('removeFormat'); syncEditor(); },
   // 어려운(B2+) 단어 자동 [ ] / 대괄호 모두 지우기
   autoBracket() {
-    const ta = document.getElementById(ui.expand ? 'pv-textarea' : 'passage-textarea');
-    const cur = ta ? ta.value : (ed.day.passageText || '');
-    ed.day.passageText = autoBracketHard(cur);
+    syncEditor();
+    ed.day.passageText = autoBracketHard(ed.day.passageText || '');
     toast("어려운 단어에 [ ]를 자동 표시했어요. 이름 등 잘못 표시된 건 지우고, 아래 '🔄 지문에서 [단어] 불러오기'로 뜻을 채우세요.", 'ok');
     render();
   },
   clearBrackets() {
-    const ta = document.getElementById(ui.expand ? 'pv-textarea' : 'passage-textarea');
-    const cur = ta ? ta.value : (ed.day.passageText || '');
-    ed.day.passageText = stripBrackets(cur);
+    syncEditor();
+    ed.day.passageText = stripBrackets(ed.day.passageText || '');
     toast('지문의 [ ] 표시를 모두 지웠어요.', 'ok');
     render();
   },
@@ -252,8 +248,64 @@ function render() {
   </div>
   ${ui.expand ? passageEditorOverlay(d) : ''}`;
 
-  if (ui.expand) { const t = document.getElementById('pv-textarea'); if (t && document.activeElement !== t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
+  if (ui.expand) { const t = document.getElementById('pv-editor'); if (t && document.activeElement !== t) t.focus(); }
 }
+
+/* ---- WYSIWYG 지문 편집(contenteditable) ↔ 저장용 마크업(**굵게** / ==형광펜==) ---- */
+// 저장 마크업 → 편집기에 보일 HTML(줄바꿈=div, **→<b>, ==→<mark>, [단어]는 글자 그대로)
+function markupToEditorHTML(text) {
+  text = String(text == null ? '' : text);
+  if (!text) return '';
+  return text.split('\n').map(line => {
+    if (line === '') return '<div><br></div>';
+    const h = esc(line)
+      .replace(/==([^=]+)==/g, '<mark style="background:#ffe35c;color:#1a1a1a">$1</mark>')
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    return '<div>' + h + '</div>';
+  }).join('');
+}
+function _edBold(el) {
+  const t = el.tagName; if (t === 'B' || t === 'STRONG') return true;
+  const fw = (el.style && el.style.fontWeight) || ''; return /^(bold|[6-9]00)$/.test(fw);
+}
+function _edMark(el) {
+  if (el.tagName === 'MARK') return true;
+  const bg = (el.style && el.style.backgroundColor) || '';
+  return !!bg && bg !== 'transparent' && !/rgba?\(0,\s*0,\s*0,\s*0\)/.test(bg);
+}
+// 편집기 DOM → 저장용 마크업 문자열
+function serializeEditor(root) {
+  const chars = [];
+  (function walk(node, b, m) {
+    node.childNodes.forEach(ch => {
+      if (ch.nodeType === 3) { for (const c of ch.nodeValue) chars.push({ c, b, m }); return; }
+      if (ch.nodeType !== 1) return;
+      const tag = ch.tagName;
+      if (tag === 'BR') { chars.push({ br: true }); return; }
+      const nb = b || _edBold(ch);
+      const nm = m || _edMark(ch);
+      if (/^(DIV|P|LI|H[1-6]|SECTION)$/.test(tag) && chars.length && !chars[chars.length - 1].br) chars.push({ br: true });
+      walk(ch, nb, nm);
+    });
+  })(root, false, false);
+  let out = '', b = false, m = false;
+  const closeB = () => { if (b) { out += '**'; b = false; } };
+  const closeM = () => { if (m) { out += '=='; m = false; } };
+  for (const s of chars) {
+    if (s.br) { closeB(); closeM(); out += '\n'; continue; }
+    if (s.m && !m) { out += '=='; m = true; }
+    else if (!s.m && m) { closeB(); out += '=='; m = false; }
+    if (s.b && !b) { out += '**'; b = true; }
+    else if (!s.b && b) { out += '**'; b = false; }
+    out += s.c;
+  }
+  closeB(); closeM();
+  return out.replace(/\*\*(\s*)\*\*/g, '$1').replace(/==(\s*)==/g, '$1').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+}
+// 화면에 있는 지문 편집기 요소(메인/오버레이)
+function activeEditorEl() { return document.getElementById(ui.expand ? 'pv-editor' : 'passage-editor'); }
+// 편집기 내용을 편집 모델에 반영(리렌더 없이)
+function syncEditor() { const el = activeEditorEl(); if (el && ed) ed.day.passageText = serializeEditor(el); }
 
 // 지문 전체화면 편집 오버레이(장편 검토용)
 function passageEditorOverlay(d) {
@@ -263,8 +315,9 @@ function passageEditorOverlay(d) {
     <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#fff;border-bottom:1px solid #e2e9f2;flex:none">
       <div style="font-size:15px;font-weight:800;color:#14243f;white-space:nowrap">📖 지문 크게 편집${d.label ? ' · ' + esc(d.label) : ''}</div>
       <div style="font-size:12px;color:#7d8aa0">문단=빈 줄 · 페이지=<span class="mono">---</span> · 팝오버=<span class="mono">[단어]</span></div>
-      <button class="btn ghost sm" data-act="markPassage" data-arg="**" title="선택한 부분을 굵게 강조"><b>B</b> 강조</button>
-      <button class="btn ghost sm" data-act="markPassage" data-arg="==" title="선택한 부분에 형광펜 색">🖍 형광펜</button>
+      <button class="btn ghost sm" data-fmt="1" data-act="fmtBold" title="선택한 부분 굵게 (Ctrl+B)"><b>B</b> 강조</button>
+      <button class="btn ghost sm" data-fmt="1" data-act="fmtMark" title="선택한 부분 형광펜">🖍 형광펜</button>
+      <button class="btn ghost sm" data-fmt="1" data-act="fmtClear" title="선택한 부분 서식 지우기">🧽 서식지우기</button>
       <button class="btn primary sm" data-act="autoBracket" title="어려운(B2+) 단어 자동 [ ]">🔎 자동 [ ]</button>
       <button class="btn ghost sm" data-act="clearBrackets" title="[ ] 모두 지우기">⌫ [ ]</button>
       <div style="flex:1"></div>
@@ -275,7 +328,7 @@ function passageEditorOverlay(d) {
       <button class="btn primary sm" data-act="collapsePassage">✓ 완료</button>
     </div>
     <div style="flex:1;overflow:auto;display:flex;justify-content:center;padding:18px">
-      <textarea id="pv-textarea" class="inp" data-bind="passageText" spellcheck="false" style="width:100%;max-width:920px;height:100%;resize:none;font-size:${ui.expandFont}px;line-height:1.85;padding:24px 28px;border-radius:12px" placeholder="여기에 그날 읽을 지문을 붙여넣으세요. 아주 길어도 괜찮아요.">${esc(d.passageText)}</textarea>
+      <div id="pv-editor" contenteditable="true" spellcheck="false" class="pw-editor" data-ph="여기에 그날 읽을 지문을 붙여넣으세요. 아주 길어도 괜찮아요." style="width:100%;max-width:920px;min-height:100%;background:#fff;border:1px solid #e2e9f2;font-size:${ui.expandFont}px;line-height:1.85;padding:24px 28px;border-radius:12px;white-space:pre-wrap;outline:none">${markupToEditorHTML(d.passageText)}</div>
     </div>
   </div>`;
 }
@@ -283,7 +336,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v24 (지문창 확대·분량 표시)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v25 (지문 서식 편집기 WYSIWYG)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -354,14 +407,15 @@ function passageTab(d) {
           이 지문 하나에서 <b>e-북 리더</b>와 <b>지문 복습(팝오버)</b>이 모두 나와요.
         </div>
         <div style="display:flex;gap:7px;margin:10px 0 8px;flex-wrap:wrap;align-items:center">
-          <button class="btn ghost sm" data-act="markPassage" data-arg="**" title="선택한 부분을 굵게 강조 (**...**)"><b>B</b> 강조</button>
-          <button class="btn ghost sm" data-act="markPassage" data-arg="==" title="선택한 부분에 형광펜 색 (==...==)">🖍 형광펜</button>
+          <button class="btn ghost sm" data-fmt="1" data-act="fmtBold" title="선택한 부분 굵게 (Ctrl+B)"><b>B</b> 강조</button>
+          <button class="btn ghost sm" data-fmt="1" data-act="fmtMark" title="선택한 부분 형광펜">🖍 형광펜</button>
+          <button class="btn ghost sm" data-fmt="1" data-act="fmtClear" title="선택한 부분 서식 지우기">🧽 서식지우기</button>
           <span class="hint" style="margin:0">← <b>드래그 선택</b> 후 누르기</span>
           <span style="flex:1"></span>
           <button class="btn primary sm" data-act="autoBracket" title="B2 이상으로 보이는 어려운 단어에 자동으로 [ ] 표시">🔎 어려운 단어 자동 [ ]</button>
           <button class="btn ghost sm" data-act="clearBrackets" title="지문의 모든 [ ]를 지우기">⌫ [ ] 지우기</button>
         </div>
-        <textarea id="passage-textarea" class="inp" data-bind="passageText" rows="30" style="min-height:560px;resize:vertical;line-height:1.7;font-size:15px" placeholder="여기에 그날 읽을 지문을 붙여넣으세요. 10쪽 이상 아주 길어도 괜찮아요 — 더 편하게 보려면 위 '⤢ 크게 편집'을 눌러요.">${esc(d.passageText)}</textarea>
+        <div id="passage-editor" contenteditable="true" spellcheck="false" class="pw-editor" data-ph="여기에 그날 읽을 지문을 붙여넣으세요. 10쪽 이상 아주 길어도 괜찮아요 — 굵게는 드래그 후 Ctrl+B 또는 'B 강조'." style="min-height:560px;max-height:72vh;overflow:auto;resize:vertical;line-height:1.7;font-size:15px;background:#fff;border:1px solid #dbe2ec;border-radius:10px;padding:12px 14px;white-space:pre-wrap;outline:none">${markupToEditorHTML(d.passageText)}</div>
         ${(() => {
           const words = (d.passageText.match(/[A-Za-z][A-Za-z'’]*/g) || []).length;
           const ebookPages = (typeof passageToPagesRaw === 'function') ? passageToPagesRaw(d.passageText).length : 0;
@@ -572,9 +626,20 @@ rootEl.addEventListener('click', e => {
 rootEl.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'gh-token') return;
+  if (el.id === 'passage-editor' || el.id === 'pv-editor') { if (ed) ed.day.passageText = serializeEditor(el); return; }
   if (el.dataset.gbind) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
   if (bind && el.type !== 'radio' && el.tagName !== 'SELECT') setPath(ed.day, bind, el.value);
+});
+// 서식 버튼 클릭 시 편집기 선택이 풀리지 않도록(포커스 뺏김 방지)
+rootEl.addEventListener('mousedown', e => { if (e.target.closest('[data-fmt]')) e.preventDefault(); });
+// 붙여넣기는 서식 없이 평문으로(외부 HTML 오염 방지)
+rootEl.addEventListener('paste', e => {
+  const el = e.target.closest && e.target.closest('[contenteditable]');
+  if (!el) return;
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  document.execCommand('insertText', false, text);
 });
 rootEl.addEventListener('change', e => {
   const el = e.target;
