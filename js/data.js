@@ -204,6 +204,21 @@ const CEFR_COMMON_WORDS = (
   "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred thousand million zero first second third once twice " +
   "today tomorrow yesterday now soon later monday tuesday wednesday thursday friday saturday sunday january february march april may june july august september october november december spring summer autumn fall winter week weekend month year season " +
   "yes no ok okay please thanks thank sorry hello hi bye goodbye mr mrs ms miss sir madam " +
+  // 흔한 일상·자연·장소·이야기 단어(아동 도서 빈출)
+  "ocean wave beach shore sand shell ship sail boat storm cloud sky rock stone hill field forest wood garden park farm village castle bridge gate path grass leaf branch root seed plant bush pond stream valley cave island desert jungle cliff shore " +
+  "king queen prince princess knight giant dragon witch fairy monster ghost magic wizard sword crown gold treasure map ring bell drum horn " +
+  "morning noon midnight sunrise sunset shadow light candle lamp fire smoke ash dust mud ice snow rain wind thunder lightning rainbow " +
+  "smile laugh cry shout whisper nod wave point wink stare frown yawn sigh " +
+  "happy sad angry scared afraid brave kind cruel wise silly lazy busy lonely proud shy calm gentle wild quiet loud strange funny scary lovely pretty ugly clever foolish " +
+  "run walk jump climb crawl swim fly float sink dive slide roll spin bounce chase hide seek follow lead carry drag lift drop toss grab hold squeeze knock tap kick push pull " +
+  "breakfast lunch dinner supper meal cake pie soup bean corn nut honey sugar salt butter cheese cream jam candy sweet " +
+  "sheep goat pig hen duck goose rabbit mouse rat frog snake fox wolf bear deer lion tiger monkey elephant whale shark bee ant fly spider worm bird fish " +
+  "hat coat shirt dress skirt sock shoe boot glove scarf button pocket cap ribbon " +
+  "wall roof gate fence yard garden kitchen bedroom bathroom stair step chimney basement attic cottage cabin hut palace tower " +
+  "north south east west left right front back top bottom middle corner edge side inside outside upstairs downstairs " +
+  "week hour clock watch calendar birthday holiday party gift present card game toy doll ball kite balloon " +
+  "loud soft quiet gentle rough smooth sharp bright dark deep shallow empty full heavy light tiny huge giant round square flat curved straight " +
+  "voice sound noise word name letter story song poem tale rhyme dream wish secret promise plan trick joke lie truth " +
   // 흔한 불규칙 과거·과거분사(어미 제거로 못 잡는 것)
   "was were been had said made went gone got gotten came come saw seen knew known took taken gave given found told thought became begun began ran run met paid held kept meant sat stood lost sent built spent sold heard read put cut set let grew grown drew drawn threw thrown flew flown chose chosen spoke spoken broke broken woke drove driven rode ridden rose risen fell fallen felt dealt bought caught taught fought sought brought understood won did done left brought wrote written swam swum sang sung rang rung drank drunk swore worn wore ate eaten fed led hid hidden shone shut spread struck stuck bit bitten"
 ).split(/\s+/).filter(Boolean).reduce((s, w) => (s.add(w), s), new Set());
