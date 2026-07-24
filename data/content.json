@@ -1752,6 +1752,64 @@
         ]
       },
       "class": "2026 여름방학 영방반"
+    },
+    {
+      "date": "2026-07-25",
+      "label": "",
+      "quote": {
+        "en": "",
+        "ko": "",
+        "teacher": "",
+        "comment": ""
+      },
+      "book": {
+        "title": "The Bad Beginning",
+        "author": "Lemony Snicket",
+        "chapter": "Chapter 02-1",
+        "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
+        "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
+      },
+      "passage": "",
+      "vocab": {},
+      "coreSentences": [],
+      "quiz": {
+        "preview": [],
+        "vocab": [],
+        "sentence": [],
+        "vocabPrep": [],
+        "sentPrep": [],
+        "grammar": []
+      },
+      "class": "2026 여름방학 영방반"
+    },
+    {
+      "date": "2026-07-25",
+      "label": "",
+      "quote": {
+        "en": "",
+        "ko": "",
+        "teacher": "",
+        "comment": ""
+      },
+      "book": {
+        "title": "The Bad Beginning",
+        "author": "Lemony Snicket",
+        "chapter": "Chapter 02-2",
+        "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
+        "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
+      },
+      "passage": "",
+      "vocab": {},
+      "coreSentences": [],
+      "quiz": {
+        "preview": [],
+        "vocab": [],
+        "sentence": [],
+        "vocabPrep": [],
+        "sentPrep": [],
+        "grammar": []
+      },
+      "class": "2026 여름방학 영방반"
     }
   ]
 }
