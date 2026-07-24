@@ -303,7 +303,8 @@ function render() {
   const tabBtn = (id, label) => `<div class="daychip ${ui.tab === id ? 'on' : ''}" data-act="tab" data-arg="${id}">${label}</div>`;
 
   let panel = '';
-  if (ui.tab === 'passage') panel = passageTab(d);
+  if (ui.tab === 'book') panel = bookTab(d);
+  else if (ui.tab === 'passage') panel = passageTab(d);
   else if (ui.tab === 'preview') panel = previewTab(d);
   else if (ui.tab === 'quiz') panel = quizTab(d);
   else if (ui.tab === 'schedule') panel = scheduleTab();
@@ -322,7 +323,8 @@ function render() {
 
     <div class="daybar" style="margin-bottom:16px">
       ${tabBtn('schedule', '📅 챕터 일정')}
-      ${tabBtn('passage', '📖 지문 · 책')}
+      ${tabBtn('book', '📖 책 정보')}
+      ${tabBtn('passage', '✍️ 지문 편집')}
       ${tabBtn('preview', '👀 예습 (살살·보통·버닝)')}
       ${tabBtn('quiz', '📝 복습 · 퀴즈')}
       ${tabBtn('settings', '⚙️ 학생 · 설정')}
@@ -505,7 +507,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v30 (지문 편집기 개편·어휘/문법/핵심문장)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v31 (책 정보·지문 편집 탭 분리)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -514,8 +516,8 @@ function topbar(loaded) {
   </div>`;
 }
 
-/* ---- 탭 1: 지문 · 책 ---- */
-function passageTab(d) {
+/* ---- 탭: 책 정보 (기본 정보 · 책 · 표지) ---- */
+function bookTab(d) {
   const cover = (d.book.cover || '').trim();
   const spine = (d.book.spine || '').trim();
   return `<div class="cols">
@@ -558,9 +560,12 @@ function passageTab(d) {
           <div style="font-size:12px;color:#7d8aa0;line-height:1.7">← 표지 / 책등 →<br>서가에는 책등이 세워져 보이고,<br>탭하면 표지와 함께 읽기가 열려요.</div>
         </div>
       </div>
-  </div>
+  </div>`;
+}
 
-  <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-top:2px">
+/* ---- 탭: 지문 편집 (지문 편집기 + 팝오버 어휘) ---- */
+function passageTab(d) {
+  return `<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-top:2px">
     <div style="flex:2;min-width:340px">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
