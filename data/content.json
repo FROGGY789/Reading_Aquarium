@@ -10,8 +10,8 @@
   },
   "days": [
     {
-      "date": "2026-07-24",
-      "label": "영방반 Day01",
+      "date": "2026-07-25",
+      "label": "Day 1",
       "quote": {
         "en": "Yet the deeper they went, the more the water kept its silence.",
         "ko": "그러나 더 깊이 들어갈수록, 바다는 더욱 침묵을 지켰다.",
@@ -21,7 +21,7 @@
       "book": {
         "title": "The Bad Beginning",
         "author": "Lemony Snicket",
-        "chapter": "Chapter 01",
+        "chapter": "Chapter 01-1",
         "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
         "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
       },
@@ -460,39 +460,82 @@
       "coreSentences": [
         {
           "text": "If you are interested in stories with happy endings, you would be better off reading some other book.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            1,
+            9
+          ],
+          "verb": [
+            2,
+            10,
+            11
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "Violet, Klaus, and Sunny Baudelaire were intelligent children, and they were charming, and resourceful, and had pleasant facial features, but they were extremely unlucky, and most everything that happened to them was rife with misfortune, misery, and despair.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            9,
+            20,
+            25,
+            26
+          ],
+          "verb": [
+            5,
+            10,
+            21,
+            31
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "On gray and cloudy days, the Baudelaires had the beach to themselves to do what they liked.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            5,
+            6,
+            15
+          ],
+          "verb": [
+            7,
+            16
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "Anyone who knew Violet well could tell she was thinking hard, because her long hair was tied up in a ribbon to keep it out of her eyes.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            7,
+            12,
+            13,
+            14
+          ],
+          "verb": [
+            5,
+            6
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "Violet had a real knack for inventing and building strange devices, so her brain was often filled with images of pulleys； levers, and gears, and she never wanted to be distracted by something as trivial as her hair.",
-          "subject": [],
+          "subject": [
+            0,
+            12,
+            13,
+            25
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
@@ -500,7 +543,10 @@
         },
         {
           "text": "Being only twelve, Klaus of course had not read all of the books in the Baudelaire library, but he had read a great many of them and had retained a lot of the information from his readings.",
-          "subject": [],
+          "subject": [
+            3,
+            18
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
@@ -508,7 +554,9 @@
         },
         {
           "text": "She was an infant, and very small for her age, scarcely larger than a boot.",
-          "subject": [],
+          "subject": [
+            0
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
@@ -516,15 +564,22 @@
         },
         {
           "text": "What she lacked in size, however, she made up for with the size and sharpness of her four teeth.",
-          "subject": [],
+          "subject": [
+            1,
+            6
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
-          "text": "Except when she used the few actual words in her vocabulary, ike “bottle,” “mommy,” and “bite,” most people had trouble understanding what it was that Sunny as saying.",
-          "subject": [],
+          "text": "Except when she used the few actual words in her vocabulary, ike “bottle,” “mommy,” and “bite,” most people had trouble understanding what it was that Sunny was saying.",
+          "subject": [
+            2,
+            16,
+            17
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
@@ -532,7 +587,11 @@
         },
         {
           "text": "Sure enough, in the distance along the misty shore of Briny Beach there could be seen a tall figure striding toward the Baudelaire children.",
-          "subject": [],
+          "subject": [
+            16,
+            17,
+            18
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
@@ -540,7 +599,11 @@
         },
         {
           "text": "Sunny had already been staring and shrieking at the figure for some time when Klaus looked up from the spiny crab he was examining, and saw it too.",
-          "subject": [],
+          "subject": [
+            0,
+            14,
+            21
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
@@ -548,15 +611,22 @@
         },
         {
           "text": "“What do you think it is?” Violet asked.",
-          "subject": [],
+          "subject": [
+            6,
+            4
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
-          "text": "“There’s nobody else ( ) it could be moving toward.”",
-          "subject": [],
+          "text": "“There’s nobody else  it could be moving toward.”",
+          "subject": [
+            1,
+            2,
+            3
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
@@ -564,7 +634,16 @@
         },
         {
           "text": "One of the things Violet, Klaus, and Sunny really liked about their parents was that they didn’t send their children away when they had company over, but allowed them to join the adults at the dinner table and participate in the conversation as long as they helped clear the table.",
-          "subject": [],
+          "subject": [
+            0,
+            4,
+            5,
+            6,
+            7,
+            15,
+            22,
+            45
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
@@ -572,7 +651,14 @@
         },
         {
           "text": "For a few seconds nobody said anything, and the children wondered what Mr. Poe was doing there at Briny Beach, when he should have been at the bank in the city, where he worked.",
-          "subject": [],
+          "subject": [
+            4,
+            8,
+            9,
+            12,
+            13,
+            21
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
@@ -580,15 +666,897 @@
         },
         {
           "text": "He did know what the word “perished” meant, but he was still having trouble understanding exactly what it was that Mr. Poe had said.",
-          "subject": [],
+          "subject": [
+            0,
+            9,
+            17,
+            20,
+            21
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
-          "text": "“I was sent to retrieve you here, and to take you to my home, where you’ll stay for some time while we figure things out.",
-          "subject": [],
+          "text": "“I was sent to retrieve you here, and to take you to my home, where you will stay for some time while we figure things out.",
+          "subject": [
+            0,
+            15,
+            21
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        }
+      ],
+      "quiz": {
+        "preview": [
+          {
+            "type": "mc",
+            "prompt": "이 글은 주로 무엇에 관한 글일까요?",
+            "explain": "바다의 수평선과 침묵을 통해 인간의 끝없는 호기심을 그리고 있어요.",
+            "options": [
+              "바다에 대한 인간의 호기심",
+              "항해 기술의 발전",
+              "어업의 역사",
+              "해양 날씨 예보"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "mc",
+            "prompt": "\"restless horizon\"에서 느껴지는 분위기로 가장 알맞은 것은?",
+            "explain": "restless는 \"가만히 있지 못하는\"이라는 뜻이에요.",
+            "options": [
+              "가만히 있지 않고 계속 멀어지는 느낌",
+              "평온하고 고요한 느낌",
+              "위험하고 공포스러운 느낌",
+              "따뜻하고 포근한 느낌"
+            ],
+            "answer": 0
+          }
+        ],
+        "vocab": [
+          {
+            "type": "mc",
+            "prompt": "restless의 뜻으로 알맞은 것은?",
+            "explain": "restless = 가만히 있지 못하는, 끊임없이 움직이는.",
+            "options": [
+              "가만히 있지 못하는",
+              "아주 조용한",
+              "매우 깊은",
+              "환하게 빛나는"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "mc",
+            "prompt": "빈칸에 알맞은 단어는? \"The sailors watched the ___ far away.\" (멀리 있는 수평선을 보았다)",
+            "explain": "horizon = 수평선.",
+            "options": [
+              "horizon",
+              "silence",
+              "edge",
+              "mile"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "input",
+            "prompt": "\"물러나다, 후퇴하다\"에 해당하는 영단어를 쓰세요.",
+            "explain": "retreat = 물러나다, 후퇴하다. 스펠링에 유의하세요.",
+            "accept": [
+              "retreat"
+            ]
+          }
+        ],
+        "sentence": [
+          {
+            "type": "mc",
+            "prompt": "이 문장의 주어는?",
+            "explain": "문장의 주어는 Sailors(선원들)입니다.",
+            "sentence": "Sailors spoke of a restless horizon.",
+            "options": [
+              "Sailors",
+              "a restless horizon",
+              "spoke"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "mc",
+            "prompt": "이 문장의 동사는?",
+            "explain": "동사는 spoke(speak의 과거형)입니다.",
+            "sentence": "Sailors spoke of a restless horizon.",
+            "options": [
+              "spoke",
+              "Sailors",
+              "horizon"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "input",
+            "prompt": "\"kept its silence\"를 우리말로 해석하면?",
+            "explain": "kept its silence = 침묵을 지켰다.",
+            "accept": [
+              "침묵을 지켰다",
+              "침묵했다",
+              "조용히 있었다",
+              "침묵"
+            ]
+          }
+        ],
+        "vocabPrep": [
+          {
+            "type": "mc",
+            "prompt": "다음 수업에 나올 단어 horizon의 뜻은?",
+            "explain": "horizon = 수평선.",
+            "options": [
+              "수평선",
+              "파도",
+              "조류",
+              "해안"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "mc",
+            "prompt": "silence의 뜻으로 알맞은 것은?",
+            "explain": "silence = 침묵, 고요.",
+            "options": [
+              "침묵",
+              "속삭임",
+              "폭풍",
+              "비밀"
+            ],
+            "answer": 0
+          }
+        ],
+        "sentPrep": [
+          {
+            "type": "mc",
+            "prompt": "다음 문장의 의미로 가장 알맞은 것은?",
+            "explain": "kept its silence = 침묵을 지켰다.",
+            "sentence": "The water kept its silence.",
+            "options": [
+              "물은 침묵을 지켰다",
+              "물이 소리쳤다",
+              "물이 사라졌다",
+              "물이 넘쳤다"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "input",
+            "prompt": "\"toward its edge\"를 우리말로 해석하면?",
+            "explain": "toward its edge = 그 가장자리를 향해.",
+            "accept": [
+              "가장자리로",
+              "가장자리를 향해",
+              "끝을 향해",
+              "가장자리 쪽으로"
+            ]
+          }
+        ],
+        "grammar": [
+          {
+            "type": "mc",
+            "prompt": "빈칸에 알맞은 것은? \"The sea has always ___ people.\"",
+            "explain": "have/has + 과거분사(drawn) → 현재완료.",
+            "options": [
+              "drawn",
+              "draw",
+              "drawing",
+              "draws"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "mc",
+            "prompt": "밑줄 친 that의 역할은? \"a horizon that seemed to retreat\"",
+            "explain": "선행사 horizon을 수식하는 주격 관계대명사.",
+            "options": [
+              "주격 관계대명사",
+              "목적격 관계대명사",
+              "접속사",
+              "지시대명사"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "input",
+            "prompt": "\"seemed to retreat\"에서 seem 뒤에 오는 형태는? (to + ___)",
+            "explain": "seem to + 동사원형.",
+            "accept": [
+              "동사원형",
+              "원형",
+              "retreat",
+              "동사"
+            ]
+          }
+        ]
+      },
+      "class": "2026 여름방학 영방반"
+    },
+    {
+      "date": "2026-07-25",
+      "label": "Day 2",
+      "quote": {
+        "en": "Yet the deeper they went, the more the water kept its silence.",
+        "ko": "그러나 더 깊이 들어갈수록, 바다는 더욱 침묵을 지켰다.",
+        "teacher": "김선생님",
+        "comment": "침묵의 의미를 생각하며 읽어보세요"
+      },
+      "book": {
+        "title": "The Bad Beginning",
+        "author": "Lemony Snicket",
+        "chapter": "Chapter 01-2",
+        "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
+        "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
+      },
+      "passage": "A Series of Unfortunate Events\n\nThe Bad Beginning\n\nBy Lemony Snicket\n\n==If you are interested in stories with happy endings, you would be <better off> reading some other book.== In this book, %%not only [ is / are ]%% there no happy ending, there is no happy beginning and very few happy things in the middle. This is because not very many happy things happened in the lives of the three Baudelaire youngsters. ==Violet, Klaus, and Sunny Baudelaire were intelligent children, and they were <charming>, and <resourceful>, and had pleasant facial features, but they were extremely unlucky, and most everything %%that%% happened to them <was rife with misfortune>, <misery>, and <despair>.== I’m sorry to tell you this, but that is how the story goes.\n\nTheir misfortune began one day at Briny Beach. The three Baudelaire children lived with their parents in an enormous <mansion> at the heart of a dirty and busy city, and <occasionally> their parents gave them <permission> to take a rickety <trolley>—the word ‘rickety’ you probably know, here means “<unsteady>” or “likely to <collapse>”一 alone to the <seashore>%%, where%% they would spend the day as a sort of vacation <as long as> they were home for dinner. This particular morning %%it%% was gray and cloudy%%, which%% didn’t bother the Baudelaire youngsters one bit. When it was hot and sunny, Briny Beach was crowded with tourists and %%it%% was impossible %%to find%% a good place to <lay> one’s <blanket>. ==On gray and cloudy days, the Baudelaires <had the beach to themselves> to do what they liked.==\n\nViolet Baudelaire, the eldest, liked to <skip rocks>. Like most fourteen-year-olds, she was right-handed, so the rocks skipped <farther> across the <murky> water when Violet used her right hand than when she used her left. As she skipped rocks, she was looking out at the horizon and thinking about an <invention> she wanted to build. ==Anyone %%who%% knew Violet well could tell she was thinking hard, because her long hair was tied up in a ribbon to keep it out of her eyes. Violet had a real <knack> for inventing and building strange devices, so her brain was often filled with images of <pulleys>； <levers>, and <gears>, and she never wanted to be <distracted> by something %%as%% <trivial> %%as%% her hair.== This morning she was thinking about how to <construct> a device %%that%% could <retrieve> a rock after you had skipped it into the ocean.\n\nKlaus Baudelaire, the middle child, and only boy, liked to examine creatures in <tidepools>. Klaus was a little older than twelve and wore glasses%%, which%% made him look intelligent. He was intelligent. The Baudelaire parents had an enormous library in their <mansion>%%,%% a room filled with thousands of books on nearly every subject. ==%%Being only twelve%%, Klaus of course had %%not%% read all of the books in the Baudelaire library, %%but%% he had read a great many of them and had <retained> a lot of the information from his <readings>.== He knew how to <tell> an alligator from a crocodile. He knew %%who%% killed Julius Caesar. And he knew much about the <tiny>, <slimy> animals %%[ finding / found ]%% at Briny Beach%%, which%% he was examining now.\n\nSunny Baudelaire, the youngest, liked to bite things. ==She was an <infant>, and very small for her age, <scarcely> larger than a boot. %%What%% she <lacked> in size, however, she <made up for> with the size and <sharpness> of her four teeth.== Sunny was at an age %%where one%% mostly speaks in a series of <unintelligible shrieks>. ==Except when she used the few actual words in her vocabulary, ike “bottle,” “mommy,” and “bite,” most people <had trouble> understanding what %%it%% was %%that%% Sunny as saying.== For instance, this morning she was saying “Gack!” <over and over>%%, which%% probably meant； “Look at that <mysterious figure> emerging from the <fog>!”\n\n==<Sure enough>, <in the distance> along the <misty> shore of Briny Beach there could be seen a tall <figure striding> toward the Baudelaire children. Sunny had already been <staring> and <shrieking> at the figure for some time %%when%% Klaus looked up from the <spiny> crab he was examining, and saw it too.== He reached over and touched Violet’s arm, bringing her out of her inventing thoughts.\n\n“Look at that,” Klaus said, and pointed toward the figure. It was <drawing closer>, and the children could see a few details. It was about the size of an adult, except its head was tall, and rather square.\n\n==“What do you think it is?” Violet asked.==\n\n“I don’t know” Klaus said, <squinting at> it, “but it seems to be moving right toward us.”\n\n“We’re alone on the beach,” Violet said, a little nervously. ==“There’s nobody else %%( )%% it could be moving toward.”== She felt the <slender>, smooth stone in her left hand%%, which%% she had been about to try to skip as far as she could. She had a sudden thought to throw it at the figure, because it seemed so <frightening>.\n\n“It only seems scary” Klaus said, <as if> reading his sister’s thoughts, “because of all the <mist>.”\n\nThis was true. As the figure reached them, the children saw with relief that it was not anybody frightening at all, but somebody they knew: Mr. Poe. Mr. Poe was a friend of Mr. and Mrs. Baudelaire’s %%whom%% the children had met many times at dinner parties. ==One of the things Violet, Klaus, and Sunny really liked about their parents was that they did%%n’t%% send their children away when they <had company over>, %%but%% allowed them to join the adults at the dinner table and participate in the conversation <as long as> they %%helped clear%% the table.== The children remembered Mr. Poe because he always had a cold and was constantly <excusing himself from> the table to have <a fit of coughing> in the next room.\n\nMr. Poe took off his <top hat>%%, which%% had %%made%% his head look large and square in the fog, and stood for a moment, coughing loudly into a white handkerchief. Violet and Klaus moved forward to shake his hand and say how do you do.\n\n“How do you do?” said Violet.\n\n“How do you do?” said Klaus.\n\n“Odo yow!” said Sunny.\n\n“Fine, thank you,” said Mr. Poe, but he looked very sad. ==For a few seconds nobody said anything, and the children wondered what Mr. Poe was doing there at Briny Beach%%, when%% he should have been at the bank in the city%%, where%% he worked.== He was not dressed for the beach.\n\n“It’s a nice day,” Violet said finally, <making conversation>. Sunny made a noise %%that%% sounded like an angry bird, and Klaus picked her up and held her.\n\n“Yes, it is a nice day,’ Mr. Poe said <absently>, <staring> out at the empty beach. “I’m afraid I have some very bad news for you children.”\n\nThe three Baudelaire <siblings> looked him. Violet, with some embarrassment； felt the stone in her left hand and was glad she had not thrown it at Mr. Poe.\n\n“Your parents,” Mr. Poe said, “have <perished> in a terrible fire.”\n\nThe children didn’t say anything.\n\n“They perished,” Mr. Poe said, “in a fire %%that%% destroyed the entire house. I’m very, very sorry to tell you this, my dears.”\n\nViolet took her eyes off Mr. Poe and stared out at the ocean. Mr. Poe had never called the Baudelaire children “my dears” before. She understood the words he was saying but thought he %%must be joking%%, playing a terrible joke on her and her brother and sister.\n\n“‘Perished,’” Mr. Poe said, “means ‘killed.’”\n\n“We know what the word ‘perished’ means,” Klaus said, <crossly>. ==He did know what the word “perished” meant, but he was still having trouble understanding exactly what %%it%% was %%that%% Mr. Poe had said.== %%It%% seemed to him %%that%% Mr. Poe %%must%% somehow %%have misspoken%%.\n\n“The <fire department> arrived, of course,” Mr. Poe said, “but they were too late. The entire house was <engulfed> in fire. It <burned to the ground>.”\n\nKlaus pictured all the books in the library, going up in flames. Now he’d never read all of them.\n\nMr. Poe coughed several times into his handkerchief before continuing. ==“I was sent to <retrieve> you here, and to take you to my home%%, where%% you’ll stay for some time while we <figure things out>.== I am the <executor> of your parents' <estate>. That means I will be <handling> their enormous <fortune> and figuring out where you children will go. When Violet <comes of age>, the fortune will be yours, but the bank will <take charge of> it until you are old enough.”\n\nAlthough he said he was the <executor>, Violet felt like Mr. Poe was the <executioner>. He had simply walked down the beach to them and changed their lives forever.\n\n“Come with me,” Mr. Poe said, and held out his hand. In order to take it, Violet had to drop the stone she was holding. Klaus took Violet’s other hand, and Sunny took Klaus’s other hand， and in that <manner> the three Baudelaire children—the Baudelaire <orphans>, now —were led away from the beach and from their previous lives.",
+      "vocab": {
+        "better off": {
+          "pos": "phrase",
+          "def": "형편이 더 나은, 더 잘 사는",
+          "ex": "They would have been better off staying home."
+        },
+        "charming": {
+          "pos": "adj.",
+          "def": "매력적인, 멋진",
+          "ex": "The house had a charming garden.",
+          "head": "charm"
+        },
+        "resourceful": {
+          "pos": "adj.",
+          "def": "자원이 풍부한, 임기응변에 능한",
+          "ex": "Violet was a resourceful girl who could fix almost anything."
+        },
+        "was rife with misfortune": {
+          "pos": "phrase",
+          "def": "불행으로 가득했다",
+          "ex": "Their lives were rife with misfortune from that day on."
+        },
+        "misery": {
+          "pos": "n.",
+          "def": "고통, 비참함",
+          "ex": "The story is full of misery and sadness."
+        },
+        "despair": {
+          "pos": "n.",
+          "def": "절망",
+          "ex": "She felt a deep sense of despair."
+        },
+        "mansion": {
+          "pos": "n.",
+          "def": "대저택",
+          "ex": "The family lived in a huge mansion."
+        },
+        "occasionally": {
+          "pos": "adv.",
+          "def": "가끔, 때때로",
+          "ex": "They occasionally visited the beach."
+        },
+        "permission": {
+          "pos": "n.",
+          "def": "허락, 허가",
+          "ex": "They asked for permission to go outside."
+        },
+        "trolley": {
+          "pos": "n.",
+          "def": "전차, 트롤리(작은 손수레)",
+          "ex": "They rode the trolley down to the beach."
+        },
+        "unsteady": {
+          "pos": "adj.",
+          "def": "불안정한, 흔들리는",
+          "ex": "The old bridge felt unsteady under their feet."
+        },
+        "collapse": {
+          "pos": "v.",
+          "def": "무너지다, 쓰러지다",
+          "ex": "The old building began to collapse."
+        },
+        "seashore": {
+          "pos": "n.",
+          "def": "해변, 바닷가",
+          "ex": "They spent the afternoon at the seashore."
+        },
+        "as long as": {
+          "pos": "conj.",
+          "def": "~하는 한",
+          "ex": "You can stay as long as you like."
+        },
+        "lay": {
+          "pos": "v.",
+          "def": "눕다, 놓다(lie의 과거형)",
+          "ex": "She lay on the blanket and looked at the sky."
+        },
+        "blanket": {
+          "pos": "n.",
+          "def": "담요",
+          "ex": "They spread a blanket on the sand."
+        },
+        "had the beach to themselves": {
+          "pos": "phrase",
+          "def": "(장소)를 독차지하다, 그들끼리만 있었다",
+          "ex": "It was so early that they had the beach to themselves.",
+          "head": "have 장소 to oneself"
+        },
+        "skip rocks": {
+          "pos": "phrase",
+          "def": "물수제비를 뜨다",
+          "ex": "Klaus liked to skip rocks across the water."
+        },
+        "farther": {
+          "pos": "adv.",
+          "def": "더 멀리",
+          "ex": "They walked farther down the shore."
+        },
+        "murky": {
+          "pos": "adj.",
+          "def": "흐릿한, 탁한, 어두운",
+          "ex": "The water looked murky and gray."
+        },
+        "invention": {
+          "pos": "n.",
+          "def": "발명(품)",
+          "ex": "Violet was always working on some invention."
+        },
+        "knack": {
+          "pos": "n.",
+          "def": "재주, 소질",
+          "ex": "She had a knack for building things."
+        },
+        "pulleys": {
+          "pos": "n.",
+          "def": "도르래(들)",
+          "ex": "Her invention used a system of pulleys.",
+          "head": "pulley"
+        },
+        "levers": {
+          "pos": "n.",
+          "def": "지렛대(들)",
+          "ex": "The machine was operated by several levers.",
+          "head": "lever"
+        },
+        "gears": {
+          "pos": "n.",
+          "def": "톱니바퀴(들), 기어",
+          "ex": "She loved tinkering with gears and machines.",
+          "head": "gear"
+        },
+        "distracted": {
+          "pos": "adj./v.",
+          "def": "정신이 팔린, (주의를) 흩뜨리다",
+          "ex": "She looked distracted, thinking about her next invention.",
+          "head": "distract"
+        },
+        "trivial": {
+          "pos": "adj.",
+          "def": "사소한, 하찮은",
+          "ex": "It seemed like a trivial problem at first."
+        },
+        "construct": {
+          "pos": "v.",
+          "def": "건설하다, 조립하다",
+          "ex": "She wanted to construct a device to open locks."
+        },
+        "retrieve": {
+          "pos": "v.",
+          "def": "되찾다, 회수하다",
+          "ex": "Klaus went to retrieve the ball from the water."
+        },
+        "tidepools": {
+          "pos": "n.",
+          "def": "조수 웅덩이",
+          "ex": "They explored the tidepools near the rocks.",
+          "head": "tidepool"
+        },
+        "retained": {
+          "pos": "v.",
+          "def": "(정보를) 기억하다, 보유하다",
+          "ex": "He retained a lot of information from his readings.",
+          "head": "retain"
+        },
+        "readings": {
+          "pos": "n.",
+          "def": "읽은 것들, 읽은 내용",
+          "ex": "He remembered facts from his readings.",
+          "head": "reading"
+        },
+        "tell": {
+          "pos": "phrase",
+          "def": "A와 B를 구별하다",
+          "ex": "It was hard to tell one twin from the other.",
+          "head": "tell A from B"
+        },
+        "tiny": {
+          "pos": "adj.",
+          "def": "아주 작은",
+          "ex": "Sunny was a tiny baby."
+        },
+        "slimy": {
+          "pos": "adj.",
+          "def": "끈적끈적한, 미끈미끈한",
+          "ex": "The rock was covered in something slimy."
+        },
+        "infant": {
+          "pos": "n.",
+          "def": "유아, 아기",
+          "ex": "Sunny, the youngest, was still an infant."
+        },
+        "scarcely": {
+          "pos": "adv.",
+          "def": "거의 ~않다",
+          "ex": "She could scarcely walk yet."
+        },
+        "lacked": {
+          "pos": "v.",
+          "def": "부족했다, 없었다",
+          "ex": "What she lacked in vocabulary, she made up for in teeth.",
+          "head": "lack"
+        },
+        "made up for": {
+          "pos": "phrase",
+          "def": "보충하다, 만회하다",
+          "ex": "She made up for her lack of words with sharp teeth.",
+          "head": "make up for"
+        },
+        "sharpness": {
+          "pos": "n.",
+          "def": "날카로움, 예리함",
+          "ex": "Her teeth were known for their sharpness."
+        },
+        "unintelligible shrieks": {
+          "pos": "phrase",
+          "def": "알아들을 수 없는 비명(소리)",
+          "ex": "Sunny made a series of unintelligible shrieks."
+        },
+        "had trouble": {
+          "pos": "phrase",
+          "def": "~하는 데 어려움을 겪다",
+          "ex": "They had trouble understanding what Sunny meant.",
+          "head": "had trouble ~ing"
+        },
+        "over and over": {
+          "pos": "phrase",
+          "def": "몇 번이고, 반복해서",
+          "ex": "She repeated the sound over and over."
+        },
+        "mysterious figure": {
+          "pos": "phrase",
+          "def": "수수께끼 같은 인물, 정체를 알 수 없는 형체",
+          "ex": "A mysterious figure appeared in the fog."
+        },
+        "fog": {
+          "pos": "n.",
+          "def": "안개",
+          "ex": "The beach was covered in thick fog."
+        },
+        "Sure enough": {
+          "pos": "phrase",
+          "def": "아니나 다를까, 과연",
+          "ex": "Sure enough, someone was walking toward them."
+        },
+        "in the distance": {
+          "pos": "phrase",
+          "def": "저 멀리에",
+          "ex": "They saw a figure in the distance."
+        },
+        "misty": {
+          "pos": "adj.",
+          "def": "안개 낀, 흐릿한",
+          "ex": "The misty air made it hard to see clearly."
+        },
+        "figure striding": {
+          "pos": "phrase",
+          "def": "성큼성큼 걷는 사람(모습)",
+          "ex": "A figure striding along the beach came closer.",
+          "head": "stride"
+        },
+        "staring": {
+          "pos": "v.",
+          "def": "응시하다, 빤히 쳐다보다",
+          "ex": "The children stood staring at the approaching figure.",
+          "head": "stare"
+        },
+        "shrieking": {
+          "pos": "v.",
+          "def": "비명을 지르다",
+          "ex": "Sunny kept shrieking as the figure got closer.",
+          "head": "shriek"
+        },
+        "spiny": {
+          "pos": "adj.",
+          "def": "가시 돋친, 뾰족뾰족한",
+          "ex": "The shells were spiny and hard to hold."
+        },
+        "drawing closer": {
+          "pos": "phrase",
+          "def": "점점 가까워지다",
+          "ex": "The figure was drawing closer to the children.",
+          "head": "draw closer"
+        },
+        "squinting at": {
+          "pos": "phrase",
+          "def": "눈을 가늘게 뜨고 ~을 보다",
+          "ex": "Violet stood squinting at the figure in the fog.",
+          "head": "squint at"
+        },
+        "slender": {
+          "pos": "adj.",
+          "def": "가느다란, 호리호리한",
+          "ex": "The figure had a tall, slender frame."
+        },
+        "frightening": {
+          "pos": "adj.",
+          "def": "무서운, 겁나게 하는",
+          "ex": "The mysterious figure looked frightening.",
+          "head": "frighten"
+        },
+        "as if": {
+          "pos": "conj.",
+          "def": "마치 ~인 것처럼",
+          "ex": "He spoke as if nothing had happened."
+        },
+        "mist": {
+          "pos": "n.",
+          "def": "옅은 안개, 물안개",
+          "ex": "The mist slowly cleared to reveal the man."
+        },
+        "had company over": {
+          "pos": "phrase",
+          "def": "손님을 초대해 놓은 상태이다",
+          "ex": "Mr. Poe had company over that evening.",
+          "head": "have company over"
+        },
+        "excusing himself from": {
+          "pos": "phrase",
+          "def": "~에서 양해를 구하고 자리를 뜨다",
+          "ex": "He kept excusing himself from the conversation to cough.",
+          "head": "excuse oneself from~"
+        },
+        "a fit of coughing": {
+          "pos": "phrase",
+          "def": "기침 발작",
+          "ex": "He was interrupted by a fit of coughing."
+        },
+        "top hat": {
+          "pos": "n.",
+          "def": "실크해트, 원통형 모자",
+          "ex": "The man wore a black top hat."
+        },
+        "making conversation": {
+          "pos": "phrase",
+          "def": "대화를 나누다, 이야기하다",
+          "ex": "He tried making conversation with the children."
+        },
+        "absently": {
+          "pos": "adv.",
+          "def": "멍하니, 무심코",
+          "ex": "He answered absently, still thinking of something else."
+        },
+        "siblings": {
+          "pos": "n.",
+          "def": "형제자매",
+          "ex": "The three siblings looked at each other.",
+          "head": "sibling"
+        },
+        "perished": {
+          "pos": "v.",
+          "def": "사망하다, 죽다",
+          "ex": "Their parents perished in the fire.",
+          "head": "perish"
+        },
+        "crossly": {
+          "pos": "adv.",
+          "def": "심술궂게, 화난 듯이",
+          "ex": "He spoke crossly to the children."
+        },
+        "fire department": {
+          "pos": "n.",
+          "def": "소방서",
+          "ex": "The fire department arrived too late to save the house."
+        },
+        "engulfed": {
+          "pos": "v.",
+          "def": "휩싸다, 집어삼키다",
+          "ex": "Flames engulfed the entire mansion.",
+          "head": "engulf"
+        },
+        "burned to the ground": {
+          "pos": "phrase",
+          "def": "완전히 다 타버리다",
+          "ex": "The mansion burned to the ground.",
+          "head": "burn to the ground"
+        },
+        "figure things out": {
+          "pos": "phrase",
+          "def": "상황을 파악하다, 알아내다",
+          "ex": "The children tried to figure things out on their own."
+        },
+        "executor": {
+          "pos": "n.",
+          "def": "유언 집행자, 재산 관리인",
+          "ex": "Mr. Poe was named the executor of the estate."
+        },
+        "estate": {
+          "pos": "n.",
+          "def": "재산, 유산",
+          "ex": "He was responsible for handling the Baudelaire estate."
+        },
+        "handling": {
+          "pos": "v./n.",
+          "def": "처리하다, 다루다",
+          "ex": "Mr. Poe was in charge of handling their fortune.",
+          "head": "handle"
+        },
+        "fortune": {
+          "pos": "n.",
+          "def": "재산, 큰돈",
+          "ex": "The children inherited a large fortune."
+        },
+        "comes of age": {
+          "pos": "phrase",
+          "def": "성년이 되다",
+          "ex": "Violet would receive the fortune once she comes of age.",
+          "head": "come of age"
+        },
+        "take charge of": {
+          "pos": "phrase",
+          "def": "~을 책임지다, 관리하다",
+          "ex": "Someone needed to take charge of the children.",
+          "head": "take charge of~"
+        },
+        "executioner": {
+          "pos": "n.",
+          "def": "사형 집행인",
+          "ex": "Klaus joked that 'executor' sounded like 'executioner'."
+        },
+        "manner": {
+          "pos": "n.",
+          "def": "태도, 방식",
+          "ex": "He spoke in a very serious manner."
+        },
+        "orphans": {
+          "pos": "n.",
+          "def": "고아들",
+          "ex": "The three siblings became orphans overnight.",
+          "head": "orphan"
+        }
+      },
+      "coreSentences": [
+        {
+          "text": "If you are interested in stories with happy endings, you would be better off reading some other book.",
+          "subject": [
+            1,
+            9
+          ],
+          "verb": [
+            2,
+            10,
+            11
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Violet, Klaus, and Sunny Baudelaire were intelligent children, and they were charming, and resourceful, and had pleasant facial features, but they were extremely unlucky, and most everything that happened to them was rife with misfortune, misery, and despair.",
+          "subject": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            9,
+            20,
+            25,
+            26
+          ],
+          "verb": [
+            5,
+            10,
+            21,
+            31
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "On gray and cloudy days, the Baudelaires had the beach to themselves to do what they liked.",
+          "subject": [
+            5,
+            6,
+            15
+          ],
+          "verb": [
+            7,
+            16
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Anyone who knew Violet well could tell she was thinking hard, because her long hair was tied up in a ribbon to keep it out of her eyes.",
+          "subject": [
+            0,
+            7,
+            12,
+            13,
+            14
+          ],
+          "verb": [
+            5,
+            6
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Violet had a real knack for inventing and building strange devices, so her brain was often filled with images of pulleys； levers, and gears, and she never wanted to be distracted by something as trivial as her hair.",
+          "subject": [
+            0,
+            12,
+            13,
+            25
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Being only twelve, Klaus of course had not read all of the books in the Baudelaire library, but he had read a great many of them and had retained a lot of the information from his readings.",
+          "subject": [
+            3,
+            18
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "She was an infant, and very small for her age, scarcely larger than a boot.",
+          "subject": [
+            0
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "What she lacked in size, however, she made up for with the size and sharpness of her four teeth.",
+          "subject": [
+            1,
+            6
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Except when she used the few actual words in her vocabulary, ike “bottle,” “mommy,” and “bite,” most people had trouble understanding what it was that Sunny was saying.",
+          "subject": [
+            2,
+            16,
+            17
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Sure enough, in the distance along the misty shore of Briny Beach there could be seen a tall figure striding toward the Baudelaire children.",
+          "subject": [
+            16,
+            17,
+            18
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Sunny had already been staring and shrieking at the figure for some time when Klaus looked up from the spiny crab he was examining, and saw it too.",
+          "subject": [
+            0,
+            14,
+            21
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "“What do you think it is?” Violet asked.",
+          "subject": [
+            6,
+            4
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "“There’s nobody else  it could be moving toward.”",
+          "subject": [
+            1,
+            2,
+            3
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "One of the things Violet, Klaus, and Sunny really liked about their parents was that they didn’t send their children away when they had company over, but allowed them to join the adults at the dinner table and participate in the conversation as long as they helped clear the table.",
+          "subject": [
+            0,
+            4,
+            5,
+            6,
+            7,
+            15,
+            22,
+            45
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "For a few seconds nobody said anything, and the children wondered what Mr. Poe was doing there at Briny Beach, when he should have been at the bank in the city, where he worked.",
+          "subject": [
+            4,
+            8,
+            9,
+            12,
+            13,
+            21
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "He did know what the word “perished” meant, but he was still having trouble understanding exactly what it was that Mr. Poe had said.",
+          "subject": [
+            0,
+            9,
+            17,
+            20,
+            21
+          ],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "“I was sent to retrieve you here, and to take you to my home, where you will stay for some time while we figure things out.",
+          "subject": [
+            0,
+            15,
+            21
+          ],
           "verb": [],
           "bold": [],
           "italic": [],
