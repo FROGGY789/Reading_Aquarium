@@ -105,15 +105,15 @@ const actions = {
     tpl.date = _todayKey(); tpl.label = 'Day ' + (content.days.length + 1);
     content.days.push(tpl);
     openDay(content.days.length - 1);
-    toast('새 Day를 추가했어요 (마지막 Day 복제).', 'ok');
+    toast('새 챕터를 추가했어요 (마지막 챕터 복제).', 'ok');
     render();
   },
   delDay() {
-    if (content.days.length <= 1) { toast('최소 1개의 Day는 남겨야 해요.', 'err'); return; }
-    if (!confirm('이 Day를 삭제할까요?')) return;
+    if (content.days.length <= 1) { toast('최소 1개의 챕터는 남겨야 해요.', 'err'); return; }
+    if (!confirm('이 챕터를 삭제할까요?')) return;
     content.days.splice(ed.dayIndex, 1);
     openDay(Math.max(0, ed.dayIndex - 1));
-    toast('Day를 삭제했어요.', 'ok'); render();
+    toast('챕터를 삭제했어요.', 'ok'); render();
   },
   // 지문에서 [단어]를 스캔해 어휘 목록 갱신 (뜻은 유지)
   syncWords() {
@@ -228,7 +228,7 @@ function render() {
         const ct = day.class ? ` 〔${esc(day.class)}〕` : '';
         return `<div class="daychip ${i === ed.dayIndex ? 'on' : ''}" data-act="selectDay" data-arg="${i}">${esc(md)}${day.label ? ' · ' + esc(day.label) : ''}${ct}</div>`;
       }).join('')}
-      <button class="btn ghost sm" data-act="addDay">＋ 새 Day</button>
+      <button class="btn ghost sm" data-act="addDay">＋ 새 챕터</button>
     </div>
 
     <div class="daybar" style="margin-bottom:16px">
@@ -243,7 +243,7 @@ function render() {
 
   <div class="savebar">
     <div class="msg ${ui.msgType === 'ok' ? 'toast-ok' : ui.msgType === 'err' ? 'toast-err' : ''}">${ui.msg ? esc(ui.msg) : '변경 후 <b>배포</b>를 누르면 모든 기기에 반영됩니다.'}</div>
-    <button class="btn danger" data-act="delDay">이 Day 삭제</button>
+    <button class="btn danger" data-act="delDay">이 챕터 삭제</button>
     <button class="btn primary" data-act="publish" ${ui.busy ? 'disabled' : ''}>${ui.busy ? '배포 중...' : '🚀 배포하기'}</button>
   </div>
   ${ui.expand ? passageEditorOverlay(d) : ''}`;
@@ -336,7 +336,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v27 (어휘 예습 카드화 + 편집 제거)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v28 (챕터별 학습 개편)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -353,10 +353,10 @@ function passageTab(d) {
     <div>
       <div class="card">
         <h2>기본 정보 & 책</h2>
-        <div class="label">수업 날짜 <span style="font-weight:400;color:#b8c2d2">(이 날짜부터 학생에게 노출)</span> / 라벨</div>
+        <div class="label">여는 날짜 <span style="font-weight:400;color:#b8c2d2">(이 날짜부터 학생 홈에 노출 · 같은 날짜에 여러 챕터를 둬도 돼요)</span> / 챕터 이름</div>
         <div class="row">
           <input type="date" class="inp" data-bind="date" value="${esc(d.date)}">
-          <input class="inp" data-bind="label" value="${esc(d.label)}" placeholder="라벨 (예: A반 Day 3)">
+          <input class="inp" data-bind="label" value="${esc(d.label)}" placeholder="챕터 이름 (예: Ch1 · 도입부)">
         </div>
         <div class="label">📢 대상 반 <span style="font-weight:400;color:#b8c2d2">(이 반에게만 배포 · '공통'이면 모든 반에게 보여요)</span></div>
         <select class="inp" data-bind="classTarget" data-rerender="1">

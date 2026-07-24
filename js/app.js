@@ -402,18 +402,38 @@ function dayMatchesClass(d, cls) {
   const dc = ((d && d.class) || '').trim();
   return !dc || dc === cls;
 }
-function activeDay() {
+// 반 필터를 적용해 날짜순 정렬된 전체 챕터(=Day) 목록
+function sortedChapters() {
   let days = contentSource().days.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const cls = viewingClass();
-  if (cls !== null) {
-    const m = days.filter(d => dayMatchesClass(d, cls));
-    if (m.length) days = m;   // 내 반+공통이 있으면 그걸로, 하나도 없으면 안전하게 전체
-  }
-  const today = todayKey();
-  const past = days.filter(d => (d.date || '') <= today);
-  return past.length ? past[past.length - 1] : days[0];
+  if (cls !== null) { const m = days.filter(d => dayMatchesClass(d, cls)); if (m.length) days = m; }
+  return days;
 }
-function dayQuiz(cat) { return (activeDay().quiz && activeDay().quiz[cat]) || []; }
+// 오늘까지 '열린' 챕터(오래된→최신) — 홈 목록과 활성 챕터의 기준
+function unlockedChapters() {
+  const today = todayKey();
+  return sortedChapters().filter(d => (d.date || '') <= today);
+}
+// 챕터 고유 키(진행도 저장용) — 날짜 + 라벨
+function chapterKey(ch) { return ch ? ((ch.date || '') + '|' + (ch.label || '')) : ''; }
+// 현재 열려 있는 챕터: state.chapterKey가 가리키는 것, 없으면 가장 최근 열린 챕터
+function activeDay() {
+  const chs = unlockedChapters();
+  if (state.chapterKey) {
+    const hit = chs.find(c => chapterKey(c) === state.chapterKey);
+    if (hit) return hit;
+  }
+  if (chs.length) return chs[chs.length - 1];
+  return sortedChapters()[0] || {};   // 아직 열린 챕터가 없으면 첫 챕터로 안전 폴백
+}
+function dayQuiz(cat) { return dayQuizOf(activeDay(), cat); }
+function dayQuizOf(d, cat) { return (d && d.quiz && d.quiz[cat]) || []; }
+// 홈 상단 배너용 '오늘의 문장' — 가장 최근에 열린 챕터 중 문장이 있는 것
+function todayQuote() {
+  const chs = unlockedChapters();
+  for (let i = chs.length - 1; i >= 0; i--) { if (chs[i].quote && chs[i].quote.en) return chs[i].quote; }
+  return null;
+}
 
 /* ---- 플래시카드(예습 살살 · 어휘 복습) 공용 헬퍼 ---- */
 // 오늘(activeDay) 다음의 Day — 예습 살살에 쓰는 '다음 수업' (반 필터 반영)
@@ -591,18 +611,21 @@ const BONUS_TASKS = [
   { key: 'sentPrep',  icon: '✍️', bg: '#e0f3ea', time: '2분', sub: n => `핵심 문장 의미 미리보기 ${n}문항` },
   { key: 'grammar',   icon: '📐', bg: '#fdeede', time: '2분', sub: n => `시제·관계사 등 어법 ${n}문항` }
 ];
-function taskAvailable(key) {
-  if (key === 'review') return passageToReview(dayPassage(activeDay())).length > 0;
-  if (key === 'vocab') return dayVocabCards(activeDay()).length > 0;   // 어휘 복습 = 플래시카드
-  if (key === 'vocabPrep') return nextDayPopoverCards().length > 0;    // 어휘 예습 = 다음날 팝오버 단어 플래시카드
+// 특정 챕터(day)에 이 학습 항목이 존재하는가
+function taskAvailableForDay(d, key) {
+  if (key === 'review') return passageToReview(dayPassage(d)).length > 0;
+  if (key === 'vocab') return dayVocabCards(d).length > 0;             // 어휘 복습 = 플래시카드
+  if (key === 'vocabPrep') return nextDayPopoverCards().length > 0;    // 어휘 예습 = 다음 챕터 단어(활성 기준·심화 전용)
   if (key === 'preview') {
     // 세 난이도 중 하나라도 가능하면 노출 (어휘/핵심문장/지문+이해도)
-    const d = activeDay();
-    return dayVocabCards(d).length > 0 || dayCoreSentences(d).length > 0 || dayPassage(d).trim().length > 0 || dayQuiz('preview').length > 0;
+    return dayVocabCards(d).length > 0 || dayCoreSentences(d).length > 0 || dayPassage(d).trim().length > 0 || dayQuizOf(d, 'preview').length > 0;
   }
-  return dayQuiz(key).length > 0;
+  return dayQuizOf(d, key).length > 0;
 }
-function requiredKeys() { return MAIN_TASKS.map(t => t.key).filter(taskAvailable); }
+function taskAvailable(key) { return taskAvailableForDay(activeDay(), key); }
+// 한 챕터의 '할 일'(MAIN) 중 실제로 존재하는 항목들
+function chapterRequiredKeys(ch) { return MAIN_TASKS.map(t => t.key).filter(k => taskAvailableForDay(ch, k)); }
+function requiredKeys() { return chapterRequiredKeys(activeDay()); }
 
 /* ---------- 상태 ---------- */
 const DEFAULT_STATE = {
@@ -610,7 +633,9 @@ const DEFAULT_STATE = {
   screen: 'home',
   intro: true,
   introLeaving: false,
-  daily: null,              // {date, tasks:{...}, rewarded} — 날마다 리셋
+  daily: null,              // {date, tasks:{...}, rewarded} — 화면 리셋용(자정 넘김 시 몰입화면 복귀)
+  chapterKey: null,         // 현재 열려 있는 챕터 키(null이면 홈 목록)
+  progress: {},             // 챕터별 진행도 { [key]: {tasks:{}, rewarded} } — 영구(리셋 안 함)
   eggs: 0,
   animals: [],
   xp: 0,
@@ -723,7 +748,9 @@ function set(patch) {
 /* ---------- 파생 값 ---------- */
 const level = () => Math.floor(state.xp / XP_NEED) + 1;
 const xpInto = () => state.xp % XP_NEED;
-const doneCount = () => requiredKeys().filter(k => state.daily.tasks[k]).length;
+// 챕터별 진행도(읽기전용 안전 버전) — 없으면 빈 기본값 반환
+function chapProg(key) { return (state.progress && state.progress[key]) || { tasks: {}, rewarded: false }; }
+const doneCount = () => { const p = chapProg(chapterKey(activeDay())); return requiredKeys().filter(k => p.tasks[k]).length; };
 const speciesCount = () => new Set(state.animals).size;
 
 // 결정적 의사난수(수조 배치가 리렌더마다 흔들리지 않게)
@@ -862,6 +889,7 @@ const actions = {
   },
 
   goHome() { set({ screen: 'home', pop: null, dexOpen: false }); },
+  openChapter(key) { set({ screen: 'chapter', chapterKey: key, pop: null, dexOpen: false }); },   // 챕터 허브 열기
   goAqua() { set({ screen: 'aquarium', pop: null, dexOpen: false }); },
   goHatch() { set({ screen: 'hatchery', hatchStage: 'idle', hatchSpecies: null, pop: null, dexOpen: false }); },
   goAdvanced() { set({ screen: 'advanced', pop: null, dexOpen: false }); },
@@ -1234,14 +1262,21 @@ function completeTask(t) {
     correct: r ? r.correct : null
   });
 
-  const tasks = Object.assign({}, state.daily.tasks);
-  const wasDone = tasks[t];
-  tasks[t] = true;
-  const daily = Object.assign({}, state.daily, { tasks });
-  const patch = { daily, screen: 'home', quizTask: null, result: null, pop: null };
+  // 완료를 '활성 챕터'의 진행도에 기록
+  const key = chapterKey(activeDay());
+  const cur = chapProg(key);
+  const wasDone = cur.tasks[t];
+  const tasks = Object.assign({}, cur.tasks, { [t]: true });
+  let rewarded = cur.rewarded;
+  // 심화(보너스) 항목이면 심화 화면으로, 그 외(챕터 할 일)는 챕터 허브로 복귀
+  const isBonus = ['vocabPrep', 'sentPrep', 'grammar'].includes(t);
+  const patch = { screen: isBonus ? 'advanced' : 'chapter', quizTask: null, result: null, pop: null };
   if (!wasDone) patch.xp = state.xp + 15;
-  const allDone = requiredKeys().every(k => tasks[k]);
-  if (allDone && !state.daily.rewarded) { patch.eggs = state.eggs + 1; daily.rewarded = true; }
+  // 이 챕터의 '할 일'(MAIN)을 모두 끝내면 챕터당 한 번 알 지급
+  const req = requiredKeys();
+  const allDone = req.length > 0 && req.every(k => tasks[k]);
+  if (allDone && !rewarded) { patch.eggs = state.eggs + 1; rewarded = true; }
+  patch.progress = Object.assign({}, state.progress, { [key]: { tasks, rewarded } });
   set(patch);
 }
 
@@ -1363,8 +1398,7 @@ async function publishContent() {
 function todayLabel() {
   const now = new Date();
   const days = ['일', '월', '화', '수', '목', '금', '토'];
-  const label = activeDay().label;
-  return `${now.getMonth() + 1}월 ${now.getDate()}일 ${days[now.getDay()]}요일${label ? ' · ' + label : ''}`;
+  return `${now.getMonth() + 1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
 }
 
 // 교사 계정 전용: 학생 화면 미리보기 토글
@@ -1592,7 +1626,7 @@ function hatchCinematicHTML() {
 // 할 일/보너스 카드 한 줄(홈·심화 학습 공용)
 function taskRowHTML(cfg) {
   if (!taskAvailable(cfg.key)) return '';
-  const done = state.daily.tasks[cfg.key];
+  const done = chapProg(chapterKey(activeDay())).tasks[cfg.key];
   const row = `display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid ${done ? '#cfe6da' : '#e2e9f2'};border-radius:16px;padding:13px 15px;cursor:pointer;opacity:${done ? '.72' : '1'}`;
   const badge = done
     ? `<div style="font-size:11px;font-weight:700;color:#2fa36b">완료 ✓</div>`
@@ -1608,13 +1642,54 @@ function taskRowHTML(cfg) {
   </div>`;
 }
 
-function homeHTML() {
-  const day = activeDay();
-  const taskRow = taskRowHTML;
+// 선생님이 고른 문장 배너(홈·챕터 허브 공용)
+function quoteBannerHTML(q, label) {
+  if (!q || !q.en) return '';
+  return `
+    <div style="position:relative;background:linear-gradient(150deg,#1f57c4,#2f74e6 55%,#17b0c4);border-radius:22px;padding:20px 20px 18px;color:#fff;box-shadow:0 14px 30px -14px rgba(31,87,196,.7);overflow:hidden;margin-bottom:20px">
+      <div style="position:absolute;top:-14px;left:14px;font-family:'Lora',serif;font-size:90px;line-height:1;color:rgba(255,255,255,.16);font-style:italic">“</div>
+      <div style="position:relative">
+        <div style="font-size:10.5px;font-weight:600;letter-spacing:.06em;opacity:.85;text-transform:uppercase">${esc(label || '선생님이 고른 문장')}</div>
+        <div style="font-family:'Lora',serif;font-size:17px;line-height:1.55;margin:9px 0 8px">"${esc(q.en)}"</div>
+        <div style="font-size:13px;line-height:1.5;color:#e4f0ff">${esc(q.ko)}</div>
+        ${q.teacher || q.comment ? `
+        <div style="display:flex;align-items:center;gap:7px;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.22)">
+          <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc((q.teacher || '샘').slice(0, 1))}</div>
+          <span style="font-size:11.5px;opacity:.9">${esc(q.teacher)}의 한마디${q.comment ? ' · ' + esc(q.comment) : ''}</span>
+        </div>` : ''}
+      </div>
+    </div>`;
+}
 
-  const req = requiredKeys();
-  const done = doneCount();
+// 챕터 카드 한 장(홈 목록) — 진행도 표시
+function chapterCardHTML(ch) {
+  const key = chapterKey(ch);
+  const req = chapterRequiredKeys(ch);
+  const p = chapProg(key);
+  const done = req.filter(k => p.tasks[k]).length;
+  const pct = req.length ? Math.round(done / req.length * 100) : 0;
+  const complete = req.length > 0 && done === req.length;
+  const name = (ch.book && ch.book.chapter) || ch.label || '챕터';
+  const title = (ch.book && ch.book.title) || '';
+  return `<div data-act="openChapter" data-arg="${esc(key)}" style="display:flex;gap:13px;align-items:center;background:#fff;border:1.5px solid ${complete ? '#cfe6da' : '#e2e9f2'};border-radius:18px;padding:14px 15px;cursor:pointer;box-shadow:0 8px 20px -14px rgba(20,50,90,.5)">
+    <div style="flex:none;width:46px;height:46px;border-radius:14px;background:${complete ? '#e0f3ea' : '#e7f0fd'};display:flex;align-items:center;justify-content:center;font-size:22px">${complete ? '✅' : '📖'}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:14.5px;font-weight:700;color:#14243f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
+      ${title ? `<div style="font-size:11.5px;color:#7d8aa0;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title)}</div>` : ''}
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:6px;border-radius:3px;background:#e7edf5;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:3px"></div></div>
+        <span style="font-size:10.5px;font-weight:700;color:${complete ? '#2fa36b' : '#2f74e6'}">${complete ? '완료 ✓' : `${done}/${req.length || 0}`}</span>
+      </div>
+    </div>
+    <div style="font-size:16px;color:#c3ccda">›</div>
+  </div>`;
+}
+
+// 홈 = 챕터 목록
+function homeHTML() {
   const enter = (!state.intro && freshView) ? 'animation:riseIn .8s cubic-bezier(.2,.7,.2,1) both' : '';
+  const chapters = unlockedChapters();
+  const q = todayQuote();
 
   const eggBanner = state.eggs > 0 ? `
     <div data-act="goHatch" style="display:flex;align-items:center;gap:13px;background:#fff8e6;border:1.5px solid #f0c65a;border-radius:18px;padding:14px 16px;margin-bottom:18px;cursor:pointer;box-shadow:0 8px 20px -12px rgba(240,169,46,.6)">
@@ -1632,6 +1707,10 @@ function homeHTML() {
       <div style="font-size:11px;font-weight:700;color:#2f74e6">열기 →</div>
     </div>`;
 
+  const chapterList = chapters.length
+    ? `<div style="display:flex;flex-direction:column;gap:11px">${chapters.map(chapterCardHTML).join('')}</div>`
+    : `<div style="background:#fff;border:1px dashed #cdd8e6;border-radius:16px;padding:26px 18px;text-align:center;color:#7d8aa0;font-size:12.5px">아직 열린 챕터가 없어요.<br>선생님이 새 챕터를 열면 여기에 나타나요 📖</div>`;
+
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div ${!authMode() && roster().length ? 'data-act="switchProfile"' : ''} style="display:flex;align-items:center;gap:11px;${!authMode() && roster().length ? 'cursor:pointer' : ''}" ${!authMode() && roster().length ? 'title="탭해서 다른 친구로 바꾸기"' : ''}>
@@ -1647,20 +1726,62 @@ function homeHTML() {
       </div>
     </div>
 
-    ${day.quote && day.quote.en ? `
-    <div style="position:relative;background:linear-gradient(150deg,#1f57c4,#2f74e6 55%,#17b0c4);border-radius:22px;padding:20px 20px 18px;color:#fff;box-shadow:0 14px 30px -14px rgba(31,87,196,.7);overflow:hidden;margin-bottom:20px">
-      <div style="position:absolute;top:-14px;left:14px;font-family:'Lora',serif;font-size:90px;line-height:1;color:rgba(255,255,255,.16);font-style:italic">“</div>
-      <div style="position:relative">
-        <div style="font-size:10.5px;font-weight:600;letter-spacing:.06em;opacity:.85;text-transform:uppercase">오늘 선생님이 고른 문장</div>
-        <div style="font-family:'Lora',serif;font-size:17px;line-height:1.55;margin:9px 0 8px">"${esc(day.quote.en)}"</div>
-        <div style="font-size:13px;line-height:1.5;color:#e4f0ff">${esc(day.quote.ko)}</div>
-        ${day.quote.teacher || day.quote.comment ? `
-        <div style="display:flex;align-items:center;gap:7px;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.22)">
-          <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc((day.quote.teacher || '샘').slice(0, 1))}</div>
-          <span style="font-size:11.5px;opacity:.9">${esc(day.quote.teacher)}의 한마디${day.quote.comment ? ' · ' + esc(day.quote.comment) : ''}</span>
-        </div>` : ''}
-      </div>
+    ${quoteBannerHTML(q, '오늘 선생님이 고른 문장')}
+
+    ${ui.grantMsg ? `<div data-act="dismissGrant" style="display:flex;align-items:center;gap:11px;background:linear-gradient(150deg,#fff0d0,#ffe0a8);border:1.5px solid #f0c65a;border-radius:16px;padding:13px 15px;margin-bottom:16px;cursor:pointer">
+      <div style="font-size:24px">🎁</div>
+      <div style="flex:1;font-size:13px;font-weight:700;color:#8a6412">${esc(ui.grantMsg)}</div>
+      <div style="font-size:15px;color:#c9922a">✕</div>
     </div>` : ''}
+
+    ${eggBanner}
+
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px">
+      <div style="font-size:14px;font-weight:700;color:#14243f">챕터별 학습</div>
+      <div style="font-size:12px;font-weight:600;color:#2f74e6">${chapters.length}개</div>
+    </div>
+    <div style="font-size:11px;color:#7d8aa0;margin-bottom:14px">챕터를 골라 읽기·어휘·어법을 복습해요. 한 챕터를 모두 끝내면 알을 하나 받아요 🥚</div>
+    ${chapterList}
+
+    <div style="font-size:13px;font-weight:700;color:#14243f;margin:22px 0 11px">단어장</div>
+    <div style="display:flex;flex-direction:column;gap:10px">${wordbookCard}</div>
+
+    ${shelfHTML()}
+
+    ${authMode() ? `
+    <div style="margin-top:26px;display:flex;justify-content:center;gap:8px">
+      <div data-act="openAccount" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#4a5a72;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">⚙️ 내 계정</div>
+      <div data-act="doLogout" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#7d8aa0;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">↩︎ 로그아웃</div>
+    </div>` : ''}
+
+  </div></div>`;
+}
+
+// 챕터 허브 = 한 챕터의 할 일(읽기·어휘·어법 등)
+function chapterHubHTML() {
+  const day = activeDay();
+  const taskRow = taskRowHTML;
+  const req = requiredKeys();
+  const done = doneCount();
+  const enter = freshView ? 'animation:riseIn .8s cubic-bezier(.2,.7,.2,1) both' : '';
+  const name = (day.book && day.book.chapter) || day.label || '챕터';
+  const complete = req.length > 0 && done === req.length;
+  const hasBonus = BONUS_TASKS.some(t => taskAvailableForDay(day, t.key));
+
+  return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
+    <div style="display:flex;align-items:center;gap:11px;margin-bottom:18px">
+      <div data-act="goHome" style="flex:none;width:38px;height:38px;border-radius:12px;background:#fff;border:1px solid #e2e9f2;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:#2f74e6;box-shadow:0 3px 8px -4px rgba(20,36,63,.3)">←</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:700;color:#14243f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
+        <div style="font-size:11.5px;color:#7d8aa0;margin-top:1px">${complete ? '이 챕터를 모두 끝냈어요! 🎉' : `할 일 ${done}/${req.length} 완료`}</div>
+      </div>
+      <div data-act="goAqua" style="flex:none;display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:7px 11px;cursor:pointer;box-shadow:0 3px 8px -4px rgba(20,36,63,.3)">
+        <span style="font-size:15px">🐚</span>
+        <div style="line-height:1"><div style="font-size:9px;color:#7d8aa0">레벨</div><div style="font-size:14px;font-weight:700;color:#2f74e6">Lv.${level()}</div></div>
+      </div>
+    </div>
+
+    ${quoteBannerHTML(day.quote, '선생님이 고른 문장')}
 
     ${dayPassage(day).trim() ? `
     <div style="font-size:12px;font-weight:700;color:#7d8aa0;letter-spacing:.02em;margin-bottom:9px">지금 읽는 책</div>
@@ -1685,34 +1806,22 @@ function homeHTML() {
       </div>
     </div>` : ''}
 
-    ${ui.grantMsg ? `<div data-act="dismissGrant" style="display:flex;align-items:center;gap:11px;background:linear-gradient(150deg,#fff0d0,#ffe0a8);border:1.5px solid #f0c65a;border-radius:16px;padding:13px 15px;margin-bottom:16px;cursor:pointer">
-      <div style="font-size:24px">🎁</div>
-      <div style="flex:1;font-size:13px;font-weight:700;color:#8a6412">${esc(ui.grantMsg)}</div>
-      <div style="font-size:15px;color:#c9922a">✕</div>
-    </div>` : ''}
-
-    ${eggBanner}
-
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px">
-      <div style="font-size:14px;font-weight:700;color:#14243f">오늘 할 일</div>
+      <div style="font-size:14px;font-weight:700;color:#14243f">할 일</div>
       <div style="font-size:12px;font-weight:600;color:#2f74e6">${done}/${req.length} 완료</div>
     </div>
     <div style="height:8px;border-radius:4px;background:#dde6f1;overflow:hidden;margin-bottom:6px"><div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#2f74e6,#17b0c4);width:${req.length ? done / req.length * 100 : 0}%"></div></div>
-    <div style="font-size:11px;color:#7d8aa0;margin-bottom:14px">${req.length}개를 모두 끝내면 랜덤 알을 하나 받아요 🥚 (매일 리셋)</div>
+    <div style="font-size:11px;color:#7d8aa0;margin-bottom:14px">이 챕터의 할 일을 모두 끝내면 랜덤 알을 하나 받아요 🥚</div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
       ${MAIN_TASKS.map(taskRow).join('')}
     </div>
 
-    <div style="font-size:13px;font-weight:700;color:#14243f;margin:20px 0 11px">단어장</div>
-    <div style="display:flex;flex-direction:column;gap:10px">${wordbookCard}</div>
-
-    ${shelfHTML()}
-
-    ${authMode() ? `
-    <div style="margin-top:26px;display:flex;justify-content:center;gap:8px">
-      <div data-act="openAccount" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#4a5a72;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">⚙️ 내 계정</div>
-      <div data-act="doLogout" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#7d8aa0;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">↩︎ 로그아웃</div>
+    ${hasBonus ? `
+    <div data-act="goAdvanced" style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 15px;margin-top:16px;cursor:pointer;box-shadow:0 6px 16px -12px rgba(20,50,90,.5)">
+      <div style="width:40px;height:40px;border-radius:12px;background:#eef2f8;display:flex;align-items:center;justify-content:center;font-size:19px">🚀</div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#14243f">심화 학습</div><div style="font-size:11px;color:#7d8aa0;margin-top:1px">어휘 예습 · 문장 예습 · 어법 퀴즈</div></div>
+      <div style="font-size:11px;font-weight:700;color:#2f74e6">더 하기 →</div>
     </div>` : ''}
 
   </div></div>`;
@@ -2864,6 +2973,7 @@ function render() {
     let screen = '';
     switch (state.screen) {
       case 'home': screen = homeHTML(); break;
+      case 'chapter': screen = chapterHubHTML(); break;
       case 'advanced': screen = advancedHTML(); break;
       case 'wordbook': screen = wordbookHTML(); break;
       case 'aquarium': screen = aquariumHTML(); break;
@@ -2882,7 +2992,7 @@ function render() {
       case 'hatchery': screen = hatcheryHTML(); break;
     }
     html += `<div class="scroll">${screen}</div>`;
-    if (['home', 'advanced', 'wordbook', 'aquarium', 'hatchery'].includes(state.screen)) html += navHTML();
+    if (['home', 'chapter', 'advanced', 'wordbook', 'aquarium', 'hatchery'].includes(state.screen)) html += navHTML();
   } else {
     html += teacherHTML();
   }
