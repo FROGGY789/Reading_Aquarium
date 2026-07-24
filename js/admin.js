@@ -302,6 +302,7 @@ async function publish() {
 function b64(str) { return btoa(unescape(encodeURIComponent(str))); }
 
 /* ---------- 렌더 ---------- */
+let _lastAdminSig = null;   // 직전 렌더의 탭·챕터 서명(같으면 스크롤 위치 유지)
 function render() {
   const root = document.getElementById('admin');
   if (!ui.loaded) { root.innerHTML = topbar(false) + `<div class="wrap"><div class="card">불러오는 중...</div></div>`; return; }
@@ -316,7 +317,7 @@ function render() {
   else if (ui.tab === 'schedule') panel = scheduleTab();
   else panel = settingsTab();
 
-  root.innerHTML = topbar(true) + `
+  const _html = topbar(true) + `
   <div class="wrap">
     <div class="daybar">
       ${content.days.map((day, i) => {
@@ -346,6 +347,20 @@ function render() {
   </div>
   ${ui.expand ? passageEditorOverlay(d) : ''}`;
 
+  // 같은 탭·챕터를 다시 그릴 땐 스크롤 위치 유지(단어 삭제 등으로 화면이 맨 위로 튀지 않게)
+  const _sig = ui.tab + '|' + (ed ? ed.dayIndex : '');
+  const _keep = (_sig === _lastAdminSig);
+  const _sc = document.scrollingElement || document.documentElement;
+  const _winTop = _sc ? _sc.scrollTop : 0;
+  const _vl = document.getElementById('vocab-list');
+  const _vlTop = _vl ? _vl.scrollTop : 0;
+  root.innerHTML = _html;
+  if (_keep) {
+    if (_sc) _sc.scrollTop = _winTop;
+    const _nvl = document.getElementById('vocab-list');
+    if (_nvl) _nvl.scrollTop = _vlTop;
+  }
+  _lastAdminSig = _sig;
   if (ui.expand) { const t = document.getElementById('pv-editor'); if (t && document.activeElement !== t) t.focus(); }
 }
 
@@ -612,7 +627,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v35 (표제어 바로 편집)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v36 (편집 중 스크롤 위치 유지)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -740,7 +755,7 @@ function vocabPanel(d) {
     </div>
     <div class="hint" style="margin-top:6px">지문에서 단어 드래그 → <b>📌 어휘</b> → 여기에 떠요. 뜻은 직접 적거나, <b>⬇엑셀</b>로 받아 채운 뒤 <b>⬆올리기</b> 하세요(단어 기준 자동 매칭).</div>
     <input type="file" id="vocab-import" accept=".csv,text/csv" style="display:none">
-    <div style="overflow:auto;margin-top:4px;flex:1;min-height:120px">${rows}</div>
+    <div id="vocab-list" style="overflow:auto;margin-top:4px;flex:1;min-height:120px">${rows}</div>
   </div>`;
 }
 
