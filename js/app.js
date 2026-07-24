@@ -474,10 +474,10 @@ function nextDayPopoverCards() {
   }
   return out;
 }
-// 플래시카드 덱: preview=다음날 어휘 10개 / vocabPrep=다음날 팝오버 단어 랜덤 10개 / vocab=오늘 어휘(선택 개수)
+// 플래시카드 덱: preview=다음날 어휘 10개 / vocabPrep=다음날 지문 단어 랜덤 최대 30개 / vocab=오늘 어휘(선택 개수)
 function flashcardCards(mode) {
   if (mode === 'preview') return dayVocabCards(nextDayAfterActive() || activeDay()).slice(0, 10);
-  if (mode === 'vocabPrep') return state.vpDeck || [];   // 시작 시 랜덤 10개로 고정된 덱
+  if (mode === 'vocabPrep') return state.vpDeck || [];   // 시작 시 랜덤 최대 30개로 고정된 덱
   return dayVocabCards(activeDay()).slice(0, state.vrCount || 0);
 }
 // 화면 → 플래시카드 모드
@@ -587,7 +587,7 @@ const MAIN_TASKS = [
   { key: 'preview',  icon: '👀',  bg: '#e7f0fd', time: '5분', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
 ];
 const BONUS_TASKS = [
-  { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', time: '2분', sub: () => `다음 수업 팝오버 단어 · 플래시카드 ${Math.min(nextDayPopoverCards().length, 10)}개` },
+  { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', time: '3분', sub: () => `다음 수업 지문 단어 · 플래시카드 ${Math.min(nextDayPopoverCards().length, 30)}개` },
   { key: 'sentPrep',  icon: '✍️', bg: '#e0f3ea', time: '2분', sub: n => `핵심 문장 의미 미리보기 ${n}문항` },
   { key: 'grammar',   icon: '📐', bg: '#fdeede', time: '2분', sub: n => `시제·관계사 등 어법 ${n}문항` }
 ];
@@ -616,7 +616,7 @@ const DEFAULT_STATE = {
   xp: 0,
   pullCount: 0,
   quizTask: null, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {},
-  vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 10개로 고정)
+  vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 최대 30개로 고정)
   result: null,
   hatchStage: 'idle', hatchSpecies: null,
   pop: null,
@@ -904,8 +904,8 @@ const actions = {
     if (t === 'review') { armReviewGate(); set({ screen: 'review', pop: null, revIndex: 0 }); }
     else if (t === 'preview') set({ screen: 'preview', pop: null });   // 3단계 난이도 선택
     else if (t === 'vocab') set({ screen: 'vocabReview', vrCount: null, fcI: 0, fcFlipped: false, fcHint: false });   // 어휘 복습(플래시카드)
-    else if (t === 'vocabPrep') {   // 어휘 예습(플래시카드) — 다음 수업 팝오버 단어 랜덤 10개
-      const deck = shuffleArr(nextDayPopoverCards()).slice(0, 10);
+    else if (t === 'vocabPrep') {   // 어휘 예습(플래시카드) — 다음 수업 지문 단어 랜덤 최대 30개
+      const deck = shuffleArr(nextDayPopoverCards()).slice(0, 30);
       if (!deck.length) return;
       set({ screen: 'vocabPrepCard', vpDeck: deck, fcI: 0, fcFlipped: false, fcHint: false });
     }

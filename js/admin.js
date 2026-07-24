@@ -336,7 +336,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v26 (어휘 복습 편집 제거)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v27 (어휘 예습 카드화 + 편집 제거)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -531,7 +531,7 @@ function quizTab(d) {
     <div class="hint">문제를 비워두면 그 문항은 출제되지 않아요. 문항이 하나도 없는 카테고리는 학생 홈에서 숨겨집니다.</div>
     <div class="cols">
       <div>${['sentence', 'grammar'].map(qcat).join('')}</div>
-      <div>${['vocabPrep', 'sentPrep'].map(qcat).join('')}</div>
+      <div>${['sentPrep'].map(qcat).join('')}</div>
     </div>
   </div>`;
 }
