@@ -530,8 +530,8 @@ function quizTab(d) {
     <h2>복습 · 보조 퀴즈</h2>
     <div class="hint">문제를 비워두면 그 문항은 출제되지 않아요. 문항이 하나도 없는 카테고리는 학생 홈에서 숨겨집니다.</div>
     <div class="cols">
-      <div>${['vocab', 'sentence'].map(qcat).join('')}</div>
-      <div>${['grammar', 'vocabPrep', 'sentPrep'].map(qcat).join('')}</div>
+      <div>${['sentence', 'grammar'].map(qcat).join('')}</div>
+      <div>${['vocabPrep', 'sentPrep'].map(qcat).join('')}</div>
     </div>
   </div>`;
 }
