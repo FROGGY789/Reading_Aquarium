@@ -159,6 +159,7 @@ const actions = {
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
   },
   importVocabClick() { const i = document.getElementById('vocab-import'); if (i) { i.value = ''; i.click(); } },
+  importHwpxClick() { const i = document.getElementById('hwpx-import'); if (i) { i.value = ''; i.click(); } },
   selectDay(i) { commit(); openDay(Number(i)); toast(''); render(); },
   addDay() {
     commit();
@@ -487,6 +488,98 @@ function importVocabFile(file) {
   reader.readAsText(file, 'utf-8');
 }
 
+/* ===== 한글(HWPX) 불러오기: 빨강=어휘(<>) · 노랑 형광펜=핵심문장(==) · 파랑=문법(%%) 자동 인식 =====
+   HWPX = ZIP(Deflate) + XML. 브라우저 표준 API(DecompressionStream)만 사용. */
+function _u16(dv, o) { return dv.getUint16(o, true); }
+function _u32(dv, o) { return dv.getUint32(o, true); }
+function zipExtractRaw(buffer, wanted) {
+  const bytes = new Uint8Array(buffer); const dv = new DataView(buffer);
+  let eocd = -1; const min = Math.max(0, bytes.length - 22 - 65536);
+  for (let i = bytes.length - 22; i >= min; i--) { if (_u32(dv, i) === 0x06054b50) { eocd = i; break; } }
+  if (eocd < 0) throw new Error('ZIP 구조를 찾지 못했어요');
+  const cdCount = _u16(dv, eocd + 10); let p = _u32(dv, eocd + 16); const out = {};
+  for (let n = 0; n < cdCount; n++) {
+    if (_u32(dv, p) !== 0x02014b50) break;
+    const method = _u16(dv, p + 10), compSize = _u32(dv, p + 20), nameLen = _u16(dv, p + 28), extraLen = _u16(dv, p + 30), commentLen = _u16(dv, p + 32), lho = _u32(dv, p + 42);
+    const name = new TextDecoder().decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    if (wanted.indexOf(name) >= 0) {
+      const lNameLen = _u16(dv, lho + 26), lExtraLen = _u16(dv, lho + 28), dataStart = lho + 30 + lNameLen + lExtraLen;
+      out[name] = { method, data: bytes.subarray(dataStart, dataStart + compSize) };
+    }
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return out;
+}
+async function inflateEntry(entry) {
+  if (entry.method === 0) return entry.data;
+  if (typeof DecompressionStream === 'undefined') throw new Error('이 브라우저는 압축 해제를 지원하지 않아요(크롬 최신 사용 권장)');
+  const ds = new DecompressionStream('deflate-raw');
+  const ab = await new Response(new Blob([entry.data]).stream().pipeThrough(ds)).arrayBuffer();
+  return new Uint8Array(ab);
+}
+function _dec(s) { return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&amp;/g, '&'); }
+function parseHwpxXml(headerXml, sectionXml) {
+  sectionXml = String(sectionXml).replace(/<\?[\s\S]*?\?>/g, '').replace(/<!--[\s\S]*?-->/g, '');
+  const colorOf = {};
+  const cr = /<hh:charPr id="(\d+)"[^>]*?textColor="([^"]+)"/g; let cm;
+  while ((cm = cr.exec(headerXml))) colorOf[cm[1]] = cm[2].toUpperCase();
+  const lines = [], core = []; let line = '', curCore = '', inHeader = 0, markpen = false; const colorStack = [];
+  const wrap = (txt, open, close) => { const lead = (txt.match(/^\s*/) || [''])[0], trail = (txt.match(/\s*$/) || [''])[0], c = txt.trim(); return c ? lead + open + c + close + trail : txt; };
+  const flush = () => {
+    if (markpen) { line += '=='; if (curCore.trim()) core.push(curCore.replace(/\s+/g, ' ').trim()); markpen = false; curCore = ''; }
+    const t = line.replace(/[ \t]+/g, ' ').trim();
+    if (t && t !== 'Memo' && !/^Chapter\s*0?\d+\.?$/i.test(t) && !/^그림입니다/.test(t) && !/^원본 그림/.test(t)) lines.push(t);
+    line = '';
+  };
+  const re = /<(\/?)([\w:]+)([^>]*?)(\/?)>|([^<]+)/g; let m;
+  while ((m = re.exec(sectionXml))) {
+    if (m[5] != null) {
+      if (inHeader) continue; const txt = _dec(m[5]); if (!txt) continue;
+      const color = colorStack.length ? colorStack[colorStack.length - 1] : null;
+      if (markpen) curCore += txt;
+      if (color === '#FF0000') { const pc = line.slice(-1); if (/[A-Za-z]/.test(pc) && /^[A-Za-z]/.test(txt)) line += txt; else line += wrap(txt, '<', '>'); }
+      else if (color === '#0000FF') line += wrap(txt, '%%', '%%');
+      else line += txt;
+      continue;
+    }
+    const close = m[1] === '/', name = m[2], attrs = m[3] || '', self = m[4] === '/';
+    if (name === 'hp:markpenBegin') { if (!inHeader && !markpen) { markpen = true; line += '=='; curCore = ''; } continue; }
+    if (name === 'hp:markpenEnd') { if (!inHeader && markpen) { markpen = false; line += '=='; if (curCore.trim()) core.push(curCore.replace(/\s+/g, ' ').trim()); } continue; }
+    if ((name === 'hp:header' || name === 'hp:pic') && !self) { inHeader += close ? -1 : 1; continue; }
+    if (name === 'hp:run') { if (close) colorStack.pop(); else if (!self) { const c = (attrs.match(/charPrIDRef="(\d+)"/) || [])[1]; colorStack.push(colorOf[c] || null); } continue; }
+    if (name === 'hp:p' && (close || self)) flush();
+  }
+  flush();
+  return { passage: lines.join('\n\n'), core };
+}
+async function hwpxToPassage(buffer) {
+  const ent = zipExtractRaw(buffer, ['Contents/header.xml', 'Contents/section0.xml']);
+  if (!ent['Contents/section0.xml']) throw new Error('HWPX 형식이 아니에요 (section0.xml 없음)');
+  const dec = new TextDecoder('utf-8');
+  const header = ent['Contents/header.xml'] ? dec.decode(await inflateEntry(ent['Contents/header.xml'])) : '';
+  const section = dec.decode(await inflateEntry(ent['Contents/section0.xml']));
+  return parseHwpxXml(header, section);
+}
+// 업로드한 HWPX를 현재 챕터 지문으로 적용
+async function applyHwpx(file) {
+  try {
+    toast('한글 파일 분석 중...'); render();
+    const buf = await file.arrayBuffer();
+    const { passage, core } = await hwpxToPassage(buf);
+    if (!passage.trim()) { toast('본문 텍스트를 찾지 못했어요.', 'err'); render(); return; }
+    const vcount = (passage.match(/<[^>]+>/g) || []).length;
+    if (!confirm(`한글 파일에서 인식했어요:\n· 어휘(빨강) ${vcount}개\n· 핵심문장(노랑) ${core.length}개\n· 문법(파랑) 표시\n\n현재 지문을 이 내용으로 바꿀까요?`)) { toast(''); render(); return; }
+    ed.day.passageText = passage;
+    refreshWords();
+    ed.day.core = ed.day.core || [];
+    const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    let added = 0;
+    core.forEach(t => { if (t && !ed.day.core.some(c => norm(c.text) === norm(t))) { ed.day.core.push({ text: t, subject: [], verb: [], bold: [], italic: [], ko: '' }); added++; } });
+    toast(`불러왔어요 · 어휘 ${ed.day.words.length}개 · 핵심문장 ${added}개 추가 · 문법 표시 완료. 뜻을 채우고 배포하세요.`, 'ok');
+    render();
+  } catch (e) { toast('한글 파일을 읽지 못했어요: ' + e.message, 'err'); render(); }
+}
+
 // 지문 전체화면 편집 오버레이(장편 검토용)
 function passageEditorOverlay(d) {
   const paras = (typeof passageToReview === 'function') ? passageToReview(d.passageText).length : 0;
@@ -517,7 +610,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v32 (어휘 삭제 · 버튼 색 수정)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v33 (한글 HWPX 자동 인식 불러오기)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -584,10 +677,13 @@ function passageTab(d) {
         </div>
         <div class="hint" style="margin-top:8px">
           문단=<b>빈 줄</b> · e-북 페이지=<span class="mono">---</span> 한 줄 · 아래에서 <b>드래그 선택</b> 후 버튼을 누르세요.<br>
-          <b>📌 어휘</b>=팝오버 단어(<span class="mono">&lt;단어&gt;</span>) · <b>📐 문법</b>=<mark style="background:#bcd7fb">파란 표시</mark> · <b>⭐ 핵심문장</b>=<mark style="background:#ffe35c">노란 표시</mark>+예습'보통' · <span class="mono">[대괄호]</span>는 자유롭게 쓰세요(팝오버 아님).
+          <b>📌 어휘</b>=팝오버 단어(<span class="mono">&lt;단어&gt;</span>) · <b>📐 문법</b>=<mark style="background:#bcd7fb">파란 표시</mark> · <b>⭐ 핵심문장</b>=<mark style="background:#ffe35c">노란 표시</mark>+예습'보통' · <span class="mono">[대괄호]</span>는 자유롭게 쓰세요(팝오버 아님).<br>
+          <b>📄 한글(HWPX) 불러오기</b>: 한글에서 <span style="color:#e2564d;font-weight:700">빨강=어휘</span> · <mark style="background:#ffe35c">노랑 형광펜=핵심문장</mark> · <span style="color:#2f74e6;font-weight:700">파랑=문법</span>으로 표시해 저장하면 자동 인식돼요.
         </div>
         ${editorToolbar()}
         <div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;align-items:center">
+          <button class="btn primary sm" data-act="importHwpxClick" title="한글(HWPX) 파일에서 빨강=어휘·노랑 형광펜=핵심문장·파랑=문법을 자동 인식해 지문에 적용">📄 한글(HWPX) 불러오기</button>
+          <input type="file" id="hwpx-import" accept=".hwpx" style="display:none">
           <button class="btn ghost sm" data-act="autoBracket" title="B2 이상으로 보이는 어려운 단어에 자동으로 &lt;&gt; 표시">🔎 어려운 단어 자동표시</button>
           <button class="btn ghost sm" data-act="clearBrackets" title="지문의 모든 &lt;&gt; 어휘표시 지우기">⌫ 어휘표시 지우기</button>
         </div>
@@ -895,6 +991,7 @@ rootEl.addEventListener('paste', e => {
 rootEl.addEventListener('change', e => {
   const el = e.target;
   if (el.id === 'vocab-import') { if (el.files && el.files[0]) importVocabFile(el.files[0]); return; }   // 엑셀(CSV) 업로드
+  if (el.id === 'hwpx-import') { if (el.files && el.files[0]) applyHwpx(el.files[0]); return; }   // 한글(HWPX) 업로드
   if (el.dataset.sched != null) { applySchedField(el); resortKeepSel(); render(); return; }   // 일정 탭: 확정 시 재정렬+렌더
   const bind = el.dataset.bind;
   if (!bind) return;
