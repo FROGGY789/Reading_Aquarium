@@ -65,6 +65,30 @@ function setPath(obj, path, val) {
   o[ks[ks.length - 1]] = val;
 }
 function toast(msg, type) { ui.msg = msg; ui.msgType = type || ''; }
+// 일정 탭: 다른 챕터의 필드를 직접 수정(현재 편집 중인 챕터면 편집 모델에도 반영)
+function applySchedField(el) {
+  const i = Number(el.dataset.sched);
+  const field = el.dataset.schedfield;
+  const day = content.days[i];
+  if (!day) return;
+  const val = el.value;
+  const isCur = i === ed.dayIndex;
+  if (field === 'date') { day.date = val; if (isCur) ed.day.date = val; }
+  else if (field === 'chapter') { day.book = day.book || {}; day.book.chapter = val; if (isCur) ed.day.book.chapter = val; }
+  else if (field === 'bookTitle') {
+    const oldTitle = (day.book && day.book.title) || '';
+    content.days.forEach((x, xi) => {
+      if (((x.book && x.book.title) || '') === oldTitle) { x.book = x.book || {}; x.book.title = val; if (xi === ed.dayIndex) ed.day.book.title = val; }
+    });
+  } else if (field === 'class') { if (val) day.class = val; else delete day.class; if (isCur) ed.day.classTarget = val; }
+}
+// 날짜 재정렬 후에도 현재 편집 중이던 챕터 선택을 유지
+function resortKeepSel() {
+  const cur = content.days[ed.dayIndex];
+  content.days.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const idx = content.days.indexOf(cur);
+  ed.dayIndex = idx < 0 ? 0 : idx;
+}
 
 /* ---------- 액션 ---------- */
 const actions = {
@@ -114,6 +138,33 @@ const actions = {
     content.days.splice(ed.dayIndex, 1);
     openDay(Math.max(0, ed.dayIndex - 1));
     toast('챕터를 삭제했어요.', 'ok'); render();
+  },
+  // 일정 탭: 이 챕터를 편집(지문 탭으로 이동)
+  editChapter(arg) { commit(); openDay(Number(arg)); ui.tab = 'passage'; toast(''); render(); },
+  // 일정 탭: 특정 인덱스의 챕터 삭제(선택 유지)
+  delChapterAt(arg) {
+    const i = Number(arg);
+    if (content.days.length <= 1) { toast('최소 1개의 챕터는 남겨야 해요.', 'err'); return; }
+    if (!confirm('이 챕터를 삭제할까요?')) return;
+    const wasCur = i === ed.dayIndex;
+    content.days.splice(i, 1);
+    if (wasCur) openDay(Math.min(Math.max(0, i - 1), content.days.length - 1));
+    else if (i < ed.dayIndex) ed.dayIndex -= 1;
+    toast('챕터를 삭제했어요.', 'ok'); render();
+  },
+  // 일정 탭: 이 책에 빈 챕터 추가(책 정보만 복제, 내용은 비움)
+  addChapterToBook(bookTitle) {
+    commit();
+    const src = content.days.find(x => ((x.book && x.book.title) || '') === (bookTitle || '')) || {};
+    const book = Object.assign({ title: '', author: '', chapter: '', cover: '', spine: '' }, src.book || {});
+    book.chapter = '';
+    const nd = { date: _todayKey(), label: '', quote: {}, book, passage: '', vocab: {}, coreSentences: [], quiz: {} };
+    if (src.class) nd.class = src.class;
+    content.days.push(nd);
+    content.days.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    openDay(content.days.indexOf(nd));
+    toast('새 챕터를 추가했어요. 공개 날짜와 이름을 정해주세요.', 'ok');
+    render();
   },
   // 지문에서 [단어]를 스캔해 어휘 목록 갱신 (뜻은 유지)
   syncWords() {
@@ -218,6 +269,7 @@ function render() {
   if (ui.tab === 'passage') panel = passageTab(d);
   else if (ui.tab === 'preview') panel = previewTab(d);
   else if (ui.tab === 'quiz') panel = quizTab(d);
+  else if (ui.tab === 'schedule') panel = scheduleTab();
   else panel = settingsTab();
 
   root.innerHTML = topbar(true) + `
@@ -232,6 +284,7 @@ function render() {
     </div>
 
     <div class="daybar" style="margin-bottom:16px">
+      ${tabBtn('schedule', '📅 챕터 일정')}
       ${tabBtn('passage', '📖 지문 · 책')}
       ${tabBtn('preview', '👀 예습 (살살·보통·버닝)')}
       ${tabBtn('quiz', '📝 복습 · 퀴즈')}
@@ -336,7 +389,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v28 (챕터별 학습 개편)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v29 (챕터 일정 편집기)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -615,6 +668,52 @@ function settingsTab() {
   </div>`;
 }
 
+/* ---- 탭: 챕터 일정 (책 → 챕터, 공개 날짜 설정) ---- */
+function scheduleTab() {
+  const classOpts = (sel) => `<option value="">공통(전체)</option>` +
+    (content.classes || []).map(c => `<option value="${esc(c)}" ${((sel || '') === c) ? 'selected' : ''}>${esc(c)}</option>`).join('');
+  // 책 제목별로 그룹(입력 순서 유지)
+  const order = [];
+  const groups = {};
+  content.days.forEach((d, i) => {
+    const bt = (d.book && d.book.title) || '';
+    const gkey = bt || '__none__';
+    if (!groups[gkey]) { groups[gkey] = []; order.push(gkey); }
+    groups[gkey].push(i);
+  });
+  const cell = 'padding:9px 10px;background:#fff;border:1px solid #e2e9f2;border-radius:10px;font-size:13px';
+  const books = order.map(gkey => {
+    const bt = gkey === '__none__' ? '' : gkey;
+    const idxs = groups[gkey].slice().sort((a, b) => (content.days[a].date || '').localeCompare(content.days[b].date || ''));
+    const rows = idxs.map(i => {
+      const d = content.days[i];
+      const cur = i === ed.dayIndex;
+      return `<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;${cur ? 'outline:2px solid #bcd4f7;outline-offset:3px;border-radius:12px' : ''}">
+        <input type="date" data-sched="${i}" data-schedfield="date" value="${esc(d.date || '')}" style="${cell};flex:none;color-scheme:light">
+        <input data-sched="${i}" data-schedfield="chapter" value="${esc((d.book && d.book.chapter) || '')}" placeholder="챕터 이름 (예: Ch1 · 도입부)" style="${cell};flex:1;min-width:150px">
+        <select data-sched="${i}" data-schedfield="class" style="${cell};flex:none">${classOpts(d.class)}</select>
+        <button class="btn ghost sm" data-act="editChapter" data-arg="${i}">✏️ 편집</button>
+        <button class="btn danger sm" data-act="delChapterAt" data-arg="${i}">삭제</button>
+      </div>`;
+    }).join('');
+    return `<div class="card">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">📕</span>
+        <input data-sched="${idxs[0]}" data-schedfield="bookTitle" value="${esc(bt)}" placeholder="책 제목 (예: The Curiosity of the Sea)" style="flex:1;font-size:15px;font-weight:700;color:#14243f;border:none;border-bottom:1.5px solid #e2e9f2;padding:4px 2px;background:transparent"${idxs.length > 1 ? ' title="여기서 제목을 바꾸면 이 책의 모든 챕터에 반영돼요"' : ''}>
+        <span style="font-size:11.5px;color:#7d8aa0;white-space:nowrap">${idxs.length}챕터</span>
+      </div>
+      ${rows}
+      <button class="btn ghost sm" data-act="addChapterToBook" data-arg="${esc(bt)}" style="margin-top:10px">＋ 이 책에 챕터 추가</button>
+    </div>`;
+  }).join('');
+  return `<div class="card">
+    <h2>📅 챕터 일정</h2>
+    <div class="hint">책별로 챕터를 정리하고, 각 챕터의 <b>공개 날짜</b>를 정하세요. 그 날짜부터 학생 홈에 나타나요. <b>같은 날짜에 여러 챕터</b>를 둬도 됩니다. 자세한 내용(지문·단어·문제)은 <b>✏️ 편집</b>으로 들어가서 채워요.</div>
+  </div>
+  ${books || '<div class="card">아직 챕터가 없어요.</div>'}
+  <div style="margin:4px 0 10px"><button class="btn ghost" data-act="addDay">＋ 새 챕터(새 책)</button></div>`;
+}
+
 /* ---------- 이벤트 ---------- */
 const rootEl = document.getElementById('admin');
 rootEl.addEventListener('click', e => {
@@ -627,6 +726,7 @@ rootEl.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'gh-token') return;
   if (el.id === 'passage-editor' || el.id === 'pv-editor') { if (ed) ed.day.passageText = serializeEditor(el); return; }
+  if (el.dataset.sched != null) { applySchedField(el); return; }   // 일정 탭: 렌더 없이 모델만 갱신(포커스 유지)
   if (el.dataset.gbind) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
   if (bind && el.type !== 'radio' && el.tagName !== 'SELECT') setPath(ed.day, bind, el.value);
@@ -643,6 +743,7 @@ rootEl.addEventListener('paste', e => {
 });
 rootEl.addEventListener('change', e => {
   const el = e.target;
+  if (el.dataset.sched != null) { applySchedField(el); resortKeepSel(); render(); return; }   // 일정 탭: 확정 시 재정렬+렌더
   const bind = el.dataset.bind;
   if (!bind) return;
   let v = el.value;
