@@ -559,9 +559,10 @@ function pmAdvance() {
 // '몰라요' 단어를 내 단어장에 담기(중복 제거) + 클라우드 저장
 function addToWordbook(card) {
   if (!card || !card.word) return;
+  const dw = (card.head || card.word);   // 외울 형태(표제어)가 있으면 그걸로 담기
   const wb = state.wordbook || (state.wordbook = []);
-  if (wb.some(w => w.word === card.word)) return;
-  const e = { word: card.word, def: card.def || '', pos: card.pos || '', ex: card.ex || '', reps: 0, interval: 0, ease: 2.5, lapses: 0, due: todayKey(), ts: Date.now() };
+  if (wb.some(w => w.word === dw)) return;
+  const e = { word: dw, def: card.def || '', pos: card.pos || '', ex: card.ex || '', reps: 0, interval: 0, ease: 2.5, lapses: 0, due: todayKey(), ts: Date.now() };
   wb.push(e);
   upsertWord(e);   // 클라우드에도 저장(로그인+Supabase 시)
 }
@@ -973,9 +974,9 @@ const actions = {
     set({ vrCount: n === 'all' ? total : Math.min(Number(n), total), fcI: 0, fcFlipped: false, fcHint: false });
   },
   // 플래시카드 공용: 알아요/몰라요(뒤집기+발음) → 다음
-  fcKnow() { const c = fcCurrentCard(); if (!c) return; speak(c.word); set({ fcFlipped: true }); },
-  fcDontKnow() { const c = fcCurrentCard(); if (!c) return; speak(c.word); addToWordbook(c); set({ fcFlipped: true }); },
-  fcSpeak() { const c = fcCurrentCard(); if (c) speak(c.word); },
+  fcKnow() { const c = fcCurrentCard(); if (!c) return; speak(c.head || c.word); set({ fcFlipped: true }); },
+  fcDontKnow() { const c = fcCurrentCard(); if (!c) return; speak(c.head || c.word); addToWordbook(c); set({ fcFlipped: true }); },
+  fcSpeak() { const c = fcCurrentCard(); if (c) speak(c.head || c.word); },
   fcSpeakWord(arg) { speak(arg); },
   fcHint() { set({ fcHint: !state.fcHint }); },
   fcNext() {
@@ -2067,7 +2068,7 @@ function reviewHTML() {
     ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `
     <div style="font-family:'IBM Plex Sans KR',sans-serif;background:#14243f;color:#fff;border-radius:14px;padding:13px 15px;margin:18px 0 0;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);text-align:left">
-      <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.word)}</span><span style="font-size:11px;color:#7fd0e6">${esc(pop.pos)}</span></div>
+      <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.head || pop.word)}</span><span style="font-size:11px;color:#7fd0e6">${esc(pop.pos)}</span></div>
       <div style="font-size:13px;color:#dbe6f5;margin-top:5px">${esc(pop.def)}</div>
       ${pop.ex ? `<div style="font-size:12px;color:#93a6c2;margin-top:6px;font-style:italic;font-family:'Lora',serif">${esc(pop.ex)}</div>` : ''}
     </div>` : '';
@@ -2266,7 +2267,7 @@ function readerHTML() {
   const wStyle = active => `background:${active ? '#c08a3a' : '#f0e2c4'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #c08a3a;border-radius:3px;padding:0 3px;cursor:pointer`;
   const pop = burning && state.pop && words[state.pop] ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `<div style="font-family:'IBM Plex Sans KR',sans-serif;background:#3a3222;color:#f5f0e6;border-radius:12px;padding:12px 14px;margin:2px 0 16px;box-shadow:0 12px 26px -12px rgba(0,0,0,.5)">
-      <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.word)}</span><span style="font-size:11px;color:#d8b878">${esc(pop.pos)}</span></div>
+      <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.head || pop.word)}</span><span style="font-size:11px;color:#d8b878">${esc(pop.pos)}</span></div>
       <div style="font-size:13px;color:#e7dcc4;margin-top:5px">${esc(pop.def)}</div>
       ${pop.ex ? `<div style="font-size:12px;color:#bda880;margin-top:5px;font-style:italic;font-family:'Lora',serif">${esc(pop.ex)}</div>` : ''}
     </div>` : '';
@@ -2355,7 +2356,7 @@ function flashcardScreenHTML(mode) {
 
   const face = `<div style="width:100%;background:#fff;border:1px solid #e2e9f2;border-radius:22px;padding:30px 22px;text-align:center;box-shadow:0 16px 36px -20px rgba(20,50,90,.6);${flipped ? 'animation:pop .35s ease' : ''}">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px">
-      <div style="font-family:'Lora',serif;font-size:34px;font-weight:600;color:#14243f">${esc(c.word)}</div>
+      <div style="font-family:'Lora',serif;font-size:34px;font-weight:600;color:#14243f">${esc(c.head || c.word)}</div>
       <div data-act="fcSpeak" title="발음 듣기" style="width:34px;height:34px;border-radius:50%;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px">🔊</div>
     </div>
     ${flipped ? `

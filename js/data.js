@@ -250,6 +250,47 @@ function isCommonWord(w) {
   if (!w) return true;
   return _stemCandidates(w).some(x => CEFR_COMMON_WORDS.has(x));
 }
+// 불규칙 원형(자주 나오는 것만) — 표제어 자동 원형화용
+const _IRREG_LEMMA = {
+  was: 'be', were: 'be', been: 'be', 'being': 'be', is: 'be', are: 'be', am: 'be',
+  had: 'have', has: 'have', having: 'have', went: 'go', gone: 'go', going: 'go',
+  did: 'do', done: 'do', made: 'make', making: 'make', said: 'say', took: 'take', taken: 'take', taking: 'take',
+  came: 'come', coming: 'come', saw: 'see', seen: 'see', seeing: 'see', knew: 'know', known: 'know',
+  got: 'get', gotten: 'get', getting: 'get', gave: 'give', given: 'give', giving: 'give',
+  found: 'find', finding: 'find', told: 'tell', telling: 'tell', thought: 'think', thinking: 'think',
+  became: 'become', becoming: 'become', ran: 'run', running: 'run', met: 'meet', meeting: 'meet',
+  paid: 'pay', held: 'hold', holding: 'hold', kept: 'keep', keeping: 'keep', left: 'leave', leaving: 'leave',
+  built: 'build', building: 'build', spent: 'spend', sold: 'sell', selling: 'sell', heard: 'hear', hearing: 'hear',
+  felt: 'feel', feeling: 'feel', dealt: 'deal', bought: 'buy', buying: 'buy', caught: 'catch', catching: 'catch',
+  taught: 'teach', teaching: 'teach', fought: 'fight', sought: 'seek', brought: 'bring', bringing: 'bring',
+  wrote: 'write', written: 'write', writing: 'write', swam: 'swim', swimming: 'swim', sang: 'sing', singing: 'sing',
+  rang: 'ring', drank: 'drink', drinking: 'drink', spoke: 'speak', spoken: 'speak', speaking: 'speak',
+  broke: 'break', broken: 'break', breaking: 'break', drove: 'drive', driven: 'drive', driving: 'drive',
+  rode: 'ride', riding: 'ride', rose: 'rise', rising: 'rise', fell: 'fall', fallen: 'fall', falling: 'fall',
+  ate: 'eat', eaten: 'eat', eating: 'eat', led: 'lead', leading: 'lead', fed: 'feed', hid: 'hide', hidden: 'hide', hiding: 'hide',
+  struck: 'strike', striking: 'strike', stuck: 'stick', bit: 'bite', biting: 'bite', lying: 'lie',
+  children: 'child', men: 'man', women: 'woman', feet: 'foot', teeth: 'tooth', mice: 'mouse',
+  people: 'person', lives: 'life', knives: 'knife', wolves: 'wolf', leaves: 'leaf', shelves: 'shelf'
+};
+// 영단어 원형(표제어) 추정 — 규칙 기반 근사(불완전). 팝오버/단어장 표시용, 교사가 수정 가능.
+function lemmatize(word) {
+  const w = String(word == null ? '' : word).trim();
+  if (!w || /\s/.test(w) || w.length < 3 || /[^A-Za-z'’-]/.test(w)) return '';
+  const lower = w.toLowerCase().replace(/[’]/g, "'");
+  const cap = /^[A-Z]/.test(w);
+  const R = b => cap ? b.charAt(0).toUpperCase() + b.slice(1) : b;
+  if (Object.prototype.hasOwnProperty.call(_IRREG_LEMMA, lower)) return R(_IRREG_LEMMA[lower]);
+  const dbl = s => (s.length >= 3 && s[s.length - 1] === s[s.length - 2] && !/[aeiou]/.test(s[s.length - 1])) ? s.slice(0, -1) : s;
+  let base = null;
+  if (/ies$/.test(lower)) base = lower.slice(0, -3) + 'y';
+  else if (/ied$/.test(lower)) base = lower.slice(0, -3) + 'y';
+  else if (/(ches|shes|sses|xes|zzes|zes)$/.test(lower)) base = lower.slice(0, -2);
+  else if (/ing$/.test(lower)) base = dbl(lower.slice(0, -3));
+  else if (/ed$/.test(lower)) base = dbl(lower.slice(0, -2));
+  else if (/s$/.test(lower) && !/(ss|us|is|ous)$/.test(lower)) base = lower.slice(0, -1);
+  if (!base || base === lower || base.length < 2) return '';
+  return R(base);
+}
 // 지문을 토큰으로 분해([단어]·마크업·낱말·기타 보존)
 function _passageTokens(text) {
   const re = /(<[^>]*>)|(\*\*|==|%%)|([A-Za-z]+(?:['’][A-Za-z]+)?)|([^A-Za-z]+)/g;
@@ -363,7 +404,7 @@ function dayToEdit(day) {
   });
   const passageText = dayPassage(day);
   const vdict = dayVocab(day);
-  const words = scanVocab(passageText).map(w => ({ word: w, pos: (vdict[w] || {}).pos || '', def: (vdict[w] || {}).def || '', ex: (vdict[w] || {}).ex || '' }));
+  const words = scanVocab(passageText).map(w => ({ word: w, head: (vdict[w] || {}).head || '', pos: (vdict[w] || {}).pos || '', def: (vdict[w] || {}).def || '', ex: (vdict[w] || {}).ex || '' }));
   return {
     date: day.date || _todayKey(),
     label: day.label || '',
@@ -385,6 +426,8 @@ function editToDay(e) {
   scanVocab(e.passageText).forEach(w => {
     const row = (e.words || []).find(x => x.word === w) || {};
     vocab[w] = { pos: (row.pos || '').trim(), def: (row.def || '').trim(), ex: (row.ex || '').trim() };
+    const head = (row.head || '').trim();
+    if (head && head !== w) vocab[w].head = head;   // 표제어(외울 형태) — 지문 단어와 다를 때만 저장
   });
   const quiz = {};
   Object.keys(QUIZ_META).forEach(cat => {

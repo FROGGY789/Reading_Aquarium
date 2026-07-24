@@ -148,7 +148,7 @@ const actions = {
   },
   // 팝오버 어휘: 엑셀(CSV) 내려받기 / 올리기
   exportVocab() {
-    const rows = [['word', 'pos', 'def', 'ex']].concat((ed.day.words || []).map(w => [w.word, w.pos || '', w.def || '', w.ex || '']));
+    const rows = [['word', 'head', 'pos', 'def', 'ex']].concat((ed.day.words || []).map(w => [w.word, w.head || '', w.pos || '', w.def || '', w.ex || '']));
     const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -206,13 +206,8 @@ const actions = {
   },
   // 지문에서 [단어]를 스캔해 어휘 목록 갱신 (뜻은 유지)
   syncWords() {
-    const found = scanVocab(ed.day.passageText);
-    const kept = found.map(w => {
-      const row = ed.day.words.find(x => x.word === w);
-      return row || { word: w, pos: '', def: '', ex: '' };
-    });
-    ed.day.words = kept;
-    toast(kept.length ? `어휘 ${kept.length}개를 불러왔어요. 뜻을 채워주세요.` : '지문에 어휘(<>) 표시가 없어요.', 'ok');
+    refreshWords();
+    toast(ed.day.words.length ? `어휘 ${ed.day.words.length}개를 불러왔어요. 표제어(원형)·뜻을 확인해 주세요.` : '지문에 어휘(<>) 표시가 없어요.', 'ok');
     render();
   },
   // 팝오버 어휘 삭제: 목록에서 빼고 지문의 <단어>를 단어만 남기고 벗김
@@ -437,11 +432,18 @@ function applyHighlight(kind) {
   document.execCommand('hiliteColor', false, cur === kind ? 'transparent' : color);
   syncEditor();
 }
-// 지문의 <단어>를 스캔해 팝오버 어휘 목록 갱신(기존 뜻 유지)
+// 지문의 <단어>를 스캔해 팝오버 어휘 목록 갱신(기존 뜻 유지 · 새 단어는 표제어 자동 원형화)
 function refreshWords() {
   if (!ed) return;
   const found = scanVocab(ed.day.passageText || '');
-  ed.day.words = found.map(w => (ed.day.words || []).find(x => x.word === w) || { word: w, pos: '', def: '', ex: '' });
+  ed.day.words = found.map(w => {
+    const exist = (ed.day.words || []).find(x => x.word === w);
+    if (exist) return exist;
+    const row = { word: w, head: '', pos: '', def: '', ex: '' };
+    const lm = lemmatize(w);            // 단일 단어면 원형 추정해 표제어로(구/변화없음이면 '')
+    if (lm && lm.toLowerCase() !== w.toLowerCase()) row.head = lm;
+    return row;
+  });
 }
 // CSV 한 칸 이스케이프
 function csvCell(v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
@@ -471,16 +473,16 @@ function importVocabFile(file) {
       const rows = parseCSV(String(reader.result || ''));
       if (!rows.length) { toast('빈 파일이에요.', 'err'); render(); return; }
       const head = rows[0].map(h => (h || '').trim().toLowerCase());
-      const iw = head.indexOf('word'), ip = head.indexOf('pos'), idf = head.indexOf('def'), ix = head.indexOf('ex');
+      const iw = head.indexOf('word'), ih = head.indexOf('head'), ip = head.indexOf('pos'), idf = head.indexOf('def'), ix = head.indexOf('ex');
       const hasHeader = iw >= 0;
-      const cW = hasHeader ? iw : 0, cP = hasHeader ? ip : 1, cD = hasHeader ? idf : 2, cE = hasHeader ? ix : 3;
+      const cW = hasHeader ? iw : 0, cH = hasHeader ? ih : -1, cP = hasHeader ? ip : 1, cD = hasHeader ? idf : 2, cE = hasHeader ? ix : 3;
       const map = {};
       for (let i = hasHeader ? 1 : 0; i < rows.length; i++) {
         const r = rows[i]; const w = (r[cW] || '').trim(); if (!w) continue;
-        map[w.toLowerCase()] = { pos: (cP >= 0 && r[cP] || '').trim(), def: (cD >= 0 && r[cD] || '').trim(), ex: (cE >= 0 && r[cE] || '').trim() };
+        map[w.toLowerCase()] = { head: (cH >= 0 && r[cH] || '').trim(), pos: (cP >= 0 && r[cP] || '').trim(), def: (cD >= 0 && r[cD] || '').trim(), ex: (cE >= 0 && r[cE] || '').trim() };
       }
       let filled = 0;
-      (ed.day.words || []).forEach(w => { const m = map[(w.word || '').toLowerCase()]; if (m) { w.pos = m.pos; w.def = m.def; w.ex = m.ex; filled++; } });
+      (ed.day.words || []).forEach(w => { const m = map[(w.word || '').toLowerCase()]; if (m) { if (cH >= 0) w.head = m.head; w.pos = m.pos; w.def = m.def; w.ex = m.ex; filled++; } });
       toast(`엑셀에서 ${filled}개 단어의 뜻을 불러왔어요.`, filled ? 'ok' : 'err');
       render();
     } catch (e) { toast('파일을 읽지 못했어요: ' + e.message, 'err'); render(); }
@@ -610,7 +612,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v33 (한글 HWPX 자동 인식 불러오기)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v34 (어휘 표제어·자동 원형화)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -719,10 +721,11 @@ function vocabPanel(d) {
   const rows = d.words.map((w, i) => `
     <div class="qcard" style="margin-top:8px">
       <div class="row" style="align-items:center">
-        <div style="flex:1;min-width:80px;font-family:'Lora',serif;font-weight:700;font-size:14.5px;color:#14243f;word-break:break-word">${esc(w.word)}</div>
-        <input class="inp" style="flex:.9" data-bind="words.${i}.pos" value="${esc(w.pos)}" placeholder="품사">
+        <input class="inp" style="flex:1;min-width:80px;font-family:'Lora',serif;font-weight:700" data-bind="words.${i}.head" value="${esc(w.head || '')}" placeholder="${esc(w.word)}" title="팝오버·카드에 뜰 외울 형태(표제어) — 비우면 지문 단어 그대로 (예: have sth to oneself)">
+        <input class="inp" style="flex:.55" data-bind="words.${i}.pos" value="${esc(w.pos)}" placeholder="품사">
         <button class="btn danger sm" data-act="delWord" data-arg="${esc(w.word)}" title="이 어휘 삭제 (지문에서는 &lt;&gt;만 벗기고 단어는 남겨요)" style="flex:none;padding:6px 9px">✕</button>
       </div>
+      <div style="font-size:10.5px;color:#9aa8bd;margin:3px 2px 0">지문: <span style="font-family:'Lora',serif;color:#6b7a90">${esc(w.word)}</span></div>
       <input class="inp" style="margin-top:6px" data-bind="words.${i}.def" value="${esc(w.def)}" placeholder="뜻">
       <input class="inp" style="margin-top:6px" data-bind="words.${i}.ex" value="${esc(w.ex)}" placeholder="예문 (선택)">
     </div>`).join('') || '<div class="empty">아직 어휘가 없어요. 지문에서 단어를 선택하고 <b>📌 어휘</b>를 누르세요.</div>';
