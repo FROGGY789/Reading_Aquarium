@@ -214,6 +214,16 @@ const actions = {
     toast(kept.length ? `어휘 ${kept.length}개를 불러왔어요. 뜻을 채워주세요.` : '지문에 어휘(<>) 표시가 없어요.', 'ok');
     render();
   },
+  // 팝오버 어휘 삭제: 목록에서 빼고 지문의 <단어>를 단어만 남기고 벗김
+  delWord(arg) {
+    const w = arg;
+    syncEditor();   // 편집기 최신 내용 먼저 반영
+    const re = new RegExp('<' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '>', 'g');
+    ed.day.passageText = (ed.day.passageText || '').replace(re, w);
+    ed.day.words = (ed.day.words || []).filter(x => x.word !== w);
+    toast('"' + w + '" 어휘를 지웠어요 (지문에는 단어만 남겨요).', 'ok');
+    render();
+  },
   addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', explain: '' }); render(); },
   delQ(arg) { const [cat, i] = arg.split(':'); ed.day.quiz[cat].splice(Number(i), 1); render(); },
   qFixWrong(arg) {   // 오류 고치기: 틀린 단어 클릭 표시
@@ -490,7 +500,7 @@ function passageEditorOverlay(d) {
       <button class="btn ghost sm" data-fmt="1" data-act="fmtGrammar" title="문법(파란 형광펜)">📐 문법</button>
       <button class="btn ghost sm" data-fmt="1" data-act="fmtCore" title="핵심문장(노란 형광펜)+예습 보통">⭐ 핵심문장</button>
       <button class="btn ghost sm" data-fmt="1" data-act="fmtClear" title="서식 지우기">🧽</button>
-      <button class="btn light sm" data-act="autoBracket" title="어려운 단어 자동 &lt;&gt;">🔎 자동</button>
+      <button class="btn ghost sm" data-act="autoBracket" title="어려운 단어 자동 &lt;&gt;">🔎 자동</button>
       <div style="flex:1"></div>
       <span style="font-size:12px;color:#7d8aa0;white-space:nowrap">${paras}문단 · ${chars.toLocaleString()}자</span>
       <button class="btn ghost sm" data-act="expandFontDown" title="글자 작게">가－</button>
@@ -507,7 +517,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v31 (책 정보·지문 편집 탭 분리)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v32 (어휘 삭제 · 버튼 색 수정)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -578,7 +588,7 @@ function passageTab(d) {
         </div>
         ${editorToolbar()}
         <div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;align-items:center">
-          <button class="btn light sm" data-act="autoBracket" title="B2 이상으로 보이는 어려운 단어에 자동으로 &lt;&gt; 표시">🔎 어려운 단어 자동표시</button>
+          <button class="btn ghost sm" data-act="autoBracket" title="B2 이상으로 보이는 어려운 단어에 자동으로 &lt;&gt; 표시">🔎 어려운 단어 자동표시</button>
           <button class="btn ghost sm" data-act="clearBrackets" title="지문의 모든 &lt;&gt; 어휘표시 지우기">⌫ 어휘표시 지우기</button>
         </div>
         <div id="passage-editor" contenteditable="true" spellcheck="false" class="pw-editor" data-ph="여기에 그날 읽을 지문을 붙여넣으세요. 10쪽 이상 아주 길어도 괜찮아요." style="min-height:560px;max-height:72vh;overflow:auto;resize:vertical;line-height:1.7;font-size:15px;background:#fff;border:1px solid #dbe2ec;border-radius:10px;padding:12px 14px;white-space:pre-wrap;outline:none">${markupToEditorHTML(d.passageText)}</div>
@@ -613,8 +623,9 @@ function vocabPanel(d) {
   const rows = d.words.map((w, i) => `
     <div class="qcard" style="margin-top:8px">
       <div class="row" style="align-items:center">
-        <div style="flex:none;min-width:96px;font-family:'Lora',serif;font-weight:700;font-size:14.5px;color:#14243f;word-break:break-word">${esc(w.word)}</div>
-        <input class="inp" style="flex:.7" data-bind="words.${i}.pos" value="${esc(w.pos)}" placeholder="품사">
+        <div style="flex:1;min-width:80px;font-family:'Lora',serif;font-weight:700;font-size:14.5px;color:#14243f;word-break:break-word">${esc(w.word)}</div>
+        <input class="inp" style="flex:.9" data-bind="words.${i}.pos" value="${esc(w.pos)}" placeholder="품사">
+        <button class="btn danger sm" data-act="delWord" data-arg="${esc(w.word)}" title="이 어휘 삭제 (지문에서는 &lt;&gt;만 벗기고 단어는 남겨요)" style="flex:none;padding:6px 9px">✕</button>
       </div>
       <input class="inp" style="margin-top:6px" data-bind="words.${i}.def" value="${esc(w.def)}" placeholder="뜻">
       <input class="inp" style="margin-top:6px" data-bind="words.${i}.ex" value="${esc(w.ex)}" placeholder="예문 (선택)">
