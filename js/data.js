@@ -99,11 +99,11 @@ const DEFAULT_CONTENT = {
         cover: '',
         spine: ''
       },
-      // 지문(그날 읽을 전체 텍스트) — 문단은 빈 줄, 페이지는 --- , 팝오버 단어는 [대괄호].
+      // 지문(그날 읽을 전체 텍스트) — 문단은 빈 줄, 페이지는 --- , 팝오버 단어는 <꺾쇠>.
       // e-북 리더와 지문 복습이 모두 이 하나의 지문에서 나옵니다.
       passage:
         "The sea has always drawn people toward its edge, whispering of places no map has ever named.\n\n" +
-        "For centuries, sailors spoke of a [restless] horizon — a line that seemed to [retreat] with every mile they gained, as if the ocean itself were guarding a secret.\n\n" +
+        "For centuries, sailors spoke of a <restless> horizon — a line that seemed to <retreat> with every mile they gained, as if the ocean itself were guarding a secret.\n\n" +
         "They rowed and sailed and drifted, yet the water kept its silence, offering neither answer nor apology.\n" +
         "---\n" +
         "Young Mira had heard these stories all her life. Her grandfather, a fisherman with salt in his beard and storms in his memory, would trace maps in the sand at low tide.\n\n" +
@@ -171,15 +171,17 @@ function dayPassage(day) {
   return rp.join('\n\n');
 }
 function dayVocab(day) { return (day && day.vocab) || (day && day.review && day.review.words) || {}; }
-function stripBrackets(s) { return (s || '').replace(/\[([^\]]+)\]/g, '$1'); }
-// 본문 강조 마크업: **굵게 강조** / ==형광펜(색)== → HTML (입력은 이미 esc 처리된 문자열이어야 함)
+// 팝오버 단어 표시(<꺾쇠>)를 벗겨 안쪽 단어만 남김. [대괄호]는 교사 자유 표기라 그대로 둠.
+function stripBrackets(s) { return (s || '').replace(/<([^>]+)>/g, '$1'); }
+// 본문 강조 마크업: **굵게** / ==노란 형광펜(핵심문장)== / %%파란 형광펜(문법)%% → HTML (입력은 이미 esc 처리된 문자열이어야 함)
 function renderMarks(escaped, emColor) {
   return String(escaped == null ? '' : escaped)
     .replace(/==([^=]+)==/g, '<mark style="background:#ffe35c;color:#1a1a1a;padding:0 .14em;border-radius:.14em;box-decoration-break:clone;-webkit-box-decoration-break:clone">$1</mark>')
+    .replace(/%%([^%]+)%%/g, '<mark style="background:#bcd7fb;color:#12324f;padding:0 .14em;border-radius:.14em;box-decoration-break:clone;-webkit-box-decoration-break:clone">$1</mark>')
     .replace(/\*\*([^*]+)\*\*/g, `<strong style="color:${emColor || '#e0483d'};font-weight:800">$1</strong>`);
 }
-// 마크업 기호(**, ==) 제거 — 평문으로 보여줄 때
-function stripMarks(s) { return String(s == null ? '' : s).replace(/==([^=]+)==/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1'); }
+// 마크업 기호(**, ==, %%) 제거 — 평문으로 보여줄 때
+function stripMarks(s) { return String(s == null ? '' : s).replace(/==([^=]+)==/g, '$1').replace(/%%([^%]+)%%/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1'); }
 
 /* =========================================================
  * 어려운 단어 자동 [ ] — 대략 A1~B1(흔한 단어)를 빼고, B2 이상으로 보이는 단어에 대괄호
@@ -250,7 +252,7 @@ function isCommonWord(w) {
 }
 // 지문을 토큰으로 분해([단어]·마크업·낱말·기타 보존)
 function _passageTokens(text) {
-  const re = /(\[[^\]]*\])|(\*\*|==)|([A-Za-z]+(?:['’][A-Za-z]+)?)|([^A-Za-z]+)/g;
+  const re = /(<[^>]*>)|(\*\*|==|%%)|([A-Za-z]+(?:['’][A-Za-z]+)?)|([^A-Za-z]+)/g;
   const toks = []; let m;
   while ((m = re.exec(text)) !== null) {
     if (m[1] != null) toks.push({ t: 'br', v: m[1] });
@@ -286,12 +288,12 @@ function autoBracketHard(text) {
     if (proper.has(w.toLowerCase())) return w;       // 반복되는 고유명사
     if (/^[A-Z]/.test(w) && !st) return w;           // 문장 중간 대문자(고유명사)
     if (isCommonWord(w)) return w;                   // 흔한 단어(A1~B1)
-    return '[' + w + ']';
+    return '<' + w + '>';
   }).join('');
 }
-// 지문에서 [단어] 토큰을 순서대로(중복 제거) 뽑기
+// 지문에서 <단어> 토큰을 순서대로(중복 제거) 뽑기
 function scanVocab(text) {
-  const out = []; const re = /\[([^\]]+)\]/g; let m;
+  const out = []; const re = /<([^>]+)>/g; let m;
   while ((m = re.exec(text || '')) !== null) { const w = m[1].trim(); if (w && !out.includes(w)) out.push(w); }
   return out;
 }

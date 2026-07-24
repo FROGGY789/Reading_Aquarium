@@ -97,31 +97,68 @@ const actions = {
   collapsePassage() { syncEditor(); ui.expand = false; render(); },
   expandFontUp() { syncEditor(); ui.expandFont = Math.min(32, ui.expandFont + 2); render(); },
   expandFontDown() { syncEditor(); ui.expandFont = Math.max(12, ui.expandFont - 2); render(); },
-  // 선택 영역 서식: 굵게(토글) / 형광펜(토글) / 서식 지우기
+  // 선택 영역 서식: 굵게 / 문법(파랑) / 핵심문장(노랑+예습보통) / 어휘(<>) / 서식 지우기
   fmtBold() { const el = activeEditorEl(); if (!el) return; el.focus(); document.execCommand('bold'); syncEditor(); },
-  fmtMark() {
+  fmtMark() { applyHighlight('y'); },                 // (구버전 호환) 노란 형광펜
+  fmtGrammar() { applyHighlight('b'); },              // 문법 = 파란 형광펜
+  fmtCore() {                                         // 핵심문장 = 노란 형광펜 + 예습 '보통'에 추가
+    const el = activeEditorEl(); if (!el) return;
+    const sel = window.getSelection();
+    const text = (sel ? sel.toString() : '').replace(/\s+/g, ' ').trim();
+    applyHighlight('y');
+    if (text) {
+      ed.day.core = ed.day.core || [];
+      const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (!ed.day.core.some(c => norm(c.text) === norm(text))) {
+        ed.day.core.push({ text, subject: [], verb: [], bold: [], italic: [], ko: '' });
+      }
+      toast('핵심문장으로 표시했어요 · 예습 "보통"에 추가됨(해석은 예습 탭에서 채우세요).', 'ok');
+    } else {
+      toast('먼저 문장을 드래그해서 선택하세요.', 'err');
+    }
+    render();
+  },
+  fmtVocab() {                                        // 어휘 = 선택 단어를 <>로 감싸 팝오버 지정
     const el = activeEditorEl(); if (!el) return; el.focus();
     const sel = window.getSelection();
-    let inMark = false, n = sel && sel.anchorNode;
-    while (n && n !== el) { if (n.nodeType === 1 && _edMark(n)) { inMark = true; break; } n = n.parentNode; }
-    document.execCommand('styleWithCSS', false, true);
-    document.execCommand('hiliteColor', false, inMark ? 'transparent' : '#ffe35c');
+    const text = (sel ? sel.toString() : '').trim();
+    if (!text) { toast('먼저 단어를 드래그해서 선택하세요.', 'err'); render(); return; }
+    if (/^<.*>$/.test(text)) { toast('이미 어휘로 표시된 것 같아요.', 'err'); return; }
+    document.execCommand('insertText', false, '<' + text + '>');
     syncEditor();
+    refreshWords();
+    toast('어휘로 표시했어요. 오른쪽 목록에서 뜻을 채워주세요.', 'ok');
+    render();
   },
   fmtClear() { const el = activeEditorEl(); if (!el) return; el.focus(); document.execCommand('removeFormat'); syncEditor(); },
-  // 어려운(B2+) 단어 자동 [ ] / 대괄호 모두 지우기
+  // 어려운(B2+) 단어 자동 <> / <> 모두 지우기
   autoBracket() {
     syncEditor();
     ed.day.passageText = autoBracketHard(ed.day.passageText || '');
-    toast("어려운 단어에 [ ]를 자동 표시했어요. 이름 등 잘못 표시된 건 지우고, 아래 '🔄 지문에서 [단어] 불러오기'로 뜻을 채우세요.", 'ok');
+    refreshWords();
+    toast("어려운 단어에 어휘(<>) 표시를 자동으로 했어요. 이름 등 잘못된 건 지우고, 오른쪽 목록에서 뜻을 채우세요.", 'ok');
     render();
   },
   clearBrackets() {
     syncEditor();
     ed.day.passageText = stripBrackets(ed.day.passageText || '');
-    toast('지문의 [ ] 표시를 모두 지웠어요.', 'ok');
+    refreshWords();
+    toast('지문의 어휘(<>) 표시를 모두 지웠어요.', 'ok');
     render();
   },
+  // 팝오버 어휘: 엑셀(CSV) 내려받기 / 올리기
+  exportVocab() {
+    const rows = [['word', 'pos', 'def', 'ex']].concat((ed.day.words || []).map(w => [w.word, w.pos || '', w.def || '', w.ex || '']));
+    const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const base = ((ed.day.book && ed.day.book.chapter) || ed.day.label || 'vocab').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'vocab';
+    a.href = url; a.download = base + '-어휘.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
+  },
+  importVocabClick() { const i = document.getElementById('vocab-import'); if (i) { i.value = ''; i.click(); } },
   selectDay(i) { commit(); openDay(Number(i)); toast(''); render(); },
   addDay() {
     commit();
@@ -174,7 +211,7 @@ const actions = {
       return row || { word: w, pos: '', def: '', ex: '' };
     });
     ed.day.words = kept;
-    toast(kept.length ? `[단어] ${kept.length}개를 불러왔어요. 뜻을 채워주세요.` : '지문에 [대괄호] 단어가 없어요.', 'ok');
+    toast(kept.length ? `어휘 ${kept.length}개를 불러왔어요. 뜻을 채워주세요.` : '지문에 어휘(<>) 표시가 없어요.', 'ok');
     render();
   },
   addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', explain: '' }); render(); },
@@ -305,7 +342,7 @@ function render() {
 }
 
 /* ---- WYSIWYG 지문 편집(contenteditable) ↔ 저장용 마크업(**굵게** / ==형광펜==) ---- */
-// 저장 마크업 → 편집기에 보일 HTML(줄바꿈=div, **→<b>, ==→<mark>, [단어]는 글자 그대로)
+// 저장 마크업 → 편집기에 보일 HTML(줄바꿈=div, **→<b>, ==→노랑<mark>, %%→파랑<mark>, <단어>는 글자 그대로)
 function markupToEditorHTML(text) {
   text = String(text == null ? '' : text);
   if (!text) return '';
@@ -313,6 +350,7 @@ function markupToEditorHTML(text) {
     if (line === '') return '<div><br></div>';
     const h = esc(line)
       .replace(/==([^=]+)==/g, '<mark style="background:#ffe35c;color:#1a1a1a">$1</mark>')
+      .replace(/%%([^%]+)%%/g, '<mark style="background:#bcd7fb;color:#12324f">$1</mark>')
       .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
     return '<div>' + h + '</div>';
   }).join('');
@@ -321,44 +359,121 @@ function _edBold(el) {
   const t = el.tagName; if (t === 'B' || t === 'STRONG') return true;
   const fw = (el.style && el.style.fontWeight) || ''; return /^(bold|[6-9]00)$/.test(fw);
 }
-function _edMark(el) {
-  if (el.tagName === 'MARK') return true;
+// 형광펜 종류: 'y'(노랑=핵심문장) / 'b'(파랑=문법) / null
+function _edMarkKind(el) {
   const bg = (el.style && el.style.backgroundColor) || '';
-  return !!bg && bg !== 'transparent' && !/rgba?\(0,\s*0,\s*0,\s*0\)/.test(bg);
+  const has = !!bg && bg !== 'transparent' && !/rgba?\(0,\s*0,\s*0,\s*0\)/.test(bg);
+  if (!has) return el.tagName === 'MARK' ? 'y' : null;   // 색 없는 <mark>는 노랑 취급
+  const m = bg.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (m) { const r = +m[1], g = +m[2], b = +m[3]; if (b > r + 20 && b >= 150) return 'b'; }
+  return 'y';
 }
-// 편집기 DOM → 저장용 마크업 문자열
+// 선택 영역에 형광펜이 걸려 있는지(끄기 판별용)
+function _edMark(el) { return !!_edMarkKind(el); }
+// 편집기 DOM → 저장용 마크업 문자열 (==노랑== / %%파랑%% / **굵게**)
 function serializeEditor(root) {
   const chars = [];
-  (function walk(node, b, m) {
+  (function walk(node, b, my, mb) {
     node.childNodes.forEach(ch => {
-      if (ch.nodeType === 3) { for (const c of ch.nodeValue) chars.push({ c, b, m }); return; }
+      if (ch.nodeType === 3) { for (const c of ch.nodeValue) chars.push({ c, b, my, mb }); return; }
       if (ch.nodeType !== 1) return;
       const tag = ch.tagName;
       if (tag === 'BR') { chars.push({ br: true }); return; }
       const nb = b || _edBold(ch);
-      const nm = m || _edMark(ch);
+      const kind = _edMarkKind(ch);
+      const nmy = my || kind === 'y';
+      const nmb = mb || kind === 'b';
       if (/^(DIV|P|LI|H[1-6]|SECTION)$/.test(tag) && chars.length && !chars[chars.length - 1].br) chars.push({ br: true });
-      walk(ch, nb, nm);
+      walk(ch, nb, nmy, nmb);
     });
-  })(root, false, false);
-  let out = '', b = false, m = false;
-  const closeB = () => { if (b) { out += '**'; b = false; } };
-  const closeM = () => { if (m) { out += '=='; m = false; } };
+  })(root, false, false, false);
+  let out = '';
+  const cur = { my: false, mb: false, b: false };
+  function apply(t) {
+    // 하나라도 닫혀야 하면 모두 닫고(중첩 겹침 방지) 필요한 것만 다시 연다
+    if ((cur.b && !t.b) || (cur.mb && !t.mb) || (cur.my && !t.my)) {
+      if (cur.b) out += '**';
+      if (cur.mb) out += '%%';
+      if (cur.my) out += '==';
+      cur.my = cur.mb = cur.b = false;
+    }
+    if (!cur.my && t.my) { out += '=='; cur.my = true; }
+    if (!cur.mb && t.mb) { out += '%%'; cur.mb = true; }
+    if (!cur.b && t.b) { out += '**'; cur.b = true; }
+  }
   for (const s of chars) {
-    if (s.br) { closeB(); closeM(); out += '\n'; continue; }
-    if (s.m && !m) { out += '=='; m = true; }
-    else if (!s.m && m) { closeB(); out += '=='; m = false; }
-    if (s.b && !b) { out += '**'; b = true; }
-    else if (!s.b && b) { out += '**'; b = false; }
+    if (s.br) { apply({ my: false, mb: false, b: false }); out += '\n'; continue; }
+    apply({ my: !!s.my, mb: !!s.mb, b: !!s.b });
     out += s.c;
   }
-  closeB(); closeM();
-  return out.replace(/\*\*(\s*)\*\*/g, '$1').replace(/==(\s*)==/g, '$1').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+  apply({ my: false, mb: false, b: false });
+  return out.replace(/\*\*(\s*)\*\*/g, '$1').replace(/==(\s*)==/g, '$1').replace(/%%(\s*)%%/g, '$1').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
 }
 // 화면에 있는 지문 편집기 요소(메인/오버레이)
 function activeEditorEl() { return document.getElementById(ui.expand ? 'pv-editor' : 'passage-editor'); }
 // 편집기 내용을 편집 모델에 반영(리렌더 없이)
 function syncEditor() { const el = activeEditorEl(); if (el && ed) ed.day.passageText = serializeEditor(el); }
+// 선택 영역에 형광펜 적용/해제 — kind 'y'(노랑=핵심문장) / 'b'(파랑=문법). 같은 색이면 끔.
+function applyHighlight(kind) {
+  const el = activeEditorEl(); if (!el) return; el.focus();
+  const sel = window.getSelection();
+  let cur = null, n = sel && sel.anchorNode;
+  while (n && n !== el) { if (n.nodeType === 1) { const k = _edMarkKind(n); if (k) { cur = k; break; } } n = n.parentNode; }
+  document.execCommand('styleWithCSS', false, true);
+  const color = kind === 'b' ? '#bcd7fb' : '#ffe35c';
+  document.execCommand('hiliteColor', false, cur === kind ? 'transparent' : color);
+  syncEditor();
+}
+// 지문의 <단어>를 스캔해 팝오버 어휘 목록 갱신(기존 뜻 유지)
+function refreshWords() {
+  if (!ed) return;
+  const found = scanVocab(ed.day.passageText || '');
+  ed.day.words = found.map(w => (ed.day.words || []).find(x => x.word === w) || { word: w, pos: '', def: '', ex: '' });
+}
+// CSV 한 칸 이스케이프
+function csvCell(v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+// 아주 단순한 CSV 파서(따옴표·쉼표·줄바꿈 처리)
+function parseCSV(text) {
+  text = String(text || '').replace(/^﻿/, '');
+  const rows = []; let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\r') { /* skip */ }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(x => (x || '').trim() !== ''));
+}
+// 업로드한 CSV로 팝오버 어휘 뜻 채우기(word 기준 매칭)
+function importVocabFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const rows = parseCSV(String(reader.result || ''));
+      if (!rows.length) { toast('빈 파일이에요.', 'err'); render(); return; }
+      const head = rows[0].map(h => (h || '').trim().toLowerCase());
+      const iw = head.indexOf('word'), ip = head.indexOf('pos'), idf = head.indexOf('def'), ix = head.indexOf('ex');
+      const hasHeader = iw >= 0;
+      const cW = hasHeader ? iw : 0, cP = hasHeader ? ip : 1, cD = hasHeader ? idf : 2, cE = hasHeader ? ix : 3;
+      const map = {};
+      for (let i = hasHeader ? 1 : 0; i < rows.length; i++) {
+        const r = rows[i]; const w = (r[cW] || '').trim(); if (!w) continue;
+        map[w.toLowerCase()] = { pos: (cP >= 0 && r[cP] || '').trim(), def: (cD >= 0 && r[cD] || '').trim(), ex: (cE >= 0 && r[cE] || '').trim() };
+      }
+      let filled = 0;
+      (ed.day.words || []).forEach(w => { const m = map[(w.word || '').toLowerCase()]; if (m) { w.pos = m.pos; w.def = m.def; w.ex = m.ex; filled++; } });
+      toast(`엑셀에서 ${filled}개 단어의 뜻을 불러왔어요.`, filled ? 'ok' : 'err');
+      render();
+    } catch (e) { toast('파일을 읽지 못했어요: ' + e.message, 'err'); render(); }
+  };
+  reader.readAsText(file, 'utf-8');
+}
 
 // 지문 전체화면 편집 오버레이(장편 검토용)
 function passageEditorOverlay(d) {
@@ -367,12 +482,13 @@ function passageEditorOverlay(d) {
   return `<div style="position:fixed;inset:0;z-index:1000;background:#f7f9fc;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#fff;border-bottom:1px solid #e2e9f2;flex:none">
       <div style="font-size:15px;font-weight:800;color:#14243f;white-space:nowrap">📖 지문 크게 편집${d.label ? ' · ' + esc(d.label) : ''}</div>
-      <div style="font-size:12px;color:#7d8aa0">문단=빈 줄 · 페이지=<span class="mono">---</span> · 팝오버=<span class="mono">[단어]</span></div>
-      <button class="btn ghost sm" data-fmt="1" data-act="fmtBold" title="선택한 부분 굵게 (Ctrl+B)"><b>B</b> 강조</button>
-      <button class="btn ghost sm" data-fmt="1" data-act="fmtMark" title="선택한 부분 형광펜">🖍 형광펜</button>
-      <button class="btn ghost sm" data-fmt="1" data-act="fmtClear" title="선택한 부분 서식 지우기">🧽 서식지우기</button>
-      <button class="btn primary sm" data-act="autoBracket" title="어려운(B2+) 단어 자동 [ ]">🔎 자동 [ ]</button>
-      <button class="btn ghost sm" data-act="clearBrackets" title="[ ] 모두 지우기">⌫ [ ]</button>
+      <div style="font-size:12px;color:#7d8aa0">문단=빈 줄 · 페이지=<span class="mono">---</span> · 어휘=<span class="mono">&lt;단어&gt;</span></div>
+      <button class="btn ghost sm" data-fmt="1" data-act="fmtBold" title="선택 부분 굵게 (Ctrl+B)"><b>B</b></button>
+      <button class="btn ghost sm" data-fmt="1" data-act="fmtVocab" title="선택 단어 어휘(&lt;&gt;)">📌 어휘</button>
+      <button class="btn ghost sm" data-fmt="1" data-act="fmtGrammar" title="문법(파란 형광펜)">📐 문법</button>
+      <button class="btn ghost sm" data-fmt="1" data-act="fmtCore" title="핵심문장(노란 형광펜)+예습 보통">⭐ 핵심문장</button>
+      <button class="btn ghost sm" data-fmt="1" data-act="fmtClear" title="서식 지우기">🧽</button>
+      <button class="btn light sm" data-act="autoBracket" title="어려운 단어 자동 &lt;&gt;">🔎 자동</button>
       <div style="flex:1"></div>
       <span style="font-size:12px;color:#7d8aa0;white-space:nowrap">${paras}문단 · ${chars.toLocaleString()}자</span>
       <button class="btn ghost sm" data-act="expandFontDown" title="글자 작게">가－</button>
@@ -389,7 +505,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v29 (챕터 일정 편집기)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v30 (지문 편집기 개편·어휘/문법/핵심문장)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -403,7 +519,6 @@ function passageTab(d) {
   const cover = (d.book.cover || '').trim();
   const spine = (d.book.spine || '').trim();
   return `<div class="cols">
-    <div>
       <div class="card">
         <h2>기본 정보 & 책</h2>
         <div class="label">여는 날짜 <span style="font-weight:400;color:#b8c2d2">(이 날짜부터 학생 홈에 노출 · 같은 날짜에 여러 챕터를 둬도 돼요)</span> / 챕터 이름</div>
@@ -443,54 +558,74 @@ function passageTab(d) {
           <div style="font-size:12px;color:#7d8aa0;line-height:1.7">← 표지 / 책등 →<br>서가에는 책등이 세워져 보이고,<br>탭하면 표지와 함께 읽기가 열려요.</div>
         </div>
       </div>
-    </div>
+  </div>
 
-    <div>
+  <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-top:2px">
+    <div style="flex:2;min-width:340px">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
           <h2 style="margin:0">지문 (그날 읽을 전체 텍스트)</h2>
           <button class="btn primary sm" data-act="expandPassage" title="전체화면으로 크게 편집">⤢ 크게 편집</button>
         </div>
-        <div class="hint" style="margin-top:10px">
-          · 문단은 <b>빈 줄</b>로 구분<br>
-          · e-북 페이지는 <span class="mono">---</span> 를 한 줄에 넣어 구분<br>
-          · 팝오버로 뜻을 보여줄 단어는 <span class="mono">[대괄호]</span>로 감싸기 (예: a <span class="mono">[restless]</span> horizon)<br>
-          · <b>강조/색</b>: 굵게는 <span class="mono">**이렇게**</span>, 형광펜은 <span class="mono">==이렇게==</span> — 발표·리더·복습에 그대로 나와요<br>
-          · <b>🔎 어려운 단어 자동 [ ]</b>: 대략 B2 이상으로 보이는 단어에 자동으로 대괄호를 쳐요(근사치 — 이름 등은 확인 후 지우세요)<br>
-          이 지문 하나에서 <b>e-북 리더</b>와 <b>지문 복습(팝오버)</b>이 모두 나와요.
+        <div class="hint" style="margin-top:8px">
+          문단=<b>빈 줄</b> · e-북 페이지=<span class="mono">---</span> 한 줄 · 아래에서 <b>드래그 선택</b> 후 버튼을 누르세요.<br>
+          <b>📌 어휘</b>=팝오버 단어(<span class="mono">&lt;단어&gt;</span>) · <b>📐 문법</b>=<mark style="background:#bcd7fb">파란 표시</mark> · <b>⭐ 핵심문장</b>=<mark style="background:#ffe35c">노란 표시</mark>+예습'보통' · <span class="mono">[대괄호]</span>는 자유롭게 쓰세요(팝오버 아님).
         </div>
-        <div style="display:flex;gap:7px;margin:10px 0 8px;flex-wrap:wrap;align-items:center">
-          <button class="btn ghost sm" data-fmt="1" data-act="fmtBold" title="선택한 부분 굵게 (Ctrl+B)"><b>B</b> 강조</button>
-          <button class="btn ghost sm" data-fmt="1" data-act="fmtMark" title="선택한 부분 형광펜">🖍 형광펜</button>
-          <button class="btn ghost sm" data-fmt="1" data-act="fmtClear" title="선택한 부분 서식 지우기">🧽 서식지우기</button>
-          <span class="hint" style="margin:0">← <b>드래그 선택</b> 후 누르기</span>
-          <span style="flex:1"></span>
-          <button class="btn primary sm" data-act="autoBracket" title="B2 이상으로 보이는 어려운 단어에 자동으로 [ ] 표시">🔎 어려운 단어 자동 [ ]</button>
-          <button class="btn ghost sm" data-act="clearBrackets" title="지문의 모든 [ ]를 지우기">⌫ [ ] 지우기</button>
+        ${editorToolbar()}
+        <div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;align-items:center">
+          <button class="btn light sm" data-act="autoBracket" title="B2 이상으로 보이는 어려운 단어에 자동으로 &lt;&gt; 표시">🔎 어려운 단어 자동표시</button>
+          <button class="btn ghost sm" data-act="clearBrackets" title="지문의 모든 &lt;&gt; 어휘표시 지우기">⌫ 어휘표시 지우기</button>
         </div>
-        <div id="passage-editor" contenteditable="true" spellcheck="false" class="pw-editor" data-ph="여기에 그날 읽을 지문을 붙여넣으세요. 10쪽 이상 아주 길어도 괜찮아요 — 굵게는 드래그 후 Ctrl+B 또는 'B 강조'." style="min-height:560px;max-height:72vh;overflow:auto;resize:vertical;line-height:1.7;font-size:15px;background:#fff;border:1px solid #dbe2ec;border-radius:10px;padding:12px 14px;white-space:pre-wrap;outline:none">${markupToEditorHTML(d.passageText)}</div>
+        <div id="passage-editor" contenteditable="true" spellcheck="false" class="pw-editor" data-ph="여기에 그날 읽을 지문을 붙여넣으세요. 10쪽 이상 아주 길어도 괜찮아요." style="min-height:560px;max-height:72vh;overflow:auto;resize:vertical;line-height:1.7;font-size:15px;background:#fff;border:1px solid #dbe2ec;border-radius:10px;padding:12px 14px;white-space:pre-wrap;outline:none">${markupToEditorHTML(d.passageText)}</div>
         ${(() => {
           const words = (d.passageText.match(/[A-Za-z][A-Za-z'’]*/g) || []).length;
           const ebookPages = (typeof passageToPagesRaw === 'function') ? passageToPagesRaw(d.passageText).length : 0;
           const estPages = Math.max(1, Math.round(words / 280));
           return `<div style="margin-top:8px;font-size:12px;color:#7d8aa0">약 <b style="color:#2f74e6">${words.toLocaleString()}단어</b> · 원서 기준 <b style="color:#2f74e6">약 ${estPages}쪽</b> 분량${ebookPages > 1 ? ` · e-북 <b>${ebookPages}페이지</b>(<span class="mono">---</span>로 나눔)` : ''}</div>`;
         })()}
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
-          <div class="cathead" style="margin:0"><div class="name">팝오버 어휘 <span class="cnt">${d.words.length}개</span></div></div>
-          <button class="btn ghost sm" data-act="syncWords">🔄 지문에서 [단어] 불러오기</button>
-        </div>
-        <div class="hint" style="margin-top:6px">지문에 <span class="mono">[단어]</span>를 넣은 뒤 위 버튼을 누르면 아래 목록이 채워져요. 각 단어의 뜻·품사·예문을 한 번만 적어두면 지문 복습에서 팝오버로 떠요.</div>
-        ${d.words.map((w, i) => `
-          <div class="qcard">
-            <div class="row" style="align-items:center">
-              <div style="flex:none;min-width:110px;font-family:'Lora',serif;font-weight:700;font-size:15px;color:#14243f">${esc(w.word)}</div>
-              <input class="inp" style="flex:.7" data-bind="words.${i}.pos" value="${esc(w.pos)}" placeholder="품사 (형용사)">
-            </div>
-            <input class="inp" style="margin-top:7px" data-bind="words.${i}.def" value="${esc(w.def)}" placeholder="뜻">
-            <input class="inp" style="margin-top:7px" data-bind="words.${i}.ex" value="${esc(w.ex)}" placeholder="예문 (선택)">
-          </div>`).join('') || '<div class="empty">아직 팝오버 단어가 없어요. 지문에 [대괄호]를 넣고 위 버튼을 누르세요.</div>'}
       </div>
     </div>
+
+    <div style="flex:1;min-width:300px;max-width:460px">
+      ${vocabPanel(d)}
+    </div>
+  </div>`;
+}
+
+// 지문 편집기 서식 툴바(메인·오버레이 공용)
+function editorToolbar() {
+  return `<div style="display:flex;gap:7px;margin:10px 0 4px;flex-wrap:wrap;align-items:center">
+    <button class="btn ghost sm" data-fmt="1" data-act="fmtBold" title="선택 부분 굵게 (Ctrl+B)"><b>B</b> 강조</button>
+    <button class="btn ghost sm" data-fmt="1" data-act="fmtVocab" title="선택한 단어를 어휘(팝오버)로 — <>로 감쌈">📌 어휘</button>
+    <button class="btn ghost sm" data-fmt="1" data-act="fmtGrammar" title="선택 부분 문법 표시(파란 형광펜)">📐 문법</button>
+    <button class="btn ghost sm" data-fmt="1" data-act="fmtCore" title="선택 문장을 핵심문장으로(노란 형광펜) — 예습 '보통'에 추가">⭐ 핵심문장</button>
+    <button class="btn ghost sm" data-fmt="1" data-act="fmtClear" title="선택 부분 형광펜·굵게 지우기">🧽 지우기</button>
+  </div>`;
+}
+
+// 팝오버 어휘 목록 패널(오른쪽) — 엑셀 내려받기/올리기 포함
+function vocabPanel(d) {
+  const rows = d.words.map((w, i) => `
+    <div class="qcard" style="margin-top:8px">
+      <div class="row" style="align-items:center">
+        <div style="flex:none;min-width:96px;font-family:'Lora',serif;font-weight:700;font-size:14.5px;color:#14243f;word-break:break-word">${esc(w.word)}</div>
+        <input class="inp" style="flex:.7" data-bind="words.${i}.pos" value="${esc(w.pos)}" placeholder="품사">
+      </div>
+      <input class="inp" style="margin-top:6px" data-bind="words.${i}.def" value="${esc(w.def)}" placeholder="뜻">
+      <input class="inp" style="margin-top:6px" data-bind="words.${i}.ex" value="${esc(w.ex)}" placeholder="예문 (선택)">
+    </div>`).join('') || '<div class="empty">아직 어휘가 없어요. 지문에서 단어를 선택하고 <b>📌 어휘</b>를 누르세요.</div>';
+  return `<div class="card" style="position:sticky;top:12px;max-height:calc(100vh - 40px);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <div class="cathead" style="margin:0"><div class="name">팝오버 어휘 <span class="cnt">${d.words.length}개</span></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn ghost sm" data-act="syncWords" title="지문의 <단어>를 목록으로 불러오기">🔄</button>
+        <button class="btn ghost sm" data-act="exportVocab" title="엑셀(CSV)로 내려받기">⬇ 엑셀</button>
+        <button class="btn ghost sm" data-act="importVocabClick" title="엑셀(CSV) 올려서 뜻 채우기">⬆ 올리기</button>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:6px">지문에서 단어 드래그 → <b>📌 어휘</b> → 여기에 떠요. 뜻은 직접 적거나, <b>⬇엑셀</b>로 받아 채운 뒤 <b>⬆올리기</b> 하세요(단어 기준 자동 매칭).</div>
+    <input type="file" id="vocab-import" accept=".csv,text/csv" style="display:none">
+    <div style="overflow:auto;margin-top:4px;flex:1;min-height:120px">${rows}</div>
   </div>`;
 }
 
@@ -500,7 +635,7 @@ function previewTab(d) {
     <h2>지문 예습 3단계 안내</h2>
     <div class="hint" style="margin:0">
       학생은 예습할 때 난이도를 골라요. 아래에서 각 단계에 쓸 내용을 준비하세요.<br>
-      🟢 <b>살살</b> — <b>지문의 [단어] 어휘 카드</b>로 자동 구성돼요 (지문 탭에서 단어 뜻만 채우면 끝).<br>
+      🟢 <b>살살</b> — <b>지문의 어휘(&lt;단어&gt;) 카드</b>로 자동 구성돼요 (지문 탭에서 단어 뜻만 채우면 끝).<br>
       🟡 <b>보통</b> — 아래 <b>핵심 문장</b>을 읽어요.<br>
       🔴 <b>버닝</b> — 지문 전체를 읽고 아래 <b>이해도 확인</b> 문항을 풀어요.
     </div>
@@ -743,6 +878,7 @@ rootEl.addEventListener('paste', e => {
 });
 rootEl.addEventListener('change', e => {
   const el = e.target;
+  if (el.id === 'vocab-import') { if (el.files && el.files[0]) importVocabFile(el.files[0]); return; }   // 엑셀(CSV) 업로드
   if (el.dataset.sched != null) { applySchedField(el); resortKeepSel(); render(); return; }   // 일정 탭: 확정 시 재정렬+렌더
   const bind = el.dataset.bind;
   if (!bind) return;

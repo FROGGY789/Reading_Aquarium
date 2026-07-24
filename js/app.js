@@ -484,7 +484,7 @@ function nextDayPopoverCards() {
   const passage = dayPassage(nd);
   const v = dayVocab(nd);
   const seen = {}, out = [];
-  const re = /\[([^\]]+)\]/g; let m;
+  const re = /<([^>]+)>/g; let m;
   while ((m = re.exec(passage))) {
     const w = (m[1] || '').trim();
     const key = w.toLowerCase();
@@ -2059,11 +2059,11 @@ function reviewHTML() {
   const animate = _lastRevIndex !== i; _lastRevIndex = i;   // 문장 바뀔 때만 페이드
 
   const wordStyle = active => `background:${active ? '#2f74e6' : '#e7f0fd'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #2f74e6;border-radius:3px;padding:0 3px;cursor:pointer`;
-  const sentHTML = renderMarks(esc(sentence).replace(/\[([^\]]+)\]/g, (m, w) =>
+  const sentHTML = renderMarks(esc(sentence).replace(/&lt;([^&]+?)&gt;/g, (m, w) =>
     words[w]
       ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wordStyle(state.pop === w)}">${esc(w)}</span>`
-      : esc(w)));
-  const pop = state.pop && words[state.pop] && sentence.includes('[' + state.pop + ']')
+      : w));
+  const pop = state.pop && words[state.pop] && sentence.includes('<' + state.pop + '>')
     ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `
     <div style="font-family:'IBM Plex Sans KR',sans-serif;background:#14243f;color:#fff;border-radius:14px;padding:13px 15px;margin:18px 0 0;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);text-align:left">
@@ -2271,7 +2271,7 @@ function readerHTML() {
       ${pop.ex ? `<div style="font-size:12px;color:#bda880;margin-top:5px;font-style:italic;font-family:'Lora',serif">${esc(pop.ex)}</div>` : ''}
     </div>` : '';
   const renderPara = p => renderMarks(burning
-    ? esc(p).replace(/\[([^\]]+)\]/g, (m, w) => words[w] ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wStyle(state.pop === w)}">${esc(w)}</span>` : esc(w))
+    ? esc(p).replace(/&lt;([^&]+?)&gt;/g, (m, w) => words[w] ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wStyle(state.pop === w)}">${esc(w)}</span>` : w)
     : esc(p));
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#f5f0e6">
     <div style="padding:48px 22px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e7dfce">
