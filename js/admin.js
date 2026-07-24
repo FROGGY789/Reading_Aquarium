@@ -612,7 +612,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v34 (어휘 표제어·자동 원형화)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v35 (표제어 바로 편집)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -721,7 +721,7 @@ function vocabPanel(d) {
   const rows = d.words.map((w, i) => `
     <div class="qcard" style="margin-top:8px">
       <div class="row" style="align-items:center">
-        <input class="inp" style="flex:1;min-width:80px;font-family:'Lora',serif;font-weight:700" data-bind="words.${i}.head" value="${esc(w.head || '')}" placeholder="${esc(w.word)}" title="팝오버·카드에 뜰 외울 형태(표제어) — 비우면 지문 단어 그대로 (예: have sth to oneself)">
+        <input class="inp" style="flex:1;min-width:80px;font-family:'Lora',serif;font-weight:700" data-bind="words.${i}.head" value="${esc(w.head || w.word)}" placeholder="외울 형태" title="팝오버·카드에 뜰 외울 형태(표제어) — 여기서 스펠링을 바로 고치세요. 비우면 지문 단어 그대로 (예: have sth to oneself)">
         <input class="inp" style="flex:.55" data-bind="words.${i}.pos" value="${esc(w.pos)}" placeholder="품사">
         <button class="btn danger sm" data-act="delWord" data-arg="${esc(w.word)}" title="이 어휘 삭제 (지문에서는 &lt;&gt;만 벗기고 단어는 남겨요)" style="flex:none;padding:6px 9px">✕</button>
       </div>
