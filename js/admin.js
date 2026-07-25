@@ -629,7 +629,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v39 (상단틈·마크다운·PPT여백행간·학습기록)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v40 (핵심문장 좌측 플로팅 툴바 · O/X 문제)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -785,6 +785,18 @@ function previewTab(d) {
 function coreEditor(d) {
   const core = d.core || [];
   const modeBtn = (m, label, color) => `<button class="btn sm" data-act="coreMode" data-arg="${m}" style="background:${ui.coreMode === m ? color : '#eef2f8'};color:${ui.coreMode === m ? '#fff' : '#4a5a72'};border:1px solid ${ui.coreMode === m ? color : '#e2e9f2'}">${label}</button>`;
+  // 좌측 플로팅 세로 버튼(마우스 동선 최소화)
+  const modeBtnV = (m, icon, label, color) => `<button data-act="coreMode" data-arg="${m}" title="${label}" style="display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;padding:7px 2px;border-radius:10px;cursor:pointer;background:${ui.coreMode === m ? color : '#eef2f8'};color:${ui.coreMode === m ? '#fff' : '#4a5a72'};border:1px solid ${ui.coreMode === m ? color : '#e2e9f2'};font-family:inherit"><span style="font-size:15px;line-height:1">${icon}</span><span style="font-size:9.5px;font-weight:700">${label}</span></button>`;
+  const floatBar = `<div style="position:fixed;left:max(8px,calc(50% - 664px));top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:6px;background:#fff;border:1.5px solid #cfe0f5;border-radius:14px;padding:9px 8px;box-shadow:0 12px 34px -10px rgba(20,50,90,.55);width:66px">
+    <div style="font-size:9.5px;font-weight:800;color:#9aa8bd;text-align:center;letter-spacing:.02em">표시</div>
+    ${modeBtnV('subject', '🔵', '주어', '#2f74e6')}
+    ${modeBtnV('verb', '🟢', '동사', '#2fa36b')}
+    ${modeBtnV('bold', 'B', '볼드', '#14243f')}
+    ${modeBtnV('italic', 'I', '이탤릭', '#8a5fd6')}
+    ${modeBtnV('clear', '🧽', '지우개', '#b23a32')}
+    <div style="height:1px;background:#eef2f8;margin:1px 0"></div>
+    <button data-act="coreResetAll" title="모든 문장 표시 초기화" style="width:100%;padding:6px 2px;border-radius:10px;cursor:pointer;background:#fff;color:#8a97a8;border:1px solid #e2e9f2;font-family:inherit;font-size:9.5px;font-weight:700">↺ 전체</button>
+  </div>`;
   const chip = (si, wi, w, c) => {
     const isS = (c.subject || []).includes(wi), isV = (c.verb || []).includes(wi), isB = (c.bold || []).includes(wi), isI = (c.italic || []).includes(wi);
     let bg = '#fff', bd = '#e2e9f2';
@@ -816,17 +828,8 @@ function coreEditor(d) {
     </div>` : '';
   return `<div class="card">
     <h2>🟡 보통 · 핵심 문장 <span style="font-size:12px;color:#7d8aa0;font-weight:600">${core.length}문장</span></h2>
-    <div class="hint"><b>모드를 고르고 단어를 클릭</b>해 표시하세요. 🔵주어 · 🟢동사(예습 '보통' 채점에 사용) · 볼드·이탤릭(강조). 해석은 '문장 작문'에 쓰여요. 비워두면 지문 앞 문장 6개가 자동으로 쓰여요.</div>
-    <div style="position:sticky;top:64px;z-index:8;display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0;background:#fff;padding:8px;border:1.5px solid #cfe0f5;border-radius:12px;box-shadow:0 8px 20px -8px rgba(20,50,90,.45)">
-      <span style="font-size:11px;font-weight:700;color:#9aa8bd;margin-right:2px">표시</span>
-      ${modeBtn('subject', '🔵 주어', '#2f74e6')}
-      ${modeBtn('verb', '🟢 동사', '#2fa36b')}
-      ${modeBtn('bold', '볼드', '#14243f')}
-      ${modeBtn('italic', '이탤릭', '#8a5fd6')}
-      ${modeBtn('clear', '🧽 지우개', '#b23a32')}
-      <span style="flex:1"></span>
-      <button class="btn ghost sm" data-act="coreResetAll" title="모든 문장의 표시 초기화">↺ 전체 초기화</button>
-    </div>
+    <div class="hint"><b>왼쪽에 떠 있는 툴바</b>에서 모드를 고르고 <b>단어를 클릭</b>해 표시하세요. 🔵주어 · 🟢동사(예습 '보통' 채점에 사용) · 볼드·이탤릭(강조). 해석은 '문장 작문'에 쓰여요. 비워두면 지문 앞 문장 6개가 자동으로 쓰여요.</div>
+    ${floatBar}
     ${cards}
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn ghost sm" data-act="coreTogglePicker">${ui.corePickOpen ? '▲ 닫기' : '📄 지문에서 문장 고르기'}</button>
@@ -874,6 +877,7 @@ function qcat(cat) {
         <span style="font-size:11.5px;font-weight:700;color:#7d8aa0">형식</span>
         <select class="inp" style="width:auto;padding:6px 8px" data-bind="${base}.type" data-rerender="1">
           <option value="mc" ${q.type === 'mc' ? 'selected' : ''}>A~D 고르기(객관식)</option>
+          <option value="ox" ${q.type === 'ox' ? 'selected' : ''}>O/X (참·거짓)</option>
           <option value="ab" ${q.type === 'ab' ? 'selected' : ''}>[A/B] 고르기</option>
           <option value="fix" ${q.type === 'fix' ? 'selected' : ''}>오류 고치기</option>
           <option value="scramble" ${q.type === 'scramble' ? 'selected' : ''}>Scramble(순서 맞추기)</option>
@@ -886,6 +890,12 @@ function qcat(cat) {
       ${q.type === 'scramble' ? '' : `<input class="inp" style="margin-top:7px" data-bind="${base}.sentence" data-rerender="1" value="${esc(q.sentence)}" placeholder="${q.type === 'ab' ? '문장에 [정답/오답] 넣기 — 예: She [was/were] happy.' : q.type === 'fix' ? '틀린 부분이 든 문장 — 예: She go to school.' : '예문/제시 문장 (선택)'}">`}
       ${q.type === 'mc'
         ? `<div class="label" style="margin-bottom:2px">보기 (동그라미로 정답 선택, 2개 이상)</div>${opts}`
+        : q.type === 'ox'
+          ? `<div class="label" style="margin:6px 0 2px">위 문장은 맞나요, 틀리나요? (문제 칸에 참/거짓을 판단할 문장을 쓰세요)</div>
+             <div class="opt" style="gap:16px">
+               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ox-${cat}-${i}" value="0" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === 0 ? 'checked' : ''}> O (맞음·참)</label>
+               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ox-${cat}-${i}" value="1" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === 1 ? 'checked' : ''}> X (틀림·거짓)</label>
+             </div>`
         : q.type === 'ab'
           ? `<div class="label" style="margin:6px 0 2px">둘 중 어느 쪽이 정답인가요?</div>
              <div class="opt" style="gap:16px">

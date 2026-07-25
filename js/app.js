@@ -858,7 +858,7 @@ function currentQs() { return state.quizTask ? dayQuiz(state.quizTask) : []; }
 function currentQ() { return currentQs()[state.quizQi] || null; }
 function isRight(q, i) {
   if (!q) return false;
-  if (q.type === 'mc' || q.type === 'ab') return state.picks[i] === q.answer;
+  if (q.type === 'mc' || q.type === 'ab' || q.type === 'ox') return state.picks[i] === q.answer;
   if (q.type === 'fix') {
     const v = NORM(state.inputs[i]);
     return state.picks[i] === q.wrong && !!v && (q.accept || []).some(a => NORM(a) === v);
@@ -873,7 +873,7 @@ function isRight(q, i) {
 function canCheck() {
   const cq = currentQ(); const qi = state.quizQi;
   if (!cq) return false;
-  if (cq.type === 'mc' || cq.type === 'ab') return state.picks[qi] != null;
+  if (cq.type === 'mc' || cq.type === 'ab' || cq.type === 'ox') return state.picks[qi] != null;
   if (cq.type === 'fix') return state.picks[qi] != null && !!(state.inputs[qi] && state.inputs[qi].trim());
   if (cq.type === 'scramble') return ((state.scr && state.scr[qi]) || []).length === (cq.chunks || []).length;
   return !!(state.inputs[qi] && state.inputs[qi].trim());
@@ -1119,6 +1119,7 @@ const actions = {
       let your, corr;
       if (qq.type === 'mc') { your = state.picks[i] != null ? qq.options[state.picks[i]] : '(무응답)'; corr = qq.options[qq.answer]; }
       else if (qq.type === 'ab') { your = state.picks[i] != null ? abo[state.picks[i]] : '(무응답)'; corr = abo[qq.answer]; }
+      else if (qq.type === 'ox') { const OX = ['O (맞아요)', 'X (틀려요)']; your = state.picks[i] != null ? OX[state.picks[i]] : '(무응답)'; corr = OX[qq.answer]; }
       else if (qq.type === 'fix') {
         const toks = (qq.sentence || '').split(/\s+/).filter(Boolean);
         your = (state.picks[i] != null ? '[' + (toks[state.picks[i]] || '?') + '] → ' : '') + (state.inputs[i] || '(무응답)');
@@ -2159,6 +2160,17 @@ function quizHTML() {
         <div style="flex:1;font-size:14px;font-weight:500;color:#26303f;font-family:'Lora',serif">${esc(txt)}</div>
       </div>`;
     }).join('') + `</div>`;
+  } else if (cq.type === 'ox') {
+    const opt = (idx, big, label) => {
+      const picked = state.picks[qi] === idx, correct = idx === cq.answer;
+      let bg = '#fff', bd = '#e2e9f2', color = '#26303f';
+      if (!checked && picked) { bg = '#e7f0fd'; bd = '#2f74e6'; color = '#1f57c4'; }
+      if (checked && correct) { bg = '#e0f3ea'; bd = '#2fa36b'; color = '#1f7a4d'; }
+      if (checked && picked && !correct) { bg = '#fbe4e2'; bd = '#e2564d'; color = '#b23a32'; }
+      return `<div ${checked ? '' : `data-act="pickOption" data-arg="${idx}"`} style="flex:1;background:${bg};border:2px solid ${bd};border-radius:16px;padding:22px 10px;text-align:center;cursor:${checked ? 'default' : 'pointer'}"><div style="font-size:36px;font-weight:800;color:${color};line-height:1;font-family:'Lora',serif">${big}</div><div style="font-size:12px;color:${color};margin-top:5px;font-weight:600">${label}</div></div>`;
+    };
+    body = `<div style="display:flex;gap:12px;margin-top:12px">${opt(0, 'O', '맞아요')}${opt(1, 'X', '틀려요')}</div>
+      <div style="text-align:center;font-size:11px;color:#9aa8bd;margin-top:8px">문장이 맞으면 O, 틀리면 X</div>`;
   } else if (cq.type === 'ab') {
     const p = abParse(cq.sentence);
     const opt = (idx, label) => {

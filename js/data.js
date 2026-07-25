@@ -455,8 +455,8 @@ function editToDay(e) {
         if (q.type === 'mc') {
           base.options = q.options.map(o => (o || '').trim()).filter(Boolean);
           base.answer = Math.min(Math.max(0, Number(q.answer) || 0), Math.max(0, base.options.length - 1));
-        } else if (q.type === 'ab') {
-          base.answer = Math.min(1, Math.max(0, Number(q.answer) || 0));   // 0=A, 1=B
+        } else if (q.type === 'ab' || q.type === 'ox') {
+          base.answer = Math.min(1, Math.max(0, Number(q.answer) || 0));   // ab: 0=A/1=B · ox: 0=O(참)/1=X(거짓)
         } else if (q.type === 'fix') {
           base.wrong = Number(q.wrong);   // 틀린 단어 인덱스
           base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
@@ -469,9 +469,10 @@ function editToDay(e) {
       })
       .filter(q => q.type === 'mc' ? q.options.length >= 2
         : q.type === 'ab' ? /\[[^\]/]*\/[^\]]*\]/.test(q.sentence || '')
-          : q.type === 'fix' ? ((q.sentence || '').trim() && q.accept.length >= 1 && q.wrong >= 0)
-            : q.type === 'scramble' ? q.chunks.length >= 2
-              : q.accept.length >= 1);
+          : q.type === 'ox' ? (q.prompt || '').trim().length > 0
+            : q.type === 'fix' ? ((q.sentence || '').trim() && q.accept.length >= 1 && q.wrong >= 0)
+              : q.type === 'scramble' ? q.chunks.length >= 2
+                : q.accept.length >= 1);
   });
   // 핵심 문장(리치): 빈 문장 제거, 마크 인덱스는 현재 단어 수 범위로 정리
   const coreSentences = (e.core || []).map(c => {
