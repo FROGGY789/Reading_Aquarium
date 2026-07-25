@@ -657,7 +657,10 @@ const DEFAULT_STATE = {
   presentTheme: 'deep',     // 수업용 발표 화면 배경 그라디언트 테마
   presentFont: 1,           // 수업용 발표 글씨 배율(0.6~1.8)
   presentLineH: 1.4,        // 발표 행간(줄 간격)
-  presentBezel: 8           // 발표 좌우 여백(베젤, vw)
+  presentBezel: 8,          // 발표 좌우 여백(베젤, vw)
+  readHlOff: false,         // 학생 읽기: 형광펜(==핵심문장==/%%문법%%) 끄기
+  readPopOff: false,        // 학생 읽기: 단어 팝오버(밑줄 단어 탭) 끄기
+  readLineH: 1.0            // 학생 읽기: 행간 배율(0.8~1.6)
 };
 
 /* ---- 수업용 발표 배경 테마(교사가 발표 화면에서 색 조정) ---- */
@@ -685,6 +688,41 @@ const PRESENT_BEZEL_MIN = 2, PRESENT_BEZEL_MAX = 24, PRESENT_BEZEL_STEP = 2;
 function presentLineH() { const v = Number(state.presentLineH); return Math.min(PRESENT_LINEH_MAX, Math.max(PRESENT_LINEH_MIN, isNaN(v) ? 1.4 : v)); }
 function presentBezel() { const v = Number(state.presentBezel); return Math.min(PRESENT_BEZEL_MAX, Math.max(PRESENT_BEZEL_MIN, isNaN(v) ? 8 : v)); }
 
+/* ---- 학생 읽기 컨트롤(형광펜·팝오버·행간) ---- */
+const READ_LINEH_MIN = 0.8, READ_LINEH_MAX = 1.6, READ_LINEH_STEP = 0.1;
+function readLineH() { const v = Number(state.readLineH); return Math.min(READ_LINEH_MAX, Math.max(READ_LINEH_MIN, isNaN(v) ? 1 : v)); }
+// 형광펜 off면 배경색 없이 평문(굵게는 유지), on이면 renderMarks 그대로
+function readMarks(escaped) {
+  if (state.readHlOff) {
+    return String(escaped == null ? '' : escaped)
+      .replace(/==([^=]+)==/g, '$1').replace(/%%([^%]+)%%/g, '$1')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight:800">$1</strong>');
+  }
+  return renderMarks(escaped);
+}
+// 읽기 화면 우상단 'Aa' 설정 버튼 + 펼침 패널(형광펜·팝오버·행간)
+// accent: {btnBg,btnFg} — 화면 톤에 맞춘 버튼 색
+function readCtlBtn(accent) {
+  return `<div data-act="toggleReadCtl" title="읽기 설정" style="width:30px;height:30px;border-radius:10px;background:${accent.btnBg};color:${accent.btnFg};display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;font-weight:800">Aa</div>`;
+}
+function readCtlPanel() {
+  if (!ui.readCtl) return '';
+  const lh = readLineH();
+  const toggle = (act, on) => `<div data-act="${act}" style="width:46px;height:27px;border-radius:14px;background:${on ? '#2f74e6' : '#c8d2e0'};position:relative;cursor:pointer;flex:none"><div style="position:absolute;top:3px;left:${on ? '22px' : '3px'};width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .12s"></div></div>`;
+  const row = (label, sub, inner) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid #eef2f7">
+      <div><div style="font-size:13px;font-weight:700;color:#26303f">${label}</div><div style="font-size:10.5px;color:#9aa8bd;margin-top:1px">${sub}</div></div>${inner}</div>`;
+  const lhMin = lh <= READ_LINEH_MIN + 1e-9, lhMax = lh >= READ_LINEH_MAX - 1e-9;
+  const stepBtn = (act, label, dis) => `<div ${dis ? '' : `data-act="${act}"`} style="width:34px;height:34px;border-radius:10px;background:#eef2f8;color:#3a4355;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;cursor:${dis ? 'default' : 'pointer'};opacity:${dis ? '.35' : '1'}">${label}</div>`;
+  const stepper = `<div style="display:flex;align-items:center;gap:9px">${stepBtn('readLineDown', '−', lhMin)}<span style="font-size:13px;font-weight:800;color:#14243f;width:34px;text-align:center">${lh.toFixed(1)}</span>${stepBtn('readLineUp', '＋', lhMax)}</div>`;
+  return `<div data-act="toggleReadCtl" style="position:absolute;inset:0;z-index:35"></div>
+    <div style="position:absolute;top:44px;right:14px;z-index:36;width:250px;background:#fff;border-radius:16px;box-shadow:0 20px 44px -16px rgba(20,50,90,.5);border:1px solid #e7edf5;padding:6px 15px 12px;font-family:'IBM Plex Sans KR',sans-serif">
+      <div style="font-size:11px;font-weight:800;color:#7d8aa0;padding:10px 0 2px">읽기 설정</div>
+      ${row('형광펜', '핵심문장·문법 강조', toggle('toggleReadHl', !state.readHlOff))}
+      ${row('단어 팝오버', '밑줄 단어 탭해서 뜻 보기', toggle('toggleReadPop', !state.readPopOff))}
+      ${row('행간', '줄 간격 조절', stepper)}
+    </div>`;
+}
+
 let state = loadState();
 let hatchTimer = null;
 let introTimer = null;
@@ -711,7 +749,8 @@ const ui = {
   revReady: false, // 지문 복습: 현재 문장 2초 경과(다음 버튼 활성)
   acct: { open: false, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false },   // 내 계정(비번 변경/탈퇴)
   wb: { word: '', def: '', ex: '' }, wbConfirm: null, wbMsg: '', wbAddOpen: false,   // 학생 단어장: 추가 폼 입력값 / 삭제 확인 대상 / 추가 폼 열림
-  present: { on: false, i: 0, sents: [], title: '' }   // 수업용 전체화면 발표(PPT처럼 한 문장씩)
+  present: { on: false, i: 0, sents: [], title: '' },   // 수업용 전체화면 발표(PPT처럼 한 문장씩)
+  readCtl: false   // 학생 읽기 설정 패널(형광펜·팝오버·행간) 열림
 };
 // 학생 화면 상단 여백: 교사 미리보기(토글 있음)일 때만 넉넉히, 실제 학생은 좁게
 function topPad() {
@@ -1261,6 +1300,12 @@ const actions = {
   presentLineDown() { state.presentLineH = Math.max(PRESENT_LINEH_MIN, +(presentLineH() - PRESENT_LINEH_STEP).toFixed(2)); save(); render(); },
   presentBezelUp() { state.presentBezel = Math.min(PRESENT_BEZEL_MAX, presentBezel() + PRESENT_BEZEL_STEP); save(); render(); },
   presentBezelDown() { state.presentBezel = Math.max(PRESENT_BEZEL_MIN, presentBezel() - PRESENT_BEZEL_STEP); save(); render(); },
+
+  toggleReadCtl() { ui.readCtl = !ui.readCtl; render(); },
+  toggleReadHl() { state.readHlOff = !state.readHlOff; save(); render(); },
+  toggleReadPop() { state.readPopOff = !state.readPopOff; save(); render(); },
+  readLineUp() { state.readLineH = Math.min(READ_LINEH_MAX, +(readLineH() + READ_LINEH_STEP).toFixed(2)); save(); render(); },
+  readLineDown() { state.readLineH = Math.max(READ_LINEH_MIN, +(readLineH() - READ_LINEH_STEP).toFixed(2)); save(); render(); },
 
   edSelectDay(arg) { commitDayEdit(); openDay(Number(arg)); render(); },
   edSelectDayView(arg) { ui.presDay = Number(arg); render(); },  // 발표용: 배포 Day 선택
@@ -2171,12 +2216,13 @@ function reviewHTML() {
   const sentence = sents[i] || '';
   const animate = _lastRevIndex !== i; _lastRevIndex = i;   // 문장 바뀔 때만 페이드
 
+  const popOn = !state.readPopOff;
   const wordStyle = active => `background:${active ? '#2f74e6' : '#e7f0fd'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #2f74e6;border-radius:3px;padding:0 3px;cursor:pointer`;
-  const sentHTML = renderMarks(esc(sentence).replace(/&lt;([^&]+?)&gt;/g, (m, w) =>
-    words[w]
+  const sentHTML = readMarks(esc(sentence).replace(/&lt;([^&]+?)&gt;/g, (m, w) =>
+    (popOn && words[w])
       ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wordStyle(state.pop === w)}">${esc(w)}</span>`
       : w));
-  const pop = state.pop && words[state.pop] && sentence.includes('<' + state.pop + '>')
+  const pop = popOn && state.pop && words[state.pop] && sentence.includes('<' + state.pop + '>')
     ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `
     <div style="font-family:'IBM Plex Sans KR',sans-serif;background:#14243f;color:#fff;border-radius:14px;padding:13px 15px;margin:18px 0 0;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);text-align:left">
@@ -2192,15 +2238,19 @@ function reviewHTML() {
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:${topPad()} 20px 24px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <div data-act="goHome" style="display:flex;align-items:center;gap:8px;cursor:pointer"><div style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center">←</div><span style="font-size:13px;font-weight:600;color:#14243f">지문 복습</span></div>
-      <div style="font-size:12px;font-weight:700;color:#7d8aa0">${i + 1} / ${total}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:12px;font-weight:700;color:#7d8aa0">${i + 1} / ${total}</div>
+        ${readCtlBtn({ btnBg: '#e7f0fd', btnFg: '#2f74e6' })}
+      </div>
     </div>
     <div style="height:5px;border-radius:3px;background:#e7edf5;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:${Math.round((i + 1) / total * 100)}%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:3px;transition:width .3s"></div></div>
     <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;padding:10px 4px">
-      <div style="font-family:'Lora',serif;font-size:23px;line-height:1.75;color:#26303f;text-align:center;${animate ? 'animation:fadeup .35s ease' : ''}">${sentHTML}</div>
+      <div style="font-family:'Lora',serif;font-size:23px;line-height:${(1.75 * readLineH()).toFixed(2)};color:#26303f;text-align:center;${animate ? 'animation:fadeup .35s ease' : ''}">${sentHTML}</div>
       ${popHTML}
     </div>
-    <div style="font-size:11px;color:#9aa8bd;text-align:center;margin-bottom:10px">밑줄 친 단어를 탭하면 뜻이 나와요</div>
+    <div style="font-size:11px;color:#9aa8bd;text-align:center;margin-bottom:10px">${popOn ? '밑줄 친 단어를 탭하면 뜻이 나와요' : '읽기 설정(Aa)에서 단어 팝오버를 켤 수 있어요'}</div>
     ${btn}
+    ${readCtlPanel()}
   </div>`;
 }
 
@@ -2388,27 +2438,28 @@ function readerHTML() {
   const paras = burning ? (passageToPagesRaw(book.passage)[page] || []) : (pages[page] || []);
   // 버닝: <단어> 팝오버 활성 — 이 책의 모든 챕터 어휘를 합쳐서 조회(다른 챕터 단어도 뜨게)
   const words = (book && book.vocab && Object.keys(book.vocab).length) ? book.vocab : dayVocab(activeDay());
+  const popOn = !state.readPopOff;
   const wStyle = active => `background:${active ? '#c08a3a' : '#f0e2c4'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #c08a3a;border-radius:3px;padding:0 3px;cursor:pointer`;
-  const pop = burning && state.pop && words[state.pop] ? Object.assign({ word: state.pop }, words[state.pop]) : null;
+  const pop = burning && popOn && state.pop && words[state.pop] ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `<div style="font-family:'IBM Plex Sans KR',sans-serif;background:#3a3222;color:#f5f0e6;border-radius:12px;padding:12px 14px;margin:2px 0 16px;box-shadow:0 12px 26px -12px rgba(0,0,0,.5)">
       <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.head || pop.word)}</span><span style="font-size:11px;color:#d8b878">${esc(pop.pos)}</span></div>
       <div style="font-size:13px;color:#e7dcc4;margin-top:5px">${esc(pop.def)}</div>
       ${(() => { const ex = wordHintSentence(pop.word) || pop.ex; return ex ? `<div style="font-size:12px;color:#bda880;margin-top:5px;font-style:italic;font-family:'Lora',serif">${esc(ex)}</div>` : ''; })()}
     </div>` : '';
-  const renderPara = p => renderMarks(burning
+  const renderPara = p => readMarks((burning && popOn)
     ? esc(p).replace(/&lt;([^&]+?)&gt;/g, (m, w) => words[w] ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wStyle(state.pop === w)}">${esc(w)}</span>` : w)
-    : esc(p));
+    : esc(p).replace(/&lt;([^&]+?)&gt;/g, (m, w) => w));
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#f5f0e6">
     <div style="padding:48px 22px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e7dfce">
       <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#ece3d2;color:#7a6b52;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       <div style="text-align:center">
         <div style="font-family:'Lora',serif;font-size:13px;font-weight:600;color:#3a3222">${burning ? '🔴 버닝 · 지문 전체' : esc(book.title)}</div>
-        <div style="font-size:10.5px;color:#9c8f76;margin-top:1px">${burning ? '단어를 탭하면 뜻이 나와요' : esc(book.chapter || book.author || '')}</div>
+        <div style="font-size:10.5px;color:#9c8f76;margin-top:1px">${burning ? (popOn ? '단어를 탭하면 뜻이 나와요' : '읽기 설정(Aa)에서 팝오버를 켤 수 있어요') : esc(book.chapter || book.author || '')}</div>
       </div>
-      <div style="width:30px;height:30px;border-radius:10px;background:#ece3d2;color:#7a6b52;display:flex;align-items:center;justify-content:center;font-size:13px">Aa</div>
+      ${readCtlBtn({ btnBg: '#ece3d2', btnFg: '#7a6b52' })}
     </div>
-    <div style="flex:1;overflow-y:auto;padding:26px 26px 20px;font-family:'Lora',serif;font-size:18px;line-height:2;color:#33302b">
-      ${paras.map(p => `<p style="margin:0 0 ${burning && state.pop && p.includes('[' + state.pop + ']') ? '2' : '18'}px;text-indent:1.1em;text-wrap:pretty">${renderPara(p)}</p>` + (burning && state.pop && p.includes('[' + state.pop + ']') ? popHTML : '')).join('')}
+    <div style="flex:1;overflow-y:auto;padding:26px 26px 20px;font-family:'Lora',serif;font-size:18px;line-height:${(2 * readLineH()).toFixed(2)};color:#33302b">
+      ${paras.map(p => { const hit = burning && pop && p.includes('<' + state.pop + '>'); return `<p style="margin:0 0 ${hit ? '2' : '18'}px;text-indent:1.1em;text-wrap:pretty">${renderPara(p)}</p>` + (hit ? popHTML : ''); }).join('')}
     </div>
     <div style="padding:12px 22px 22px;border-top:1px solid #e7dfce;background:#f5f0e6">
       <div style="height:5px;border-radius:3px;background:#e3d9c6;overflow:hidden;margin-bottom:12px"><div style="height:100%;width:${readerProgress()};background:#c08a3a;border-radius:3px"></div></div>
@@ -2422,6 +2473,7 @@ function readerHTML() {
             : `<button data-act="goHome" style="border:none;background:#2fa36b;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding:10px 18px;border-radius:12px;box-shadow:0 4px 0 #1f7a4d;cursor:pointer">다 읽었어요 ✓</button>`}
       </div>
     </div>
+    ${readCtlPanel()}
   </div>`;
 }
 
