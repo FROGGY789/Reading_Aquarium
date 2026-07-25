@@ -402,21 +402,52 @@ function passageToSentences(passage) {
 
 /* ---- 편집 모델 변환 (교사 편집기 공용) ---- */
 // 저장형 Day → 편집형(폼)
+// 저장형 퀴즈 문항 1개 → 편집형(폼)
+function quizItemToEdit(q) {
+  q = q || {};
+  return {
+    type: q.type || 'mc',
+    prompt: q.prompt || '',
+    sentence: q.sentence || '',
+    options: (q.options || []).concat(['', '', '', '']).slice(0, 4),
+    answer: q.answer || 0,
+    accept: (q.accept || []).join(', '),
+    wrong: q.wrong != null ? q.wrong : -1,            // 오류 고치기: 틀린 단어 인덱스
+    chunksText: (q.chunks || []).join(' / '),          // Scramble: 조각(정답 순서)
+    explain: q.explain || ''
+  };
+}
+// 편집형(폼) 퀴즈 문항 1개 → 저장형(유효하지 않으면 null)
+function quizItemToSaved(q) {
+  if (!((q.prompt || '').trim() || (q.sentence || '').trim())) return null;
+  const base = { type: q.type, prompt: (q.prompt || '').trim(), explain: (q.explain || '').trim() };
+  if ((q.sentence || '').trim()) base.sentence = q.sentence.trim();
+  if (q.type === 'mc') {
+    base.options = q.options.map(o => (o || '').trim()).filter(Boolean);
+    base.answer = Math.min(Math.max(0, Number(q.answer) || 0), Math.max(0, base.options.length - 1));
+  } else if (q.type === 'ab' || q.type === 'ox') {
+    base.answer = Math.min(1, Math.max(0, Number(q.answer) || 0));   // ab: 0=A/1=B · ox: 0=O(참)/1=X(거짓)
+  } else if (q.type === 'fix') {
+    base.wrong = Number(q.wrong);   // 틀린 단어 인덱스
+    base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
+  } else if (q.type === 'scramble') {
+    base.chunks = (q.chunksText || '').split('/').map(c => c.trim()).filter(Boolean);
+  } else {
+    base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
+  }
+  const ok = base.type === 'mc' ? base.options.length >= 2
+    : base.type === 'ab' ? /\[[^\]/]*\/[^\]]*\]/.test(base.sentence || '')
+      : base.type === 'ox' ? (base.prompt || '').trim().length > 0
+        : base.type === 'fix' ? ((base.sentence || '').trim() && base.accept.length >= 1 && base.wrong >= 0)
+          : base.type === 'scramble' ? base.chunks.length >= 2
+            : base.accept.length >= 1;
+  return ok ? base : null;
+}
 function dayToEdit(day) {
   day = JSON.parse(JSON.stringify(day || {}));
   const quiz = {};
   Object.keys(QUIZ_META).forEach(cat => {
-    quiz[cat] = ((day.quiz && day.quiz[cat]) || []).map(q => ({
-      type: q.type || 'mc',
-      prompt: q.prompt || '',
-      sentence: q.sentence || '',
-      options: (q.options || []).concat(['', '', '', '']).slice(0, 4),
-      answer: q.answer || 0,
-      accept: (q.accept || []).join(', '),
-      wrong: q.wrong != null ? q.wrong : -1,            // 오류 고치기: 틀린 단어 인덱스
-      chunksText: (q.chunks || []).join(' / '),          // Scramble: 조각(정답 순서)
-      explain: q.explain || ''
-    }));
+    quiz[cat] = ((day.quiz && day.quiz[cat]) || []).map(quizItemToEdit);
   });
   const passageText = dayPassage(day);
   const vdict = dayVocab(day);
@@ -449,32 +480,7 @@ function editToDay(e) {
   });
   const quiz = {};
   Object.keys(QUIZ_META).forEach(cat => {
-    quiz[cat] = (e.quiz[cat] || [])
-      .filter(q => (q.prompt || '').trim() || (q.sentence || '').trim())
-      .map(q => {
-        const base = { type: q.type, prompt: (q.prompt || '').trim(), explain: (q.explain || '').trim() };
-        if ((q.sentence || '').trim()) base.sentence = q.sentence.trim();
-        if (q.type === 'mc') {
-          base.options = q.options.map(o => (o || '').trim()).filter(Boolean);
-          base.answer = Math.min(Math.max(0, Number(q.answer) || 0), Math.max(0, base.options.length - 1));
-        } else if (q.type === 'ab' || q.type === 'ox') {
-          base.answer = Math.min(1, Math.max(0, Number(q.answer) || 0));   // ab: 0=A/1=B · ox: 0=O(참)/1=X(거짓)
-        } else if (q.type === 'fix') {
-          base.wrong = Number(q.wrong);   // 틀린 단어 인덱스
-          base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
-        } else if (q.type === 'scramble') {
-          base.chunks = (q.chunksText || '').split('/').map(c => c.trim()).filter(Boolean);
-        } else {
-          base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
-        }
-        return base;
-      })
-      .filter(q => q.type === 'mc' ? q.options.length >= 2
-        : q.type === 'ab' ? /\[[^\]/]*\/[^\]]*\]/.test(q.sentence || '')
-          : q.type === 'ox' ? (q.prompt || '').trim().length > 0
-            : q.type === 'fix' ? ((q.sentence || '').trim() && q.accept.length >= 1 && q.wrong >= 0)
-              : q.type === 'scramble' ? q.chunks.length >= 2
-                : q.accept.length >= 1);
+    quiz[cat] = (e.quiz[cat] || []).map(quizItemToSaved).filter(Boolean);
   });
   // 핵심 문장(리치): 빈 문장 제거, 마크 인덱스는 현재 단어 수 범위로 정리
   const coreSentences = (e.core || []).map(c => {

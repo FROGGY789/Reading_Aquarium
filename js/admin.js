@@ -17,6 +17,10 @@ const clone = o => JSON.parse(JSON.stringify(o));
 let content = null;         // { version, students[], supabase{}, days[] }
 let ed = null;              // { dayIndex, day(편집형) }
 let gEd = null;             // { studentsText, sbUrl, sbKey }
+let gramEd = null;          // 어법 커리큘럼(편집형) — 모든 챕터 공통, content.grammar와 동기화
+// 저장형 어법 개념 → 편집형 / 편집형 → 저장형
+function gramConceptToEdit(c) { c = c || {}; return { title: c.title || '', explain: c.explain || '', quiz: (c.quiz || []).map(quizItemToEdit) }; }
+function gramConceptToSaved(c) { return { title: (c.title || '').trim(), explain: (c.explain || '').trim(), quiz: (c.quiz || []).map(quizItemToSaved).filter(Boolean) }; }
 const ui = { tab: 'passage', msg: '', msgType: '', busy: false, loaded: false, expand: false, expandFont: 17, coreMode: 'subject', corePickOpen: false };
 
 /* ---------- 로드 ---------- */
@@ -30,7 +34,9 @@ async function boot() {
   content.classes = content.classes || [];
   content.supabase = content.supabase || { url: '', anonKey: '' };
   if (!content.days.length) content.days = [{ date: _todayKey(), label: '', quote: {}, book: {}, passage: '', vocab: {}, quiz: {} }];
+  content.grammar = Array.isArray(content.grammar) ? content.grammar : [];
   gEd = { studentsText: content.students.join('\n'), classesText: content.classes.join('\n'), sbUrl: content.supabase.url || '', sbKey: content.supabase.anonKey || '' };
+  gramEd = content.grammar.map(gramConceptToEdit);
   openDay(bestDayIndex());
   ui.loaded = true;
   render();
@@ -57,6 +63,10 @@ function commit() {
     content.students = gEd.studentsText.split('\n').map(s => s.trim()).filter(Boolean);
     content.classes = gEd.classesText.split('\n').map(s => s.trim()).filter(Boolean);
     content.supabase = { url: gEd.sbUrl.trim(), anonKey: gEd.sbKey.trim() };
+  }
+  if (gramEd) {
+    // 완전히 빈 개념(제목·설명·문항 모두 없음)은 저장에서 제외
+    content.grammar = gramEd.map(gramConceptToSaved).filter(c => c.title || c.explain || c.quiz.length);
   }
 }
 function setPath(obj, path, val) {
@@ -232,6 +242,24 @@ const actions = {
     const [cat, i, wi] = arg.split(':');
     const q = ed.day.quiz[cat][Number(i)]; if (!q) return;
     q.wrong = Number(q.wrong) === Number(wi) ? -1 : Number(wi);
+    render();
+  },
+  /* 어법 커리큘럼(개념 순서대로 · 모든 챕터 공통) */
+  addConcept() { gramEd.push({ title: '', explain: '', quiz: [] }); render(); },
+  delConcept(arg) { gramEd.splice(Number(arg), 1); render(); },
+  moveConcept(arg) {   // arg = "ci:dir"(dir -1 위 / +1 아래)
+    const [ci, dir] = arg.split(':').map(Number);
+    const j = ci + dir;
+    if (j < 0 || j >= gramEd.length) return;
+    const t = gramEd[ci]; gramEd[ci] = gramEd[j]; gramEd[j] = t;
+    render();
+  },
+  addGramQ(ci) { gramEd[Number(ci)].quiz.push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', explain: '' }); render(); },
+  delGramQ(arg) { const [ci, i] = arg.split(':').map(Number); gramEd[ci].quiz.splice(i, 1); render(); },
+  gramFixWrong(arg) {
+    const [ci, i, wi] = arg.split(':').map(Number);
+    const q = gramEd[ci] && gramEd[ci].quiz[i]; if (!q) return;
+    q.wrong = Number(q.wrong) === wi ? -1 : wi;
     render();
   },
   /* 핵심 문장(리치) 편집 */
@@ -637,7 +665,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v47 (교사 대시보드: 학생 학습시간·알 부화 기록)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v48 (어법 커리큘럼 편집기: 개념 순서대로 설명+문제)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -866,32 +894,50 @@ function quizTab(d) {
     ${qcat('sentence')}
   </div>`;
 }
-/* ---- 탭: 어법(문법 개념 + 어법 퀴즈) ---- */
+/* ---- 탭: 어법 커리큘럼(개념 순서대로 · 모든 챕터 공통) ---- */
 function grammarTab(d) {
-  return `<div class="card" style="background:#f4f7ff;border-color:#d6e2f7">
-    <h2>📐 어법 (문법)</h2>
-    <div class="hint" style="margin:0">문법을 <b>기본부터 순서대로</b> 개념을 익히고 문제를 푸는 공간이에요. 아래 <b>어법 퀴즈</b> 문항을 순서대로 쌓아 두면, 학생 심화 학습의 어법 퀴즈로 나갑니다. (개념 설명 편집은 곧 추가돼요.)</div>
+  const list = gramEd || [];
+  const total = list.reduce((a, c) => a + (c.quiz || []).length, 0);
+  const concepts = list.map((c, ci) => {
+    const base = `${ci}`;
+    return `<div class="card" style="border-color:#d9e6c9">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="flex:none;width:30px;height:30px;border-radius:9px;background:#e7f0d8;color:#4a7a1e;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">${ci + 1}</span>
+        <input class="inp" style="flex:1;font-weight:700" data-bind="${base}.title" data-broot="gram" value="${esc(c.title)}" placeholder="개념 제목 (예: 1. 문장의 주어와 동사)">
+        <button class="btn ghost sm" data-act="moveConcept" data-arg="${ci}:-1" ${ci === 0 ? 'disabled' : ''} title="위로">▲</button>
+        <button class="btn ghost sm" data-act="moveConcept" data-arg="${ci}:1" ${ci === list.length - 1 ? 'disabled' : ''} title="아래로">▼</button>
+        <button class="btn danger sm" data-act="delConcept" data-arg="${ci}">삭제</button>
+      </div>
+      <div class="label">개념 설명 (학생이 문제 풀기 전에 읽어요)</div>
+      <textarea class="inp" style="min-height:80px;line-height:1.6" data-bind="${base}.explain" data-broot="gram" placeholder="이 어법 개념을 학생 눈높이로 설명하세요. 예) 영어 문장은 '누가(주어) + 무엇을 한다(동사)'가 뼈대예요. …">${esc(c.explain)}</textarea>
+      <div class="label" style="margin-top:10px">이 개념의 어법 문제</div>
+      ${quizEditor({ list: c.quiz, basePath: `${ci}.quiz`, ns: 'g' + ci, broot: 'gram', delAct: 'delGramQ', delPrefix: `${ci}:`, fixAct: 'gramFixWrong', addAct: 'addGramQ', addArg: ci, name: '어법 문제', emptyMsg: '이 개념에 문제를 추가해 보세요. 개념 설명만 있어도 학생에게 보여집니다.' })}
+    </div>`;
+  }).join('');
+  return `<div class="card" style="background:#f2f8ea;border-color:#d9e6c9">
+    <h2>📐 어법 퀴즈 · 커리큘럼</h2>
+    <div class="hint" style="margin:0">문법을 <b>기본부터 순서대로</b> 쌓는 공간이에요. 개념마다 <b>설명 + 문제</b>를 넣고, 위/아래 화살표로 순서를 정하세요. 이 커리큘럼은 <b>모든 챕터 공통</b>이라 특정 챕터와 상관없이 학생 <b>심화 학습</b>에서 순서대로 풀립니다. (총 개념 ${list.length}개 · 문제 ${total}개)</div>
   </div>
-  <div class="card">
-    <h2>어법 퀴즈 문항</h2>
-    ${qcat('grammar')}
-  </div>`;
+  ${concepts}
+  <div style="margin:4px 0 10px"><button class="btn ghost" data-act="addConcept">＋ 새 어법 개념</button></div>`;
 }
-function qcat(cat) {
-  const meta = QUIZ_META[cat];
-  const list = ed.day.quiz[cat];
+// 퀴즈 문항 편집 카드들(공용) — cfg로 바인딩 대상/액션을 바꿔 챕터 퀴즈·어법 커리큘럼 양쪽에 사용
+// cfg: { list, basePath, ns, broot, delAct, delPrefix, fixAct, addAct, addArg, name, addLabel, emptyMsg }
+function quizEditor(cfg) {
+  const { list, basePath, ns, broot } = cfg;
+  const br = broot ? ` data-broot="${broot}"` : '';
   const cards = list.map((q, i) => {
-    const base = `quiz.${cat}.${i}`;
+    const base = `${basePath}.${i}`;
     const opts = q.type === 'mc' ? q.options.map((o, oi) => `
       <div class="opt">
-        <input type="radio" name="ans-${cat}-${i}" value="${oi}" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === oi ? 'checked' : ''}>
-        <input class="inp" data-bind="${base}.options.${oi}" value="${esc(o)}" placeholder="보기 ${oi + 1}${oi < 2 ? '' : ' (선택)'}">
+        <input type="radio" name="ans-${ns}-${i}" value="${oi}" data-bind="${base}.answer" data-type="number"${br} ${Number(q.answer) === oi ? 'checked' : ''}>
+        <input class="inp" data-bind="${base}.options.${oi}"${br} value="${esc(o)}" placeholder="보기 ${oi + 1}${oi < 2 ? '' : ' (선택)'}">
       </div>`).join('') : '';
     return `<div class="qcard">
       <div class="qhead">
         <span class="qnum">Q${i + 1}</span>
         <span style="font-size:11.5px;font-weight:700;color:#7d8aa0">형식</span>
-        <select class="inp" style="width:auto;padding:6px 8px" data-bind="${base}.type" data-rerender="1">
+        <select class="inp" style="width:auto;padding:6px 8px" data-bind="${base}.type"${br} data-rerender="1">
           <option value="mc" ${q.type === 'mc' ? 'selected' : ''}>A~D 고르기(객관식)</option>
           <option value="ox" ${q.type === 'ox' ? 'selected' : ''}>O/X (참·거짓)</option>
           <option value="ab" ${q.type === 'ab' ? 'selected' : ''}>[A/B] 고르기</option>
@@ -900,42 +946,45 @@ function qcat(cat) {
           <option value="input" ${q.type === 'input' ? 'selected' : ''}>주관식</option>
         </select>
         <div style="flex:1"></div>
-        <button class="btn danger sm" data-act="delQ" data-arg="${cat}:${i}">삭제</button>
+        <button class="btn danger sm" data-act="${cfg.delAct}" data-arg="${cfg.delPrefix}${i}">삭제</button>
       </div>
-      <input class="inp" data-bind="${base}.prompt" value="${esc(q.prompt)}" placeholder="문제 ${(q.type === 'ab' || q.type === 'scramble') ? '(비워도 됨)' : ''}">
-      ${q.type === 'scramble' ? '' : `<input class="inp" style="margin-top:7px" data-bind="${base}.sentence" data-rerender="1" value="${esc(q.sentence)}" placeholder="${q.type === 'ab' ? '문장에 [정답/오답] 넣기 — 예: She [was/were] happy.' : q.type === 'fix' ? '틀린 부분이 든 문장 — 예: She go to school.' : '예문/제시 문장 (선택)'}">`}
+      <input class="inp" data-bind="${base}.prompt"${br} value="${esc(q.prompt)}" placeholder="문제 ${(q.type === 'ab' || q.type === 'scramble') ? '(비워도 됨)' : ''}">
+      ${q.type === 'scramble' ? '' : `<input class="inp" style="margin-top:7px" data-bind="${base}.sentence"${br} data-rerender="1" value="${esc(q.sentence)}" placeholder="${q.type === 'ab' ? '문장에 [정답/오답] 넣기 — 예: She [was/were] happy.' : q.type === 'fix' ? '틀린 부분이 든 문장 — 예: She go to school.' : '예문/제시 문장 (선택)'}">`}
       ${q.type === 'mc'
         ? `<div class="label" style="margin-bottom:2px">보기 (동그라미로 정답 선택, 2개 이상)</div>${opts}`
         : q.type === 'ox'
           ? `<div class="label" style="margin:6px 0 2px">위 문장은 맞나요, 틀리나요? (문제 칸에 참/거짓을 판단할 문장을 쓰세요)</div>
              <div class="opt" style="gap:16px">
-               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ox-${cat}-${i}" value="0" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === 0 ? 'checked' : ''}> O (맞음·참)</label>
-               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ox-${cat}-${i}" value="1" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === 1 ? 'checked' : ''}> X (틀림·거짓)</label>
+               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ox-${ns}-${i}" value="0" data-bind="${base}.answer" data-type="number"${br} ${Number(q.answer) === 0 ? 'checked' : ''}> O (맞음·참)</label>
+               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ox-${ns}-${i}" value="1" data-bind="${base}.answer" data-type="number"${br} ${Number(q.answer) === 1 ? 'checked' : ''}> X (틀림·거짓)</label>
              </div>`
         : q.type === 'ab'
           ? `<div class="label" style="margin:6px 0 2px">둘 중 어느 쪽이 정답인가요?</div>
              <div class="opt" style="gap:16px">
-               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ab-${cat}-${i}" value="0" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === 0 ? 'checked' : ''}> 앞[A] 정답</label>
-               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ab-${cat}-${i}" value="1" data-bind="${base}.answer" data-type="number" ${Number(q.answer) === 1 ? 'checked' : ''}> 뒤[B] 정답</label>
+               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ab-${ns}-${i}" value="0" data-bind="${base}.answer" data-type="number"${br} ${Number(q.answer) === 0 ? 'checked' : ''}> 앞[A] 정답</label>
+               <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="ab-${ns}-${i}" value="1" data-bind="${base}.answer" data-type="number"${br} ${Number(q.answer) === 1 ? 'checked' : ''}> 뒤[B] 정답</label>
              </div>`
           : q.type === 'fix'
             ? `<div class="label" style="margin:6px 0 2px">문장에서 <b>틀린 단어를 클릭</b>하세요 ${Number(q.wrong) >= 0 ? '✅' : ''}</div>
-               <div style="line-height:2.1">${(q.sentence || '').split(/\s+/).filter(Boolean).map((w, wi) => `<span data-act="qFixWrong" data-arg="${cat}:${i}:${wi}" style="display:inline-block;margin:2px;padding:3px 8px;border-radius:8px;border:1.5px solid ${Number(q.wrong) === wi ? '#e2564d' : '#e2e9f2'};background:${Number(q.wrong) === wi ? '#fbe4e2' : '#fff'};cursor:pointer;font-family:'Lora',serif;font-size:15px">${esc(w)}</span>`).join('') || '<span class="hint" style="margin:0">위 칸에 문장을 먼저 입력하세요</span>'}</div>
-               <input class="inp" style="margin-top:7px" data-bind="${base}.accept" value="${esc(q.accept)}" placeholder="바른 표현 (여러 개면 쉼표: goes, went)">`
+               <div style="line-height:2.1">${(q.sentence || '').split(/\s+/).filter(Boolean).map((w, wi) => `<span data-act="${cfg.fixAct}" data-arg="${cfg.delPrefix}${i}:${wi}" style="display:inline-block;margin:2px;padding:3px 8px;border-radius:8px;border:1.5px solid ${Number(q.wrong) === wi ? '#e2564d' : '#e2e9f2'};background:${Number(q.wrong) === wi ? '#fbe4e2' : '#fff'};cursor:pointer;font-family:'Lora',serif;font-size:15px">${esc(w)}</span>`).join('') || '<span class="hint" style="margin:0">위 칸에 문장을 먼저 입력하세요</span>'}</div>
+               <input class="inp" style="margin-top:7px" data-bind="${base}.accept"${br} value="${esc(q.accept)}" placeholder="바른 표현 (여러 개면 쉼표: goes, went)">`
             : q.type === 'scramble'
               ? `<div class="label" style="margin:6px 0 2px">조각을 <b>정답 순서대로</b>, <b>/</b> 로 구분 (2~3단어씩)</div>
-                 <input class="inp" data-bind="${base}.chunksText" value="${esc(q.chunksText || '')}" placeholder="The sea / has always / drawn people.">`
-              : `<input class="inp" style="margin-top:7px" data-bind="${base}.accept" value="${esc(q.accept)}" placeholder="정답 (여러 개면 쉼표: retreat, 후퇴하다)">`}
-      <input class="inp" style="margin-top:7px" data-bind="${base}.explain" value="${esc(q.explain)}" placeholder="해설">
+                 <input class="inp" data-bind="${base}.chunksText"${br} value="${esc(q.chunksText || '')}" placeholder="The sea / has always / drawn people.">`
+              : `<input class="inp" style="margin-top:7px" data-bind="${base}.accept"${br} value="${esc(q.accept)}" placeholder="정답 (여러 개면 쉼표: retreat, 후퇴하다)">`}
+      <input class="inp" style="margin-top:7px" data-bind="${base}.explain"${br} value="${esc(q.explain)}" placeholder="해설">
     </div>`;
   }).join('');
   return `<div class="catbox">
     <div class="cathead">
-      <div class="name">${meta.name} <span class="cnt">${list.length}문항</span></div>
-      <button class="btn ghost sm" data-act="addQ" data-arg="${cat}">＋ 문항</button>
+      <div class="name">${cfg.name} <span class="cnt">${list.length}문항</span></div>
+      <button class="btn ghost sm" data-act="${cfg.addAct}" data-arg="${cfg.addArg}">＋ ${cfg.addLabel || '문항'}</button>
     </div>
-    ${cards || '<div class="empty">문항이 없으면 이 항목은 학생 홈에서 숨겨져요.</div>'}
+    ${cards || `<div class="empty">${cfg.emptyMsg || '문항이 없으면 이 항목은 학생 홈에서 숨겨져요.'}</div>`}
   </div>`;
+}
+function qcat(cat) {
+  return quizEditor({ list: ed.day.quiz[cat], basePath: `quiz.${cat}`, ns: cat, broot: '', delAct: 'delQ', delPrefix: `${cat}:`, fixAct: 'qFixWrong', addAct: 'addQ', addArg: cat, name: QUIZ_META[cat].name });
 }
 
 /* ---- 탭 3: 학생 · 설정 ---- */
@@ -1039,7 +1088,7 @@ rootEl.addEventListener('input', e => {
   if (el.dataset.sched != null) { applySchedField(el); return; }   // 일정 탭: 렌더 없이 모델만 갱신(포커스 유지)
   if (el.dataset.gbind) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
-  if (bind && el.type !== 'radio' && el.tagName !== 'SELECT') setPath(ed.day, bind, el.value);
+  if (bind && el.type !== 'radio' && el.tagName !== 'SELECT') setPath(el.dataset.broot === 'gram' ? gramEd : ed.day, bind, el.value);
 });
 // 서식 버튼 클릭 시 편집기 선택이 풀리지 않도록(포커스 뺏김 방지)
 rootEl.addEventListener('mousedown', e => { if (e.target.closest('[data-fmt]')) e.preventDefault(); });
@@ -1060,7 +1109,7 @@ rootEl.addEventListener('change', e => {
   if (!bind) return;
   let v = el.value;
   if (el.dataset.type === 'number') v = Number(v);
-  setPath(ed.day, bind, v);
+  setPath(el.dataset.broot === 'gram' ? gramEd : ed.day, bind, v);
   if (el.dataset.rerender) render();
 });
 
