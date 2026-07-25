@@ -240,6 +240,8 @@ const actions = {
   },
   coreAddBlank() { ed.day.core = ed.day.core || []; ed.day.core.push({ text: '', subject: [], verb: [], bold: [], italic: [], ko: '' }); render(); },
   coreDelete(arg) { ed.day.core.splice(Number(arg), 1); render(); },
+  coreResetOne(arg) { const c = (ed.day.core || [])[Number(arg)]; if (!c) return; c.subject = []; c.verb = []; c.bold = []; c.italic = []; render(); },   // 이 문장 표시(주/동/볼드/이탤릭) 초기화
+  coreResetAll() { if (!confirm('모든 핵심문장의 주어·동사·볼드·이탤릭 표시를 지울까요? (문장·해석은 유지)')) return; (ed.day.core || []).forEach(c => { c.subject = []; c.verb = []; c.bold = []; c.italic = []; }); render(); },
   coreWord(arg) {   // arg = "문장i:단어j" — 현재 모드 마크 토글
     const [si, wi] = arg.split(':').map(Number);
     const c = ed.day.core[si]; if (!c) return;
@@ -627,7 +629,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v36 (편집 중 스크롤 위치 유지)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v37 (심화·단어장학습·시간·예문자동 외)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -742,7 +744,6 @@ function vocabPanel(d) {
       </div>
       <div style="font-size:10.5px;color:#9aa8bd;margin:3px 2px 0">지문: <span style="font-family:'Lora',serif;color:#6b7a90">${esc(w.word)}</span></div>
       <input class="inp" style="margin-top:6px" data-bind="words.${i}.def" value="${esc(w.def)}" placeholder="뜻">
-      <input class="inp" style="margin-top:6px" data-bind="words.${i}.ex" value="${esc(w.ex)}" placeholder="예문 (선택)">
     </div>`).join('') || '<div class="empty">아직 어휘가 없어요. 지문에서 단어를 선택하고 <b>📌 어휘</b>를 누르세요.</div>';
   return `<div class="card" style="position:sticky;top:12px;max-height:calc(100vh - 40px);display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
@@ -798,6 +799,7 @@ function coreEditor(d) {
       <div class="row" style="align-items:center;margin-bottom:8px">
         <span style="flex:none;font-size:12px;font-weight:700;color:#7d8aa0">문장 ${si + 1}</span>
         <input class="inp" style="flex:1" data-bind="core.${si}.text" data-rerender="1" value="${esc(c.text)}" placeholder="핵심 문장(영어)">
+        <button class="btn ghost sm" data-act="coreResetOne" data-arg="${si}" title="이 문장의 주어·동사·강조 표시 초기화">↺ 표시</button>
         <button class="btn danger sm" data-act="coreDelete" data-arg="${si}">삭제</button>
       </div>
       ${toks.length ? `<div style="margin-bottom:8px;line-height:2.1">${toks.map((w, wi) => chip(si, wi, w, c)).join('')}</div>` : '<div class="hint" style="margin:0 0 8px">문장을 입력하고 <b>Enter</b>(또는 다른 곳 클릭) 하면 단어를 클릭해 표시할 수 있어요.</div>'}
@@ -815,12 +817,15 @@ function coreEditor(d) {
   return `<div class="card">
     <h2>🟡 보통 · 핵심 문장 <span style="font-size:12px;color:#7d8aa0;font-weight:600">${core.length}문장</span></h2>
     <div class="hint"><b>모드를 고르고 단어를 클릭</b>해 표시하세요. 🔵주어 · 🟢동사(예습 '보통' 채점에 사용) · 볼드·이탤릭(강조). 해석은 '문장 작문'에 쓰여요. 비워두면 지문 앞 문장 6개가 자동으로 쓰여요.</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0">
+    <div style="position:sticky;top:6px;z-index:6;display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0;background:#fff;padding:8px;border:1px solid #e2e9f2;border-radius:12px;box-shadow:0 6px 16px -8px rgba(20,50,90,.4)">
+      <span style="font-size:11px;font-weight:700;color:#9aa8bd;margin-right:2px">표시</span>
       ${modeBtn('subject', '🔵 주어', '#2f74e6')}
       ${modeBtn('verb', '🟢 동사', '#2fa36b')}
       ${modeBtn('bold', '볼드', '#14243f')}
       ${modeBtn('italic', '이탤릭', '#8a5fd6')}
       ${modeBtn('clear', '🧽 지우개', '#b23a32')}
+      <span style="flex:1"></span>
+      <button class="btn ghost sm" data-act="coreResetAll" title="모든 문장의 표시 초기화">↺ 전체 초기화</button>
     </div>
     ${cards}
     <div style="display:flex;gap:8px;margin-top:10px">
