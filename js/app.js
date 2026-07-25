@@ -304,15 +304,20 @@ async function loadRecords() {
   ui.recLoading = true; ui.recError = '';
   render();
   try {
-    const [r1, r2] = await Promise.all([
+    const [r1, r2, r3] = await Promise.all([
       sbFetch('/rest/v1/er_records?date=eq.' + todayKey() + '&select=student,task,kind,score,total,created_at&order=created_at.asc'),
-      sbFetch('/rest/v1/er_profiles?is_teacher=eq.false&select=id,name,username,class,student_no,approved&order=class.asc,student_no.asc')
+      sbFetch('/rest/v1/er_profiles?is_teacher=eq.false&select=id,name,username,class,student_no,approved&order=class.asc,student_no.asc'),
+      sbFetch('/rest/v1/er_progress?select=user_id,state,updated_at')   // 학생별 상태(학습시간·알 부화 포함) — RLS로 교사 전체 조회 허용
     ]);
     if (!r1.ok) throw new Error('HTTP ' + r1.status);
     ui.records = await r1.json();
     const all = r2.ok ? await r2.json() : [];
     ui.profiles = all.filter(p => p.approved);
     ui.pending = all.filter(p => !p.approved);
+    // 학생 상태를 user_id로 색인(학습시간·알 부화 통계용)
+    const prog = {};
+    if (r3.ok) { (await r3.json()).forEach(row => { prog[row.user_id] = row.state || {}; }); }
+    ui.progById = prog;
   } catch (e) {
     ui.recError = e.message;
     ui.records = null;
@@ -758,7 +763,7 @@ function armReviewGate() {
 // 화면에만 쓰이는 임시 UI 상태(저장 안 함)
 const ui = {
   teacherTab: 'dash', pubMsg: '', pubBusy: false, edMsg: '',
-  records: null, recLoading: false, recError: '', profiles: [],
+  records: null, recLoading: false, recError: '', profiles: [], progById: {},
   signupMode: false, authMsg: '', authBusy: false, asStudent: false, grantMsg: '',
   pending: [], grantBusy: '',   // 교사: 가입 대기 목록 / 부여 진행중 표시
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
@@ -3013,6 +3018,17 @@ function teacherDashHTML() {
     </div>`;
 }
 
+// 학생 상태 블록에서 학습시간·알 부화 통계 요약
+function studentStats(stt) {
+  if (!stt) return null;
+  const sl = stt.studyLog || {}, el = stt.eggLog || {};
+  const totalSecs = Object.values(sl).reduce((a, v) => a + (v || 0), 0);
+  const todaySecs = sl[todayKey()] || 0;
+  const eggsToday = el[todayKey()] || 0;
+  const hatchedTotal = Array.isArray(stt.animals) ? stt.animals.length : Object.values(el).reduce((a, v) => a + (v || 0), 0);
+  const days = Object.keys(sl).filter(k => (sl[k] || 0) > 0).length;
+  return { totalSecs, todaySecs, eggsToday, hatchedTotal, days, xp: stt.xp || 0 };
+}
 /* ---- 실데이터 대시보드(Supabase 설정 시) ---- */
 function liveDashHTML(day) {
   const req = requiredKeys();
@@ -3067,6 +3083,15 @@ function liveDashHTML(day) {
       : rs.length
         ? `<span style="font-size:10.5px;font-weight:600;color:#2f74e6;background:#e7f0fd;padding:3px 8px;border-radius:7px">진행 ${doneReq}/${req.length}</span>`
         : `<span style="font-size:10.5px;font-weight:600;color:#e2564d;background:#fbe4e2;padding:3px 8px;border-radius:7px">시작 전</span>`;
+    const stt = s.id ? studentStats((ui.progById || {})[s.id]) : null;
+    const statPill = (emoji, label, val) => `<span style="display:inline-flex;align-items:center;gap:4px;background:#f4f7fb;border-radius:8px;padding:3px 8px;font-size:10.5px;color:#5f7794"><span>${emoji}</span><span style="font-weight:700;color:#14243f">${val}</span><span style="color:#9aa8bd">${label}</span></span>`;
+    const statsRow = stt ? `
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+        ${statPill('⏱', '오늘', stt.todaySecs ? fmtDuration(stt.todaySecs) : '–')}
+        ${statPill('📚', '누적', stt.totalSecs ? fmtDuration(stt.totalSecs) : '–')}
+        ${statPill('🥚', '오늘 부화', stt.eggsToday)}
+        ${statPill('🐠', '모은 물고기', stt.hatchedTotal)}
+      </div>` : (s.id ? `<div style="font-size:10.5px;color:#c3ceda;margin-top:7px">아직 학습 기록이 없어요</div>` : '');
     return `<div style="padding:12px 14px;border-bottom:1px solid #f4f7fb">
       <div style="display:flex;align-items:center;gap:9px">
         <div style="width:28px;height:28px;border-radius:50%;background:${allDone ? '#2fa36b' : (rs.length ? '#2f74e6' : '#c3ceda')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc(s.name.slice(0, 2))}</div>
@@ -3076,6 +3101,7 @@ function liveDashHTML(day) {
         ${badge}
         <div style="font-size:12px;font-weight:700;color:${avg == null ? '#c3ceda' : '#14243f'};width:34px;text-align:right">${avg == null ? '–' : avg}</div>
       </div>
+      ${statsRow}
       ${grantBtns(s.id)}
     </div>`;
   }).join('');
@@ -3086,6 +3112,10 @@ function liveDashHTML(day) {
   }).length;
   const allScores = shownRecs.filter(r => r.score != null);
   const avgAll = allScores.length ? Math.round(allScores.reduce((a, r) => a + r.score, 0) / allScores.length) : null;
+
+  // 반 전체 집계: 오늘 학습시간 합 · 오늘 부화한 알 합 · 오늘 접속(학습>0) 학생 수
+  let sumTodaySecs = 0, sumEggsToday = 0, activeToday = 0;
+  shown.forEach(s => { const st = s.id ? studentStats((ui.progById || {})[s.id]) : null; if (st) { sumTodaySecs += st.todaySecs; sumEggsToday += st.eggsToday; if (st.todaySecs > 0) activeToday++; } });
 
   const pendingSection = pending.length ? `
     <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 10px">가입 대기 <span style="font-size:11px;color:#fff;background:#e2564d;border-radius:8px;padding:2px 7px">${pending.length}</span></div>
@@ -3123,6 +3153,11 @@ function liveDashHTML(day) {
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 다 끝낸 학생</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${totalDone}<span style="font-size:12px;color:#7d8aa0">/${shown.length}</span></div></div>
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">퀴즈 평균</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${avgAll == null ? '–' : avgAll}<span style="font-size:12px;color:#7d8aa0">점</span></div></div>
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 기록</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${shownRecs.length}<span style="font-size:12px;color:#7d8aa0">건</span></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:11px">
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">⏱ 오늘 접속</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${activeToday}<span style="font-size:12px;color:#7d8aa0">/${shown.length}명</span></div></div>
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">📚 오늘 학습시간</div><div style="font-size:19px;font-weight:700;color:#14243f;margin-top:5px">${sumTodaySecs ? fmtDuration(sumTodaySecs) : '–'}</div></div>
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">🥚 오늘 부화</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${sumEggsToday}<span style="font-size:12px;color:#7d8aa0">개</span></div></div>
     </div>
 
     <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 10px">학생별 현황 · 보상 주기${filt ? ' · ' + esc(filt) : ''}</div>
