@@ -859,38 +859,36 @@
         ],
         "sentence": [
           {
-            "type": "mc",
-            "prompt": "이 문장의 주어는?",
-            "explain": "문장의 주어는 Sailors(선원들)입니다.",
-            "sentence": "Sailors spoke of a restless horizon.",
-            "options": [
-              "Sailors",
-              "a restless horizon",
-              "spoke"
-            ],
+            "type": "ab",
+            "prompt": "둘 중 어법적으로 옳은 것을 고르시오.",
+            "explain": "부정어(not)가 문장 앞에 오면서 도치가 발생했죠. 주어는 'happy ending'으로, 단수기 때문에 수 일치를 시켜 동사 'is'를 사용합니다.",
+            "sentence": "In this book, not only [ is / are ] there no happy ending, there is no happy beginning and very few happy things in the middle. This is because not very many happy things happened in the lives of the three Baudelaire youngsters.",
             "answer": 0
           },
           {
-            "type": "mc",
+            "type": "fix",
             "prompt": "이 문장의 동사는?",
-            "explain": "동사는 spoke(speak의 과거형)입니다.",
-            "sentence": "Sailors spoke of a restless horizon.",
-            "options": [
-              "spoke",
-              "Sailors",
-              "horizon"
-            ],
-            "answer": 0
+            "explain": ", (콤마) 후에 관계대명사 that은 사용할 수 없어요!",
+            "sentence": "This particular morning it was gray and cloudy, that didn’t bother the Baudelaire youngsters one bit.",
+            "wrong": 8,
+            "accept": [
+              "which"
+            ]
           },
           {
-            "type": "input",
-            "prompt": "\"kept its silence\"를 우리말로 해석하면?",
-            "explain": "kept its silence = 침묵을 지켰다.",
-            "accept": [
-              "침묵을 지켰다",
-              "침묵했다",
-              "조용히 있었다",
-              "침묵"
+            "type": "scramble",
+            "prompt": "바이올렛은 머리카락처럼 사소한 것에 마음을 빼앗기고 싶어 한 적이 없었다.",
+            "explain": "as ... as ~ = ~만큼 ... 한",
+            "chunks": [
+              "She",
+              "as",
+              "her hair",
+              "never wanted",
+              "something",
+              "as",
+              "to be distracted",
+              "trivial",
+              "by"
             ]
           }
         ],
