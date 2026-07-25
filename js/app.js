@@ -653,6 +653,7 @@ const DEFAULT_STATE = {
   wordbook: [],             // '몰라요' 한 단어 모음 [{word,def,pos,ex,ts}] (5번에서 클라우드 동기화)
   studyLog: {},             // {날짜: 누적 학습 초} — 학습 화면에 머문 시간
   eggLog: {},               // {날짜: 그날 부화시킨 알 개수}
+  displayed: null,          // 아쿠아리움에 전시할 종 id 목록(레벨별 한도) · null=자동
   presentTheme: 'deep',     // 수업용 발표 화면 배경 그라디언트 테마
   presentFont: 1,           // 수업용 발표 글씨 배율(0.6~1.8)
   presentLineH: 1.4,        // 발표 행간(줄 간격)
@@ -764,6 +765,14 @@ const xpInto = () => state.xp % XP_NEED;
 function chapProg(key) { return (state.progress && state.progress[key]) || { tasks: {}, rewarded: false }; }
 const doneCount = () => { const p = chapProg(chapterKey(activeDay())); return requiredKeys().filter(k => p.tasks[k]).length; };
 const speciesCount = () => new Set(state.animals).size;
+// 레벨별 아쿠아리움 전시 가능 마리 수(4마리 시작, 레벨마다 +2, 최대=전체 종)
+function displayLimit() { return Math.min(SPECIES.length, 4 + (level() - 1) * 2); }
+// 실제로 전시할 종 목록(수집한 것만, 한도 내). state.displayed 미설정 시 수집 종을 한도까지 자동 표시.
+function displayedList() {
+  const uniq = [...new Set(state.animals)];
+  let d = Array.isArray(state.displayed) ? state.displayed.filter(id => uniq.includes(id)) : uniq.slice(0, displayLimit());
+  return d.slice(0, displayLimit());
+}
 
 // 결정적 의사난수(수조 배치가 리렌더마다 흔들리지 않게)
 function rnd(i, k) {
@@ -790,7 +799,7 @@ function spriteHTML(id, scale, extraStyle) {
 /* ---------- 수조(헤엄치는 동물 + 거품) ---------- */
 function tankHTML(full) {
   let html = '';
-  state.animals.forEach((id, i) => {
+  displayedList().forEach((id, i) => {
     const top = (8 + rnd(i, 1) * 58) + '%';
     const left = (3 + rnd(i, 6) * 10) + '%';
     const sw = (50 + rnd(i, 5) * (full ? 150 : 70)).toFixed(0) + 'px';
@@ -813,14 +822,20 @@ function tankHTML(full) {
 function collectionHTML() {
   const counts = {};
   state.animals.forEach(id => counts[id] = (counts[id] || 0) + 1);
+  const disp = new Set(state.displayed || []);
   const cells = SPECIES.map(sp => {
     const c = counts[sp.id] || 0, un = c > 0, rar = RARITY[RAR[sp.id]];
-    return `<div style="background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:14px 6px 9px;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;overflow:hidden">
+    const on = disp.has(sp.id);
+    const btn = un
+      ? `<button data-act="toggleDisplay" data-arg="${sp.id}" style="margin-top:3px;border:none;border-radius:8px;padding:4px 0;width:100%;font-size:9.5px;font-weight:700;cursor:pointer;${on ? 'background:#e0f3ea;color:#1f7a4d' : 'background:#e7f0fd;color:#2f74e6'}">${on ? '전시중 ✓' : '＋ 전시'}</button>`
+      : '';
+    return `<div style="background:#fff;border:1px solid ${on ? '#a9d8bd' : '#e2e9f2'};border-radius:14px;padding:14px 6px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;overflow:hidden">
       <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${un ? rar.color : '#e2e9f2'}"></div>
       ${c > 1 ? `<div style="position:absolute;top:8px;right:7px;background:#2f74e6;color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 5px">×${c}</div>` : ''}
       <div style="height:44px;display:flex;align-items:flex-end">${spriteHTML(sp.id, 4, un ? '' : 'opacity:.14;filter:grayscale(1)')}</div>
       <div style="font-size:10px;font-weight:600;color:${un ? '#14243f' : '#b8c2d2'}">${un ? sp.name : '???'}</div>
       <div style="font-size:7.5px;font-weight:700;letter-spacing:.03em;color:${un ? rar.color : '#c8d2e0'}">${un ? rar.label : '—'}</div>
+      ${btn}
     </div>`;
   }).join('');
   return `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px">${cells}</div>`;
@@ -902,7 +917,20 @@ const actions = {
 
   goHome() { set({ screen: 'home', pop: null, dexOpen: false }); },
   openChapter(key) { set({ screen: 'chapter', chapterKey: key, pop: null, dexOpen: false }); },   // 챕터 허브 열기
-  goAqua() { set({ screen: 'aquarium', pop: null, dexOpen: false }); },
+  goAqua() {
+    if (!Array.isArray(state.displayed)) { const uniq = [...new Set(state.animals)]; state.displayed = uniq.slice(0, displayLimit()); }
+    set({ screen: 'aquarium', pop: null, dexOpen: false });
+  },
+  // 도감: 아쿠아리움 전시에 넣기/빼기(레벨별 한도)
+  toggleDisplay(id) {
+    if (![...new Set(state.animals)].includes(id)) return;   // 아직 수집 안 함
+    const d = (state.displayed || []).slice();
+    const idx = d.indexOf(id);
+    if (idx >= 0) { d.splice(idx, 1); ui.dexMsg = ''; }
+    else if (d.length >= displayLimit()) { ui.dexMsg = `전시 칸이 가득 찼어요 (${displayLimit()}칸). 레벨을 올리거나 다른 물고기를 빼세요.`; render(); return; }
+    else { d.push(id); ui.dexMsg = ''; }
+    set({ displayed: d });
+  },
   goMe() { set({ screen: 'me', pop: null, dexOpen: false }); },
   toggleXpPop() { ui.xpPop = !ui.xpPop; render(); },
   goHatch() { set({ screen: 'hatchery', hatchStage: 'idle', hatchSpecies: null, pop: null, dexOpen: false }); },
@@ -933,7 +961,7 @@ const actions = {
     save(); render();
   },
 
-  openDex() { set({ dexOpen: true }); },
+  openDex() { ui.dexMsg = ''; set({ dexOpen: true }); },
   closeDex() { set({ dexOpen: false }); },
 
   openReader() { set({ screen: 'reader', readerBurning: false, readerPage: 0, readerBookKey: (activeDay().book || {}).title || '' }); },
@@ -1149,9 +1177,12 @@ const actions = {
     const id = cands[Math.floor(Math.random() * cands.length)].id;
     clearTimeout(hatchTimer);
     const eggLog = Object.assign({}, state.eggLog); eggLog[todayKey()] = (eggLog[todayKey()] || 0) + 1;   // 오늘 부화 기록
+    // 새로 부화한 종은 전시 칸에 여유가 있으면 자동 전시
+    const displayed = (Array.isArray(state.displayed) ? state.displayed.slice() : [...new Set(state.animals)].slice(0, displayLimit()));
+    if (!displayed.includes(id) && displayed.length < displayLimit()) displayed.push(id);
     set({
       hatchStage: 'cracking', hatchSpecies: id, pullCount: pull,
-      eggs: state.eggs - 1, animals: state.animals.concat([id]), xp: state.xp + 40, eggLog
+      eggs: state.eggs - 1, animals: state.animals.concat([id]), xp: state.xp + 40, eggLog, displayed
     });
     hatchTimer = setTimeout(() => set({ hatchStage: 'revealed' }), HATCH_MS);
   },
@@ -2084,10 +2115,12 @@ function aquariumHTML() {
     <div data-act="closeDex" style="position:absolute;inset:0;background:rgba(6,20,40,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:55"></div>
     <div style="position:absolute;left:0;right:0;bottom:0;max-height:80%;overflow-y:auto;background:#eef3fa;border-radius:26px 26px 0 0;padding:14px 18px 30px;z-index:56;box-shadow:0 -16px 44px -10px rgba(0,0,0,.55)">
       <div style="display:flex;justify-content:center;margin-bottom:12px"><div style="width:40px;height:5px;border-radius:3px;background:#c8d4e2"></div></div>
-      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
         <div style="font-size:15px;font-weight:700;color:#14243f">도감</div>
         <div style="font-size:12px;color:#7d8aa0">${speciesCount()} / ${SPECIES.length} 종 발견</div>
       </div>
+      <div style="font-size:11.5px;color:#7d8aa0;margin-bottom:12px">＋전시를 눌러 아쿠아리움에 넣고 빼요 · 전시 <b style="color:#2f74e6">${(state.displayed || []).length}/${displayLimit()}</b> (Lv.${level()})</div>
+      ${ui.dexMsg ? `<div style="font-size:11.5px;font-weight:700;color:#b23a32;background:#fbe4e2;border-radius:10px;padding:8px 11px;margin-bottom:12px">${esc(ui.dexMsg)}</div>` : ''}
       ${collectionHTML()}
       <div data-act="closeDex" style="margin-top:16px;text-align:center;background:#2f74e6;color:#fff;font-size:13px;font-weight:600;padding:12px;border-radius:14px;cursor:pointer">닫기</div>
     </div>` : '';
@@ -2102,7 +2135,7 @@ function aquariumHTML() {
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div>
           <div style="font-size:19px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.4)">나의 아쿠아리움</div>
-          <div style="font-size:12px;opacity:.92;margin-top:2px;text-shadow:0 1px 5px rgba(0,0,0,.35)">Lv.${level()} 사육사 · ${state.animals.length}마리 사육 중</div>
+          <div style="font-size:12px;opacity:.92;margin-top:2px;text-shadow:0 1px 5px rgba(0,0,0,.35)">Lv.${level()} 사육사 · 전시 ${displayedList().length}/${displayLimit()} · ${speciesCount()}종 수집</div>
         </div>
         <div style="text-align:right;background:rgba(11,33,64,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border-radius:14px;padding:8px 12px">
           <div style="font-size:10px;opacity:.85">보유 알</div>
