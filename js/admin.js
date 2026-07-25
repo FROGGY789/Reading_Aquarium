@@ -163,11 +163,13 @@ const actions = {
   selectDay(i) { commit(); openDay(Number(i)); toast(''); render(); },
   addDay() {
     commit();
-    const tpl = clone(content.days[content.days.length - 1] || { date: _todayKey(), label: '', quote: {}, book: {}, passage: '', vocab: {}, quiz: {} });
-    tpl.date = _todayKey(); tpl.label = 'Day ' + (content.days.length + 1);
-    content.days.push(tpl);
-    openDay(content.days.length - 1);
-    toast('새 챕터를 추가했어요 (마지막 챕터 복제).', 'ok');
+    // 완전히 빈 새 챕터(지문·문제·단어 없음)
+    const nd = { date: _todayKey(), label: '', quote: {}, book: { title: '', author: '', chapter: '', cover: '', spine: '' }, passage: '', vocab: {}, coreSentences: [], quiz: {} };
+    content.days.push(nd);
+    content.days.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    openDay(content.days.indexOf(nd));
+    ui.tab = 'passage';
+    toast('빈 새 챕터를 추가했어요. 지문·문제를 새로 채워주세요.', 'ok');
     render();
   },
   delDay() {
@@ -316,6 +318,7 @@ function render() {
   else if (ui.tab === 'passage') panel = passageTab(d);
   else if (ui.tab === 'preview') panel = previewTab(d);
   else if (ui.tab === 'quiz') panel = quizTab(d);
+  else if (ui.tab === 'grammar') panel = grammarTab(d);
   else if (ui.tab === 'schedule') panel = scheduleTab();
   else panel = settingsTab();
 
@@ -335,7 +338,8 @@ function render() {
       ${tabBtn('book', '📖 책 정보')}
       ${tabBtn('passage', '✍️ 지문 편집')}
       ${tabBtn('preview', '👀 예습 (살살·보통·버닝)')}
-      ${tabBtn('quiz', '📝 복습 · 퀴즈')}
+      ${tabBtn('quiz', '📝 복습 문제')}
+      ${tabBtn('grammar', '📐 어법 퀴즈')}
       ${tabBtn('settings', '⚙️ 학생 · 설정')}
     </div>
 
@@ -629,7 +633,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v43 (아쿠아리움 전시 한도·도감 넣기빼기)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v44 (어법 퀴즈 별도 탭·문장예습 삭제·빈 새 챕터·버닝 팝오버 수정)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -853,12 +857,20 @@ function quizTab(d) {
     </div>
   </div>
   <div class="card">
-    <h2>복습 · 보조 퀴즈</h2>
-    <div class="hint">문제를 비워두면 그 문항은 출제되지 않아요. 문항이 하나도 없는 카테고리는 학생 홈에서 숨겨집니다.</div>
-    <div class="cols">
-      <div>${['sentence', 'grammar'].map(qcat).join('')}</div>
-      <div>${['sentPrep'].map(qcat).join('')}</div>
-    </div>
+    <h2>복습 문제</h2>
+    <div class="hint">문제를 비워두면 그 문항은 출제되지 않아요. 문항이 하나도 없으면 학생 홈에서 숨겨집니다. (어법 퀴즈는 <b>📐 어법 퀴즈</b> 탭에서 따로 관리해요.)</div>
+    ${qcat('sentence')}
+  </div>`;
+}
+/* ---- 탭: 어법(문법 개념 + 어법 퀴즈) ---- */
+function grammarTab(d) {
+  return `<div class="card" style="background:#f4f7ff;border-color:#d6e2f7">
+    <h2>📐 어법 (문법)</h2>
+    <div class="hint" style="margin:0">문법을 <b>기본부터 순서대로</b> 개념을 익히고 문제를 푸는 공간이에요. 아래 <b>어법 퀴즈</b> 문항을 순서대로 쌓아 두면, 학생 심화 학습의 어법 퀴즈로 나갑니다. (개념 설명 편집은 곧 추가돼요.)</div>
+  </div>
+  <div class="card">
+    <h2>어법 퀴즈 문항</h2>
+    ${qcat('grammar')}
   </div>`;
 }
 function qcat(cat) {

@@ -2354,8 +2354,9 @@ function allBooks() {
     const p = dayPassage(d);
     if (!p.trim()) return;
     const title = ((d.book && d.book.title) || '').trim() || '제목 없는 책';
-    if (!map[title]) map[title] = { title, author: (d.book && d.book.author) || '', cover: '', spine: '', chapters: [] };
+    if (!map[title]) map[title] = { title, author: (d.book && d.book.author) || '', cover: '', spine: '', chapters: [], vocab: {} };
     map[title].chapters.push({ date: d.date || '', chapter: (d.book && d.book.chapter) || '', passage: p });
+    Object.assign(map[title].vocab, dayVocab(d));   // 이 책의 모든 챕터 어휘를 합침(리더 팝오버용)
     if (!map[title].cover && dayCover(d)) map[title].cover = dayCover(d);
     if (!map[title].spine && daySpine(d)) map[title].spine = daySpine(d);
     if (!map[title].author && d.book && d.book.author) map[title].author = d.book.author;
@@ -2372,7 +2373,7 @@ function currentBook() {
   if (found) return found;
   // 폴백: 오늘 Day
   const d = activeDay();
-  return { title: (d.book && d.book.title) || '', author: (d.book && d.book.author) || '', chapter: (d.book && d.book.chapter) || '', cover: dayCover(d), spine: daySpine(d), passage: dayPassage(d) };
+  return { title: (d.book && d.book.title) || '', author: (d.book && d.book.author) || '', chapter: (d.book && d.book.chapter) || '', cover: dayCover(d), spine: daySpine(d), passage: dayPassage(d), vocab: dayVocab(d) };
 }
 function readerPages() { return passageToPages(currentBook().passage); }
 function readerProgress() {
@@ -2385,8 +2386,8 @@ function readerHTML() {
   const page = Math.min(state.readerPage, Math.max(0, pages.length - 1));
   const burning = !!state.readerBurning;
   const paras = burning ? (passageToPagesRaw(book.passage)[page] || []) : (pages[page] || []);
-  // 버닝: [단어] 팝오버 활성
-  const words = dayVocab(activeDay());
+  // 버닝: <단어> 팝오버 활성 — 이 책의 모든 챕터 어휘를 합쳐서 조회(다른 챕터 단어도 뜨게)
+  const words = (book && book.vocab && Object.keys(book.vocab).length) ? book.vocab : dayVocab(activeDay());
   const wStyle = active => `background:${active ? '#c08a3a' : '#f0e2c4'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #c08a3a;border-radius:3px;padding:0 3px;cursor:pointer`;
   const pop = burning && state.pop && words[state.pop] ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `<div style="font-family:'IBM Plex Sans KR',sans-serif;background:#3a3222;color:#f5f0e6;border-radius:12px;padding:12px 14px;margin:2px 0 16px;box-shadow:0 12px 26px -12px rgba(0,0,0,.5)">
