@@ -1209,12 +1209,15 @@ const actions = {
     const days = deployedDays();
     const idx = (ui.presDay == null || ui.presDay >= days.length) ? bestDeployedDayIndex(days) : ui.presDay;
     const d = days[idx] || activeDay();
-    const sents = balanceMarks(passageToSentences(dayPassage(d)));
+    const sents = balanceMarks(passageToReviewSentences(dayPassage(d)));   // <단어> 유지 → 어휘 빨간 형광펜
     if (!sents.length) return;   // 지문이 없으면 버튼이 이미 비활성 안내 상태
-    ui.present = { on: true, i: 0, sents, title: d.label || '' };
+    const vdict = dayVocab(d); const vmap = {};
+    dayVocabCards(d).forEach(v => { vmap[v.word] = v; });
+    ui.present = { on: true, i: 0, sents, title: d.label || '', vmap, showVocab: false };
     requestFS();
     render();
   },
+  presentToggleVocab() { if (ui.present.on) { ui.present.showVocab = !ui.present.showVocab; render(); } },
   presentNext() { const p = ui.present; if (p.on && p.i < p.sents.length - 1) { p.i++; render(); } },
   presentPrev() { const p = ui.present; if (p.on && p.i > 0) { p.i--; render(); } },
   presentGo(arg) { const p = ui.present; const i = Number(arg); if (p.on && i >= 0 && i < p.sents.length) { p.i = i; render(); } },
@@ -3055,6 +3058,11 @@ function requestFS() {
 function exitFS() {
   try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (e) { /* 무시 */ }
 }
+// 발표용 문장 렌더: <단어>=빨간 형광펜(어휘), ==노랑(핵심문장), %%파랑(문법), **굵게
+function renderPresentText(s, accent) {
+  const h = esc(s).replace(/&lt;([^&]+?)&gt;/g, (m, w) => `<mark style="background:#ffbcbc;color:#7a1220;padding:0 .14em;border-radius:.14em;box-decoration-break:clone;-webkit-box-decoration-break:clone">${w}</mark>`);
+  return renderMarks(h, accent);
+}
 function presentHTML() {
   const p = ui.present;
   const total = p.sents.length;
@@ -3068,6 +3076,13 @@ function presentHTML() {
   const fs = presentFontScale();
   const lineH = presentLineH();
   const bezel = presentBezel();
+  // 이 문장에 나온 어휘(<단어>) → 측면 패널
+  const curWords = [];
+  if (p.showVocab && p.vmap) { const seen = {}; (sentence.match(/<([^>]+)>/g) || []).forEach(m => { const w = m.slice(1, -1); if (p.vmap[w] && !seen[w]) { seen[w] = 1; curWords.push(p.vmap[w]); } }); }
+  const vocabPanel = (p.showVocab && curWords.length) ? `<div style="position:absolute;top:74px;right:16px;max-height:calc(100% - 170px);width:min(300px,28vw);z-index:3;overflow:auto;background:rgba(0,0,0,.18);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border-radius:14px;padding:14px 15px;pointer-events:auto">
+      <div style="font-size:11px;font-weight:800;color:rgba(${dim},.65);margin-bottom:10px;letter-spacing:.03em">📕 이 문장의 어휘</div>
+      ${curWords.map(v => `<div style="margin-bottom:11px;line-height:1.4"><div style="font-family:'Lora',serif;font-weight:700;color:#ffbcbc;font-size:16px">${esc(v.head || v.word)}</div><div style="color:rgba(${dim},.9);font-size:12.5px;margin-top:1px">${esc(v.def)}</div></div>`).join('')}
+    </div>` : '';
 
   // 진행 점(문장이 많으면 막대로 대체)
   const progress = total <= 24
@@ -3115,6 +3130,7 @@ function presentHTML() {
           <div style="font-size:10px;font-weight:700;color:rgba(${dim},.7);min-width:30px;text-align:center;font-variant-numeric:tabular-nums">여백 ${bezel}</div>
           <div data-act="presentBezelUp" style="display:flex;align-items:center;justify-content:center;width:38px;height:40px;cursor:${bezel >= PRESENT_BEZEL_MAX ? 'default' : 'pointer'};opacity:${bezel >= PRESENT_BEZEL_MAX ? '.35' : '1'};font-size:15px;font-weight:800">▭＋</div>
         </div>
+        <div data-act="presentToggleVocab" title="어휘 보기(빨간 형광펜 단어 목록)" style="display:flex;align-items:center;gap:6px;padding:0 14px;height:40px;border-radius:12px;background:rgba(${dim},${p.showVocab ? '.24' : '.12'});cursor:pointer;font-size:13px;font-weight:700">🔴 어휘</div>
         <div data-act="presentPalette" title="배경색 조정" style="display:flex;align-items:center;gap:6px;padding:0 14px;height:40px;border-radius:12px;background:rgba(${dim},${p.palette ? '.22' : '.12'});cursor:pointer;font-size:13px;font-weight:700">🎨 배경색</div>
         <div data-act="presentClose" title="닫기 (Esc)" style="display:flex;align-items:center;gap:6px;padding:0 15px;height:40px;border-radius:12px;background:rgba(${dim},.12);cursor:pointer;font-size:13px;font-weight:700">✕ 닫기</div>
       </div>
@@ -3123,8 +3139,9 @@ function presentHTML() {
 
     <!-- 문장(가운데, 크고 깔끔하게) -->
     <div style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:${(bezel * 0.9).toFixed(1)}vh ${bezel}vw;pointer-events:none">
-      <div key="${i}" style="font-family:'Lora',Georgia,serif;font-weight:500;line-height:${lineH};text-align:center;font-size:clamp(${30 * fs}px,${(5.4 * fs).toFixed(2)}vw,${Math.round(68 * fs)}px);max-width:1100px;text-wrap:balance;animation:fadeup .4s ease">${renderMarks(esc(sentence), accent)}</div>
+      <div key="${i}" style="font-family:'Lora',Georgia,serif;font-weight:500;line-height:${lineH};text-align:center;font-size:clamp(${30 * fs}px,${(5.4 * fs).toFixed(2)}vw,${Math.round(68 * fs)}px);max-width:1100px;text-wrap:balance;animation:fadeup .4s ease">${renderPresentText(sentence, accent)}</div>
     </div>
+    ${vocabPanel}
 
     <!-- 하단 바: 이전/진행/다음 -->
     <div style="position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;flex-direction:column;align-items:center;gap:14px;padding:0 20px 26px;pointer-events:none">
