@@ -425,6 +425,8 @@ function dayToEdit(day) {
     date: day.date || _todayKey(),
     label: day.label || '',
     classTarget: day.class || '',   // 대상 반('' = 공통/전체)
+    reviewFrom: day.reviewFrom || '', reviewTo: day.reviewTo || '',     // 복습 문제 공개 기간(비우면 지문 날짜 기준)
+    previewFrom: day.previewFrom || '', previewTo: day.previewTo || '',  // 예습 문제 공개 기간
     quote: Object.assign({ en: '', ko: '', teacher: '', comment: '' }, day.quote || {}),
     book: Object.assign({ title: '', author: '', chapter: '', cover: '', spine: '' }, day.book || {}),
     passageText,
@@ -493,6 +495,10 @@ function editToDay(e) {
   };
   const cls = (e.classTarget || '').trim();
   if (cls) out.class = cls;   // 대상 반이 있으면 저장('' 공통은 필드 생략)
+  ['reviewFrom', 'reviewTo', 'previewFrom', 'previewTo'].forEach(k => {
+    const v = (e[k] || '').trim();
+    if (v) out[k] = v;   // 공개 기간(비우면 필드 생략 → 지문 날짜 기준 폴백)
+  });
   return out;
 }
 

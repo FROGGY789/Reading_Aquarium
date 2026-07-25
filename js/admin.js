@@ -81,6 +81,10 @@ function applySchedField(el) {
       if (((x.book && x.book.title) || '') === oldTitle) { x.book = x.book || {}; x.book.title = val; if (xi === ed.dayIndex) ed.day.book.title = val; }
     });
   } else if (field === 'class') { if (val) day.class = val; else delete day.class; if (isCur) ed.day.classTarget = val; }
+  else if (['reviewFrom', 'reviewTo', 'previewFrom', 'previewTo'].includes(field)) {
+    if (val) day[field] = val; else delete day[field];
+    if (isCur) ed.day[field] = val;
+  }
 }
 // 날짜 재정렬 후에도 현재 편집 중이던 챕터 선택을 유지
 function resortKeepSel() {
@@ -633,7 +637,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v45 (읽기 설정: 형광펜·팝오버·행간 조절)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v46 (홈 복습·예습 분리·챕터별 공개 기간)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -980,12 +984,26 @@ function scheduleTab() {
     const rows = idxs.map(i => {
       const d = content.days[i];
       const cur = i === ed.dayIndex;
-      return `<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;${cur ? 'outline:2px solid #bcd4f7;outline-offset:3px;border-radius:12px' : ''}">
-        <input type="date" data-sched="${i}" data-schedfield="date" value="${esc(d.date || '')}" style="${cell};flex:none;color-scheme:light">
-        <input data-sched="${i}" data-schedfield="chapter" value="${esc((d.book && d.book.chapter) || '')}" placeholder="챕터 이름 (예: Ch1 · 도입부)" style="${cell};flex:1;min-width:150px">
-        <select data-sched="${i}" data-schedfield="class" style="${cell};flex:none">${classOpts(d.class)}</select>
-        <button class="btn ghost sm" data-act="editChapter" data-arg="${i}">✏️ 편집</button>
-        <button class="btn danger sm" data-act="delChapterAt" data-arg="${i}">삭제</button>
+      const dcell = 'padding:6px 8px;background:#fff;border:1px solid #e2e9f2;border-radius:9px;font-size:12px;color-scheme:light;flex:none';
+      const rangeField = (field, ph) => `<input type="date" data-sched="${i}" data-schedfield="${field}" value="${esc(d[field] || '')}" title="${ph}" style="${dcell}">`;
+      return `<div style="margin-top:8px;padding:10px;background:#f7f9fc;border-radius:14px;${cur ? 'outline:2px solid #bcd4f7;outline-offset:2px' : ''}">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="date" data-sched="${i}" data-schedfield="date" value="${esc(d.date || '')}" title="지문 날짜(수업일)" style="${cell};flex:none;color-scheme:light">
+          <input data-sched="${i}" data-schedfield="chapter" value="${esc((d.book && d.book.chapter) || '')}" placeholder="챕터 이름 (예: Ch1 · 도입부)" style="${cell};flex:1;min-width:150px">
+          <select data-sched="${i}" data-schedfield="class" style="${cell};flex:none">${classOpts(d.class)}</select>
+          <button class="btn ghost sm" data-act="editChapter" data-arg="${i}">✏️ 편집</button>
+          <button class="btn danger sm" data-act="delChapterAt" data-arg="${i}">삭제</button>
+        </div>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:9px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px;font-weight:800;color:#2f74e6;white-space:nowrap">📖 복습 공개</span>
+            ${rangeField('reviewFrom', '복습 시작일')}<span style="color:#9aa8bd;font-size:12px">~</span>${rangeField('reviewTo', '복습 종료일')}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px;font-weight:800;color:#c98a12;white-space:nowrap">👀 예습 공개</span>
+            ${rangeField('previewFrom', '예습 시작일')}<span style="color:#9aa8bd;font-size:12px">~</span>${rangeField('previewTo', '예습 종료일')}
+          </div>
+        </div>
       </div>`;
     }).join('');
     return `<div class="card">
@@ -1000,7 +1018,7 @@ function scheduleTab() {
   }).join('');
   return `<div class="card">
     <h2>📅 챕터 일정</h2>
-    <div class="hint">책별로 챕터를 정리하고, 각 챕터의 <b>공개 날짜</b>를 정하세요. 그 날짜부터 학생 홈에 나타나요. <b>같은 날짜에 여러 챕터</b>를 둬도 됩니다. 자세한 내용(지문·단어·문제)은 <b>✏️ 편집</b>으로 들어가서 채워요.</div>
+    <div class="hint">책별로 챕터를 정리하고, 각 챕터의 <b>공개 기간</b>을 정하세요. <b>📖 복습 공개</b> 기간엔 학생 홈 <b>복습하기</b>에, <b>👀 예습 공개</b> 기간엔 <b>예습하기</b>에 나타나요. 기간을 비워두면 <b>지문 날짜부터</b> 계속 열립니다. 자세한 내용(지문·단어·문제)은 <b>✏️ 편집</b>으로 채워요.</div>
   </div>
   ${books || '<div class="card">아직 챕터가 없어요.</div>'}
   <div style="margin:4px 0 10px"><button class="btn ghost" data-act="addDay">＋ 새 챕터(새 책)</button></div>`;

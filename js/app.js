@@ -409,21 +409,37 @@ function sortedChapters() {
   if (cls !== null) { const m = days.filter(d => dayMatchesClass(d, cls)); if (m.length) days = m; }
   return days;
 }
-// 오늘까지 '열린' 챕터(오래된→최신) — 홈 목록과 활성 챕터의 기준
+// 오늘까지 '열린' 챕터(오래된→최신) — 시간 기준 헬퍼(다음 수업 어휘 등)
 function unlockedChapters() {
   const today = todayKey();
   return sortedChapters().filter(d => (d.date || '') <= today);
 }
+// 오늘이 [from, to] 공개 기간 안인가. 둘 다 비면 null(기간 미설정) 반환.
+function _inRange(today, from, to) {
+  from = (from || '').trim(); to = (to || '').trim();
+  if (!from && !to) return null;
+  if (from && today < from) return false;
+  if (to && today > to) return false;
+  return true;
+}
+// 이 챕터의 복습/예습 창이 지금 열려 있는가(기간 미설정이면 지문 날짜<=오늘로 폴백)
+function reviewOpen(ch) { const r = _inRange(todayKey(), ch && ch.reviewFrom, ch && ch.reviewTo); return r === null ? ((ch && ch.date || '') <= todayKey()) : r; }
+function previewOpen(ch) { const r = _inRange(todayKey(), ch && ch.previewFrom, ch && ch.previewTo); return r === null ? ((ch && ch.date || '') <= todayKey()) : r; }
+function reviewChapters() { return sortedChapters().filter(reviewOpen); }
+function previewChapters() { return sortedChapters().filter(previewOpen); }
 // 챕터 고유 키(진행도 저장용) — 날짜 + 라벨
 function chapterKey(ch) { return ch ? ((ch.date || '') + '|' + (ch.label || '')) : ''; }
-// 현재 열려 있는 챕터: state.chapterKey가 가리키는 것, 없으면 가장 최근 열린 챕터
+// 진행도 저장 키: 챕터 + 학습 모드(복습/예습을 따로 완료·보상)
+function progKey(ch, mode) { return chapterKey(ch) + '::' + (mode === 'preview' ? 'preview' : 'review'); }
+function activeProgKey() { return progKey(activeDay(), state.chapterMode); }
+// 현재 열려 있는 챕터: state.chapterKey가 가리키는 것, 없으면 가장 최근 복습 챕터
 function activeDay() {
-  const chs = unlockedChapters();
   if (state.chapterKey) {
-    const hit = chs.find(c => chapterKey(c) === state.chapterKey);
+    const hit = sortedChapters().find(c => chapterKey(c) === state.chapterKey);
     if (hit) return hit;
   }
-  if (chs.length) return chs[chs.length - 1];
+  const rc = reviewChapters();
+  if (rc.length) return rc[rc.length - 1];
   return sortedChapters()[0] || {};   // 아직 열린 챕터가 없으면 첫 챕터로 안전 폴백
 }
 function dayQuiz(cat) { return dayQuizOf(activeDay(), cat); }
@@ -602,11 +618,13 @@ async function loadWordbook() {
 
 // 오늘 할 일 구성(문항이 있는 카테고리만 노출)
 const MAIN_TASKS = [
-  { key: 'review',   icon: '📖',  bg: '#e0f3ea', time: '20분', sub: () => '단어 팝오버로 다시 읽기' },
-  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', time: '10분', sub: n => `어법 유형 문제 ${n}문항` },
-  { key: 'vocab',    icon: '🔤',  bg: '#fdeede', time: '10분', sub: () => `플래시카드로 단어 복습 (알아요/몰라요)` },
-  { key: 'preview',  icon: '👀',  bg: '#e7f0fd', time: '5분', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
+  { key: 'review',   icon: '📖',  bg: '#e0f3ea', time: '20분', mode: 'review',  sub: () => '단어 팝오버로 다시 읽기' },
+  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', time: '10분', mode: 'review',  sub: n => `어법 유형 문제 ${n}문항` },
+  { key: 'vocab',    icon: '🔤',  bg: '#fdeede', time: '10분', mode: 'review',  sub: () => `플래시카드로 단어 복습 (알아요/몰라요)` },
+  { key: 'preview',  icon: '👀',  bg: '#e7f0fd', time: '5분',  mode: 'preview', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
 ];
+// 현재 학습 모드('review'=복습 / 'preview'=예습)의 할 일 목록
+function modeTasks(mode) { return MAIN_TASKS.filter(t => t.mode === (mode || 'review')); }
 const BONUS_TASKS = [
   { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', time: '3분', sub: () => `다음 수업 지문 단어 · 플래시카드 ${Math.min(nextDayPopoverCards().length, 30)}개` },
   { key: 'wbStudy',   icon: '📒', bg: '#eef2f8', time: '5분', name: '단어장 학습', sub: () => `내 단어장 단어를 망각곡선 맞춤으로 카드 복습` },
@@ -626,9 +644,9 @@ function taskAvailableForDay(d, key) {
   return dayQuizOf(d, key).length > 0;
 }
 function taskAvailable(key) { return taskAvailableForDay(activeDay(), key); }
-// 한 챕터의 '할 일'(MAIN) 중 실제로 존재하는 항목들
-function chapterRequiredKeys(ch) { return MAIN_TASKS.map(t => t.key).filter(k => taskAvailableForDay(ch, k)); }
-function requiredKeys() { return chapterRequiredKeys(activeDay()); }
+// 한 챕터·모드의 '할 일'(MAIN) 중 실제로 존재하는 항목들
+function chapterRequiredKeys(ch, mode) { return modeTasks(mode).map(t => t.key).filter(k => taskAvailableForDay(ch, k)); }
+function requiredKeys() { return chapterRequiredKeys(activeDay(), state.chapterMode); }
 
 /* ---------- 상태 ---------- */
 const DEFAULT_STATE = {
@@ -638,6 +656,7 @@ const DEFAULT_STATE = {
   introLeaving: false,
   daily: null,              // {date, tasks:{...}, rewarded} — 화면 리셋용(자정 넘김 시 몰입화면 복귀)
   chapterKey: null,         // 현재 열려 있는 챕터 키(null이면 홈 목록)
+  chapterMode: 'review',    // 챕터 학습 모드: 'review'(복습) / 'preview'(예습)
   progress: {},             // 챕터별 진행도 { [key]: {tasks:{}, rewarded} } — 영구(리셋 안 함)
   eggs: 0,
   animals: [],
@@ -802,7 +821,7 @@ const level = () => Math.floor(state.xp / XP_NEED) + 1;
 const xpInto = () => state.xp % XP_NEED;
 // 챕터별 진행도(읽기전용 안전 버전) — 없으면 빈 기본값 반환
 function chapProg(key) { return (state.progress && state.progress[key]) || { tasks: {}, rewarded: false }; }
-const doneCount = () => { const p = chapProg(chapterKey(activeDay())); return requiredKeys().filter(k => p.tasks[k]).length; };
+const doneCount = () => { const p = chapProg(activeProgKey()); return requiredKeys().filter(k => p.tasks[k]).length; };
 const speciesCount = () => new Set(state.animals).size;
 // 레벨별 아쿠아리움 전시 가능 마리 수(4마리 시작, 레벨마다 +2, 최대=전체 종)
 function displayLimit() { return Math.min(SPECIES.length, 4 + (level() - 1) * 2); }
@@ -954,8 +973,10 @@ const actions = {
     introTimer = setTimeout(() => set({ intro: false, introLeaving: false }), 900);
   },
 
-  goHome() { set({ screen: 'home', pop: null, dexOpen: false }); },
-  openChapter(key) { set({ screen: 'chapter', chapterKey: key, pop: null, dexOpen: false }); },   // 챕터 허브 열기
+  goHome() { set({ screen: 'home', pop: null, dexOpen: false, readCtl: false }); },
+  openChapter(key) { set({ screen: 'chapter', chapterKey: key, chapterMode: 'review', pop: null, dexOpen: false, readCtl: false }); },   // (구) 복습으로 열기
+  openReview(key) { set({ screen: 'chapter', chapterKey: key, chapterMode: 'review', pop: null, dexOpen: false, readCtl: false }); },   // 복습하기로 챕터 열기
+  openPreview(key) { set({ screen: 'chapter', chapterKey: key, chapterMode: 'preview', pop: null, dexOpen: false, readCtl: false }); },  // 예습하기로 챕터 열기
   goAqua() {
     if (!Array.isArray(state.displayed)) { const uniq = [...new Set(state.animals)]; state.displayed = uniq.slice(0, displayLimit()); }
     set({ screen: 'aquarium', pop: null, dexOpen: false });
@@ -1380,8 +1401,8 @@ function completeTask(t) {
     correct: r ? r.correct : null
   });
 
-  // 완료를 '활성 챕터'의 진행도에 기록
-  const key = chapterKey(activeDay());
+  // 완료를 '활성 챕터·모드'의 진행도에 기록
+  const key = activeProgKey();
   const cur = chapProg(key);
   const wasDone = cur.tasks[t];
   const tasks = Object.assign({}, cur.tasks, { [t]: true });
@@ -1752,7 +1773,7 @@ function taskRowHTML(cfg) {
     </div>`;
   }
   if (!taskAvailable(cfg.key)) return '';
-  const done = chapProg(chapterKey(activeDay())).tasks[cfg.key];
+  const done = chapProg(activeProgKey()).tasks[cfg.key];
   const row = `display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid ${done ? '#cfe6da' : '#e2e9f2'};border-radius:16px;padding:13px 15px;cursor:pointer;opacity:${done ? '.72' : '1'}`;
   const badge = done
     ? `<div style="font-size:11px;font-weight:700;color:#2fa36b">완료 ✓</div>`
@@ -1848,10 +1869,11 @@ function progressColor(t) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 // 챕터 카드 한 장(홈 목록) — 진행도에 따라 색이 분홍→초록으로
-function chapterCardHTML(ch) {
+function chapterCardHTML(ch, mode) {
+  mode = mode === 'preview' ? 'preview' : 'review';
   const key = chapterKey(ch);
-  const req = chapterRequiredKeys(ch);
-  const p = chapProg(key);
+  const req = chapterRequiredKeys(ch, mode);
+  const p = chapProg(progKey(ch, mode));
   const done = req.filter(k => p.tasks[k]).length;
   const ratio = req.length ? done / req.length : 0;
   const pct = Math.round(ratio * 100);
@@ -1860,8 +1882,9 @@ function chapterCardHTML(ch) {
   const title = (ch.book && ch.book.title) || '';
   const bg = req.length ? progressColor(ratio) : '#fff';
   const bd = complete ? '#a9d8bd' : (req.length ? 'rgba(20,50,90,.08)' : '#e2e9f2');
-  return `<div data-act="openChapter" data-arg="${esc(key)}" style="display:flex;gap:13px;align-items:center;background:${bg};border:1.5px solid ${bd};border-radius:18px;padding:14px 15px;cursor:pointer;box-shadow:0 8px 20px -14px rgba(20,50,90,.5);transition:background .4s ease">
-    <div style="flex:none;width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:22px">${complete ? '✅' : '📖'}</div>
+  const act = mode === 'preview' ? 'openPreview' : 'openReview';
+  return `<div data-act="${act}" data-arg="${esc(key)}" style="display:flex;gap:13px;align-items:center;background:${bg};border:1.5px solid ${bd};border-radius:18px;padding:14px 15px;cursor:pointer;box-shadow:0 8px 20px -14px rgba(20,50,90,.5);transition:background .4s ease">
+    <div style="flex:none;width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:22px">${complete ? '✅' : (mode === 'preview' ? '👀' : '📖')}</div>
     <div style="flex:1;min-width:0">
       <div style="font-size:14.5px;font-weight:700;color:#14243f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
       ${title ? `<div style="font-size:11.5px;color:#7d8aa0;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title)}</div>` : ''}
@@ -1877,7 +1900,6 @@ function chapterCardHTML(ch) {
 // 홈 = 챕터 목록
 function homeHTML() {
   const enter = (!state.intro && freshView) ? 'animation:riseIn .8s cubic-bezier(.2,.7,.2,1) both' : '';
-  const chapters = unlockedChapters();
   const q = todayQuote();
 
   const eggBanner = state.eggs > 0 ? `
@@ -1896,9 +1918,19 @@ function homeHTML() {
       <div style="font-size:11px;font-weight:700;color:#2f74e6">열기 →</div>
     </div>`;
 
-  const chapterList = chapters.length
-    ? `<div style="display:flex;flex-direction:column;gap:11px">${chapters.map(chapterCardHTML).join('')}</div>`
-    : `<div style="background:#fff;border:1px dashed #cdd8e6;border-radius:16px;padding:26px 18px;text-align:center;color:#7d8aa0;font-size:12.5px">아직 열린 챕터가 없어요.<br>선생님이 새 챕터를 열면 여기에 나타나요 📖</div>`;
+  const reviewChs = reviewChapters();
+  const previewChs = previewChapters();
+  const emptyBox = msg => `<div style="background:#fff;border:1px dashed #cdd8e6;border-radius:16px;padding:22px 18px;text-align:center;color:#9aa8bd;font-size:12px">${msg}</div>`;
+  const groupSection = (accent, emoji, heading, desc, chs, mode) => `
+    <div style="display:flex;align-items:center;gap:8px;margin:0 0 4px">
+      <div style="width:30px;height:30px;border-radius:10px;background:${accent}1a;display:flex;align-items:center;justify-content:center;font-size:16px">${emoji}</div>
+      <div style="flex:1"><span style="font-size:15px;font-weight:800;color:#14243f">${heading}</span></div>
+      <span style="font-size:11.5px;font-weight:700;color:${accent}">${chs.length}개</span>
+    </div>
+    <div style="font-size:11px;color:#7d8aa0;margin:0 0 11px">${desc}</div>
+    ${chs.length
+      ? `<div style="display:flex;flex-direction:column;gap:11px">${chs.map(c => chapterCardHTML(c, mode)).join('')}</div>`
+      : emptyBox(mode === 'preview' ? '지금 예습할 챕터가 없어요.<br>선생님이 예습 기간을 열면 나타나요 👀' : '지금 복습할 챕터가 없어요.<br>선생님이 복습 기간을 열면 나타나요 📖')}`;
 
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -1924,14 +1956,12 @@ function homeHTML() {
 
     ${bookCardHTML(activeDay())}
 
-    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px">
-      <div style="font-size:14px;font-weight:700;color:#14243f">챕터별 학습</div>
-      <div style="font-size:12px;font-weight:600;color:#2f74e6">${chapters.length}개</div>
-    </div>
-    <div style="font-size:11px;color:#7d8aa0;margin-bottom:14px">챕터를 골라 읽기·어휘·어법을 복습해요. 한 챕터를 모두 끝내면 알을 하나 받아요 🥚</div>
-    ${chapterList}
+    ${groupSection('#2f74e6', '📖', '복습하기', '수업에서 배운 챕터를 다시 읽고 어휘·어법을 복습해요. 모두 끝내면 알 🥚', reviewChs, 'review')}
 
-    <div style="font-size:13px;font-weight:700;color:#14243f;margin:22px 0 11px">단어장</div>
+    <div style="height:18px"></div>
+    ${groupSection('#e0a41a', '👀', '예습하기', '다음 수업 챕터를 미리 읽어요. 살살🟢 보통🟡 버닝🔴 중 골라서!', previewChs, 'preview')}
+
+    <div style="font-size:13px;font-weight:700;color:#14243f;margin:24px 0 11px">단어장</div>
     <div style="display:flex;flex-direction:column;gap:10px">${wordbookCard}</div>
 
     ${shelfHTML()}
@@ -1949,18 +1979,22 @@ function homeHTML() {
 function chapterHubHTML() {
   const day = activeDay();
   const taskRow = taskRowHTML;
+  const mode = state.chapterMode === 'preview' ? 'preview' : 'review';
+  const isPrev = mode === 'preview';
   const req = requiredKeys();
   const done = doneCount();
   const enter = freshView ? 'animation:riseIn .8s cubic-bezier(.2,.7,.2,1) both' : '';
   const name = (day.book && day.book.chapter) || day.label || '챕터';
   const complete = req.length > 0 && done === req.length;
+  const accent = isPrev ? '#e0a41a' : '#2f74e6';
+  const modeChip = `<span style="display:inline-flex;align-items:center;gap:4px;background:${accent}1a;color:${accent};font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:8px">${isPrev ? '👀 예습' : '📖 복습'}</span>`;
 
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;gap:11px;margin-bottom:18px">
       <div data-act="goHome" style="flex:none;width:38px;height:38px;border-radius:12px;background:#fff;border:1px solid #e2e9f2;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:#2f74e6;box-shadow:0 3px 8px -4px rgba(20,36,63,.3)">←</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:16px;font-weight:700;color:#14243f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
-        <div style="font-size:11.5px;color:#7d8aa0;margin-top:1px">${complete ? '이 챕터를 모두 끝냈어요! 🎉' : `할 일 ${done}/${req.length} 완료`}</div>
+        <div style="display:flex;align-items:center;gap:7px">${modeChip}<span style="font-size:16px;font-weight:700;color:#14243f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</span></div>
+        <div style="font-size:11.5px;color:#7d8aa0;margin-top:2px">${complete ? '이 챕터를 모두 끝냈어요! 🎉' : `할 일 ${done}/${req.length} 완료`}</div>
       </div>
       <div style="flex:none">${levelBadgeHTML()}</div>
     </div>
@@ -1970,14 +2004,14 @@ function chapterHubHTML() {
     ${bookCardHTML(day)}
 
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px">
-      <div style="font-size:14px;font-weight:700;color:#14243f">할 일</div>
-      <div style="font-size:12px;font-weight:600;color:#2f74e6">${done}/${req.length} 완료</div>
+      <div style="font-size:14px;font-weight:700;color:#14243f">${isPrev ? '예습 할 일' : '복습 할 일'}</div>
+      <div style="font-size:12px;font-weight:600;color:${accent}">${done}/${req.length} 완료</div>
     </div>
-    <div style="height:8px;border-radius:4px;background:#dde6f1;overflow:hidden;margin-bottom:6px"><div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#2f74e6,#17b0c4);width:${req.length ? done / req.length * 100 : 0}%"></div></div>
-    <div style="font-size:11px;color:#7d8aa0;margin-bottom:14px">이 챕터의 할 일을 모두 끝내면 랜덤 알을 하나 받아요 🥚</div>
+    <div style="height:8px;border-radius:4px;background:#dde6f1;overflow:hidden;margin-bottom:6px"><div style="height:100%;border-radius:4px;background:linear-gradient(90deg,${accent},#17b0c4);width:${req.length ? done / req.length * 100 : 0}%"></div></div>
+    <div style="font-size:11px;color:#7d8aa0;margin-bottom:14px">${isPrev ? '예습을 끝내면' : '이 챕터의 복습을 모두 끝내면'} 랜덤 알을 하나 받아요 🥚</div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
-      ${MAIN_TASKS.map(taskRow).join('')}
+      ${modeTasks(mode).map(taskRow).join('') || `<div style="background:#fff;border:1px dashed #cdd8e6;border-radius:16px;padding:24px 18px;text-align:center;color:#9aa8bd;font-size:12.5px">${isPrev ? '이 챕터엔 아직 예습 자료가 없어요.' : '이 챕터엔 아직 복습 자료가 없어요.'}</div>`}
     </div>
 
   </div></div>`;
