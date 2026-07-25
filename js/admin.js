@@ -817,7 +817,7 @@ function coreEditor(d) {
   return `<div class="card">
     <h2>🟡 보통 · 핵심 문장 <span style="font-size:12px;color:#7d8aa0;font-weight:600">${core.length}문장</span></h2>
     <div class="hint"><b>모드를 고르고 단어를 클릭</b>해 표시하세요. 🔵주어 · 🟢동사(예습 '보통' 채점에 사용) · 볼드·이탤릭(강조). 해석은 '문장 작문'에 쓰여요. 비워두면 지문 앞 문장 6개가 자동으로 쓰여요.</div>
-    <div style="position:sticky;top:6px;z-index:6;display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0;background:#fff;padding:8px;border:1px solid #e2e9f2;border-radius:12px;box-shadow:0 6px 16px -8px rgba(20,50,90,.4)">
+    <div style="position:sticky;top:64px;z-index:8;display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0;background:#fff;padding:8px;border:1.5px solid #cfe0f5;border-radius:12px;box-shadow:0 8px 20px -8px rgba(20,50,90,.45)">
       <span style="font-size:11px;font-weight:700;color:#9aa8bd;margin-right:2px">표시</span>
       ${modeBtn('subject', '🔵 주어', '#2f74e6')}
       ${modeBtn('verb', '🟢 동사', '#2fa36b')}
