@@ -651,8 +651,12 @@ const DEFAULT_STATE = {
   dexOpen: false,
   readerPage: 0,
   wordbook: [],             // '몰라요' 한 단어 모음 [{word,def,pos,ex,ts}] (5번에서 클라우드 동기화)
+  studyLog: {},             // {날짜: 누적 학습 초} — 학습 화면에 머문 시간
+  eggLog: {},               // {날짜: 그날 부화시킨 알 개수}
   presentTheme: 'deep',     // 수업용 발표 화면 배경 그라디언트 테마
-  presentFont: 1            // 수업용 발표 글씨 배율(0.6~1.8)
+  presentFont: 1,           // 수업용 발표 글씨 배율(0.6~1.8)
+  presentLineH: 1.4,        // 발표 행간(줄 간격)
+  presentBezel: 8           // 발표 좌우 여백(베젤, vw)
 };
 
 /* ---- 수업용 발표 배경 테마(교사가 발표 화면에서 색 조정) ---- */
@@ -674,6 +678,11 @@ function presentFontScale() {
   const v = Number(state.presentFont);
   return Math.min(PRESENT_FONT_MAX, Math.max(PRESENT_FONT_MIN, isNaN(v) ? 1 : v));
 }
+// 발표 행간(1.0~2.4) / 좌우 여백 베젤(2~24 vw)
+const PRESENT_LINEH_MIN = 1.0, PRESENT_LINEH_MAX = 2.4, PRESENT_LINEH_STEP = 0.15;
+const PRESENT_BEZEL_MIN = 2, PRESENT_BEZEL_MAX = 24, PRESENT_BEZEL_STEP = 2;
+function presentLineH() { const v = Number(state.presentLineH); return Math.min(PRESENT_LINEH_MAX, Math.max(PRESENT_LINEH_MIN, isNaN(v) ? 1.4 : v)); }
+function presentBezel() { const v = Number(state.presentBezel); return Math.min(PRESENT_BEZEL_MAX, Math.max(PRESENT_BEZEL_MIN, isNaN(v) ? 8 : v)); }
 
 let state = loadState();
 let hatchTimer = null;
@@ -894,6 +903,7 @@ const actions = {
   goHome() { set({ screen: 'home', pop: null, dexOpen: false }); },
   openChapter(key) { set({ screen: 'chapter', chapterKey: key, pop: null, dexOpen: false }); },   // 챕터 허브 열기
   goAqua() { set({ screen: 'aquarium', pop: null, dexOpen: false }); },
+  goMe() { set({ screen: 'me', pop: null, dexOpen: false }); },
   goHatch() { set({ screen: 'hatchery', hatchStage: 'idle', hatchSpecies: null, pop: null, dexOpen: false }); },
   goAdvanced() { set({ screen: 'advanced', pop: null, dexOpen: false }); },
   goWordbook() { ui.wbConfirm = null; ui.wbMsg = ''; ui.wbAddOpen = false; set({ screen: 'wordbook', pop: null, dexOpen: false }); },
@@ -1136,9 +1146,10 @@ const actions = {
     const cands = SPECIES.filter(s => RAR[s.id] === rarity);
     const id = cands[Math.floor(Math.random() * cands.length)].id;
     clearTimeout(hatchTimer);
+    const eggLog = Object.assign({}, state.eggLog); eggLog[todayKey()] = (eggLog[todayKey()] || 0) + 1;   // 오늘 부화 기록
     set({
       hatchStage: 'cracking', hatchSpecies: id, pullCount: pull,
-      eggs: state.eggs - 1, animals: state.animals.concat([id]), xp: state.xp + 40
+      eggs: state.eggs - 1, animals: state.animals.concat([id]), xp: state.xp + 40, eggLog
     });
     hatchTimer = setTimeout(() => set({ hatchStage: 'revealed' }), HATCH_MS);
   },
@@ -1196,7 +1207,7 @@ const actions = {
     const days = deployedDays();
     const idx = (ui.presDay == null || ui.presDay >= days.length) ? bestDeployedDayIndex(days) : ui.presDay;
     const d = days[idx] || activeDay();
-    const sents = passageToSentences(dayPassage(d));
+    const sents = balanceMarks(passageToSentences(dayPassage(d)));
     if (!sents.length) return;   // 지문이 없으면 버튼이 이미 비활성 안내 상태
     ui.present = { on: true, i: 0, sents, title: d.label || '' };
     requestFS();
@@ -1210,6 +1221,10 @@ const actions = {
   presentSetTheme(arg) { state.presentTheme = arg; ui.present.palette = false; save(); render(); },
   presentFontUp() { state.presentFont = Math.min(PRESENT_FONT_MAX, presentFontScale() + PRESENT_FONT_STEP); save(); render(); },
   presentFontDown() { state.presentFont = Math.max(PRESENT_FONT_MIN, presentFontScale() - PRESENT_FONT_STEP); save(); render(); },
+  presentLineUp() { state.presentLineH = Math.min(PRESENT_LINEH_MAX, +(presentLineH() + PRESENT_LINEH_STEP).toFixed(2)); save(); render(); },
+  presentLineDown() { state.presentLineH = Math.max(PRESENT_LINEH_MIN, +(presentLineH() - PRESENT_LINEH_STEP).toFixed(2)); save(); render(); },
+  presentBezelUp() { state.presentBezel = Math.min(PRESENT_BEZEL_MAX, presentBezel() + PRESENT_BEZEL_STEP); save(); render(); },
+  presentBezelDown() { state.presentBezel = Math.max(PRESENT_BEZEL_MIN, presentBezel() - PRESENT_BEZEL_STEP); save(); render(); },
 
   edSelectDay(arg) { commitDayEdit(); openDay(Number(arg)); render(); },
   edSelectDayView(arg) { ui.presDay = Number(arg); render(); },  // 발표용: 배포 Day 선택
@@ -2080,7 +2095,7 @@ function aquariumHTML() {
 /* ---- 지문 복습 ---- */
 function reviewHTML() {
   const words = dayVocab(activeDay());
-  const sents = passageToReviewSentences(dayPassage(activeDay()));
+  const sents = balanceMarks(passageToReviewSentences(dayPassage(activeDay())));
   const total = sents.length || 1;
   const i = Math.min(state.revIndex || 0, total - 1);
   const last = i >= total - 1;
@@ -2455,6 +2470,59 @@ function composeHTML() {
     </div>
     <div style="margin-top:12px">${controls}</div>
   </div>`;
+}
+/* ---- 내 정보(학습 기록: streak·달력·알 부화·학습시간) ---- */
+function meHTML() {
+  const enter = freshView ? 'animation:riseIn .8s cubic-bezier(.2,.7,.2,1) both' : '';
+  const l = state.studyLog || {}, el = state.eggLog || {};
+  const streak = studyStreak();
+  const todaySecs = l[todayKey()] || 0;
+  const weekSecs = weekStudySecs();
+  const totalSecs = Object.values(l).reduce((a, b) => a + (b || 0), 0);
+  const totalEggs = Object.values(el).reduce((a, b) => a + (b || 0), 0);
+  const now = new Date(); const y = now.getFullYear(), mo = now.getMonth();
+  const startDow = (new Date(y, mo, 1).getDay() + 6) % 7;   // 월=0
+  const dim = new Date(y, mo + 1, 0).getDate();
+  const dow = ['월', '화', '수', '목', '금', '토', '일'];
+  let cells = '';
+  for (let i = 0; i < startDow; i++) cells += '<div></div>';
+  for (let d = 1; d <= dim; d++) {
+    const k = `${y}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const studied = (l[k] || 0) > 0, eggs = el[k] || 0, isToday = k === todayKey();
+    cells += `<div style="aspect-ratio:1;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:${studied ? '#dff3e6' : '#f2f5f9'};color:${studied ? '#1f7a4d' : '#b8c2d2'};border:${isToday ? '2px solid #2f74e6' : '1px solid transparent'};line-height:1">${d}${eggs ? `<span style="font-size:8.5px;margin-top:1px">🥚${eggs > 1 ? eggs : ''}</span>` : ''}</div>`;
+  }
+  const statCard = (label, value, sub) => `<div style="flex:1;min-width:96px;background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:14px 12px;text-align:center">
+    <div style="font-size:11px;color:#7d8aa0;font-weight:600">${label}</div>
+    <div style="font-size:20px;font-weight:800;color:#14243f;margin-top:4px">${value}</div>
+    ${sub ? `<div style="font-size:10px;color:#9aa8bd;margin-top:2px">${sub}</div>` : ''}
+  </div>`;
+  return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
+    <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px">
+      <div style="width:44px;height:44px;border-radius:14px;background:#2f74e6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;box-shadow:0 4px 0 #1f57c4">${esc(studentName().slice(0, 2))}</div>
+      <div><div style="font-size:16px;font-weight:700;color:#14243f">${esc(studentName())}님의 기록</div><div style="font-size:11.5px;color:#7d8aa0;margin-top:2px">Lv.${level()} · 총 학습 ${fmtDuration(totalSecs)}</div></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:13px;background:linear-gradient(150deg,#fff3d6,#ffe4a8);border:1.5px solid #f0c65a;border-radius:18px;padding:16px 18px;margin-bottom:14px">
+      <div style="font-size:34px">🔥</div>
+      <div style="flex:1"><div style="font-size:22px;font-weight:800;color:#8a5a12">${streak}일 연속 학습</div><div style="font-size:11.5px;color:#a5791f;margin-top:2px">${streak ? '멋져요! 내일도 이어가요' : '오늘 학습하면 연속 기록이 시작돼요'}</div></div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      ${statCard('오늘 학습', fmtDuration(todaySecs))}
+      ${statCard('이번 주', fmtDuration(weekSecs))}
+      ${statCard('부화한 알', `${totalEggs}개`)}
+    </div>
+
+    <div style="font-size:13px;font-weight:700;color:#14243f;margin:6px 0 10px">${mo + 1}월 학습 달력</div>
+    <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:14px">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:6px">${dow.map(x => `<div style="text-align:center;font-size:10px;color:#9aa8bd;font-weight:700">${x}</div>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${cells}</div>
+      <div style="display:flex;gap:14px;margin-top:12px;font-size:10.5px;color:#7d8aa0">
+        <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:4px;background:#dff3e6;display:inline-block"></span> 학습한 날</span>
+        <span style="display:inline-flex;align-items:center;gap:5px">🥚 알 부화</span>
+      </div>
+    </div>
+  </div></div>`;
 }
 /* ---- 단어장 학습(심화·SRS 카드) ---- */
 function wbStudyHTML() {
@@ -2954,6 +3022,8 @@ function presentHTML() {
   const th = presentThemeObj();
   const fg = th.fg, dim = th.dim, accent = th.accent;
   const fs = presentFontScale();
+  const lineH = presentLineH();
+  const bezel = presentBezel();
 
   // 진행 점(문장이 많으면 막대로 대체)
   const progress = total <= 24
@@ -2991,6 +3061,16 @@ function presentHTML() {
           <div style="font-size:11px;font-weight:700;color:rgba(${dim},.7);min-width:34px;text-align:center;font-variant-numeric:tabular-nums">${Math.round(fs * 100)}%</div>
           <div data-act="presentFontUp" title="글씨 크게 (+)" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;cursor:${fs >= PRESENT_FONT_MAX ? 'default' : 'pointer'};opacity:${fs >= PRESENT_FONT_MAX ? '.35' : '1'};font-size:19px;font-weight:800">A＋</div>
         </div>
+        <div style="display:flex;align-items:center;background:rgba(${dim},.12);border-radius:12px;height:40px;overflow:hidden" title="행간(줄 간격)">
+          <div data-act="presentLineDown" style="display:flex;align-items:center;justify-content:center;width:38px;height:40px;cursor:${lineH <= PRESENT_LINEH_MIN ? 'default' : 'pointer'};opacity:${lineH <= PRESENT_LINEH_MIN ? '.35' : '1'};font-size:16px;font-weight:800">≡−</div>
+          <div style="font-size:10px;font-weight:700;color:rgba(${dim},.7);min-width:30px;text-align:center;font-variant-numeric:tabular-nums">행 ${lineH.toFixed(1)}</div>
+          <div data-act="presentLineUp" style="display:flex;align-items:center;justify-content:center;width:38px;height:40px;cursor:${lineH >= PRESENT_LINEH_MAX ? 'default' : 'pointer'};opacity:${lineH >= PRESENT_LINEH_MAX ? '.35' : '1'};font-size:16px;font-weight:800">≡＋</div>
+        </div>
+        <div style="display:flex;align-items:center;background:rgba(${dim},.12);border-radius:12px;height:40px;overflow:hidden" title="좌우 여백(베젤)">
+          <div data-act="presentBezelDown" style="display:flex;align-items:center;justify-content:center;width:38px;height:40px;cursor:${bezel <= PRESENT_BEZEL_MIN ? 'default' : 'pointer'};opacity:${bezel <= PRESENT_BEZEL_MIN ? '.35' : '1'};font-size:15px;font-weight:800">▭−</div>
+          <div style="font-size:10px;font-weight:700;color:rgba(${dim},.7);min-width:30px;text-align:center;font-variant-numeric:tabular-nums">여백 ${bezel}</div>
+          <div data-act="presentBezelUp" style="display:flex;align-items:center;justify-content:center;width:38px;height:40px;cursor:${bezel >= PRESENT_BEZEL_MAX ? 'default' : 'pointer'};opacity:${bezel >= PRESENT_BEZEL_MAX ? '.35' : '1'};font-size:15px;font-weight:800">▭＋</div>
+        </div>
         <div data-act="presentPalette" title="배경색 조정" style="display:flex;align-items:center;gap:6px;padding:0 14px;height:40px;border-radius:12px;background:rgba(${dim},${p.palette ? '.22' : '.12'});cursor:pointer;font-size:13px;font-weight:700">🎨 배경색</div>
         <div data-act="presentClose" title="닫기 (Esc)" style="display:flex;align-items:center;gap:6px;padding:0 15px;height:40px;border-radius:12px;background:rgba(${dim},.12);cursor:pointer;font-size:13px;font-weight:700">✕ 닫기</div>
       </div>
@@ -2998,8 +3078,8 @@ function presentHTML() {
     ${palette}
 
     <!-- 문장(가운데, 크고 깔끔하게) -->
-    <div style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:9vh 8vw;pointer-events:none">
-      <div key="${i}" style="font-family:'Lora',Georgia,serif;font-weight:500;line-height:1.4;text-align:center;font-size:clamp(${30 * fs}px,${(5.4 * fs).toFixed(2)}vw,${Math.round(68 * fs)}px);max-width:1100px;text-wrap:balance;animation:fadeup .4s ease">${renderMarks(esc(sentence), accent)}</div>
+    <div style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:${(bezel * 0.9).toFixed(1)}vh ${bezel}vw;pointer-events:none">
+      <div key="${i}" style="font-family:'Lora',Georgia,serif;font-weight:500;line-height:${lineH};text-align:center;font-size:clamp(${30 * fs}px,${(5.4 * fs).toFixed(2)}vw,${Math.round(68 * fs)}px);max-width:1100px;text-wrap:balance;animation:fadeup .4s ease">${renderMarks(esc(sentence), accent)}</div>
     </div>
 
     <!-- 하단 바: 이전/진행/다음 -->
@@ -3018,19 +3098,77 @@ function presentHTML() {
 /* ---- 하단 내비게이션 ---- */
 function navHTML() {
   const item = (act, icon, label, on) => `
-    <div data-act="${act}" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;width:72px">
-      <span style="font-size:20px;filter:${on ? 'none' : 'grayscale(1) opacity(.6)'}">${icon}</span>
-      <span style="font-size:10px;font-weight:600;color:${on ? '#2f74e6' : '#9aa8bd'}">${label}</span>
+    <div data-act="${act}" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;width:62px">
+      <span style="font-size:19px;filter:${on ? 'none' : 'grayscale(1) opacity(.6)'}">${icon}</span>
+      <span style="font-size:9.5px;font-weight:600;color:${on ? '#2f74e6' : '#9aa8bd'}">${label}</span>
     </div>`;
   return `<div style="position:absolute;left:0;right:0;bottom:0;height:66px;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid #e2e9f2;display:flex;align-items:center;justify-content:space-around;padding-bottom:6px;z-index:50">
     ${item('goHome', '🏠', '홈', state.screen === 'home' || state.screen === 'wordbook')}
-    ${item('goAdvanced', '🚀', '심화 학습', state.screen === 'advanced')}
+    ${item('goAdvanced', '🚀', '심화', state.screen === 'advanced')}
     ${item('goHatch', '🥚', '부화장', state.screen === 'hatchery')}
     ${item('goAqua', '🐠', '아쿠아리움', state.screen === 'aquarium')}
+    ${item('goMe', '📊', '내 정보', state.screen === 'me')}
   </div>`;
 }
 
 /* ---- 전체 렌더 ---- */
+/* ---------- 학습 시간 추적 + 기록 통계 ---------- */
+const LEARN_SCREENS = ['review', 'quiz', 'result', 'vocabReview', 'previewVocab', 'previewMedium', 'previewRead', 'vocabPrepCard', 'wbStudy', 'wordTest', 'compose', 'reader'];
+let _studyStart = null;
+function flushStudy() {
+  if (_studyStart == null) return;
+  const secs = Math.round((Date.now() - _studyStart) / 1000);
+  _studyStart = null;
+  if (secs > 0 && secs < 3600) {   // 1시간 이상 한 번에 잡히면 자리비움으로 보고 버림
+    if (!state.studyLog) state.studyLog = {};
+    const k = todayKey();
+    state.studyLog[k] = (state.studyLog[k] || 0) + secs;
+    save();
+  }
+}
+function trackStudyTime() {
+  const learning = state.role === 'student' && LEARN_SCREENS.includes(state.screen) && !state.intro;
+  if (learning) { if (_studyStart == null) _studyStart = Date.now(); }
+  else if (_studyStart != null) flushStudy();
+}
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) flushStudy();
+    else if (state.role === 'student' && LEARN_SCREENS.includes(state.screen)) _studyStart = Date.now();
+  });
+  window.addEventListener('pagehide', flushStudy);
+}
+// 학습한 날짜(초>0) 목록
+function studiedDays() { const l = state.studyLog || {}; return Object.keys(l).filter(k => (l[k] || 0) > 0).sort(); }
+// 오늘부터 거꾸로 연속 학습일수(streak)
+function studyStreak() {
+  const set = new Set(studiedDays());
+  let n = 0; const d = new Date();
+  // 오늘 학습 안 했으면 어제부터 카운트(끊기지 않은 것으로)
+  if (!set.has(todayKey())) d.setDate(d.getDate() - 1);
+  for (;;) {
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (set.has(k)) { n++; d.setDate(d.getDate() - 1); } else break;
+  }
+  return n;
+}
+function fmtDuration(secs) {
+  secs = Math.round(secs || 0);
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
+  if (h) return `${h}시간 ${m}분`;
+  if (m) return `${m}분`;
+  return `${secs}초`;
+}
+// 이번 주(월~일) 학습 시간 합
+function weekStudySecs() {
+  const l = state.studyLog || {}; const now = new Date();
+  const day = (now.getDay() + 6) % 7;   // 월=0
+  const mon = new Date(now); mon.setDate(now.getDate() - day); mon.setHours(0, 0, 0, 0);
+  let sum = 0;
+  for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; sum += l[k] || 0; }
+  return sum;
+}
+
 function render() {
   // 날짜가 바뀌면(자정 넘김 포함) 오늘 할 일 리셋
   const before = state.daily && state.daily.date;
@@ -3039,6 +3177,8 @@ function render() {
 
   // 역할은 계정으로 자동 결정. 교사는 '학생' 토글로 학생 화면을 미리 볼 수 있음.
   if (authMode()) state.role = (isTeacherUser() && !ui.asStudent) ? 'teacher' : 'student';
+
+  trackStudyTime();   // 학습 화면 체류 시간 누적(화면엔 표시 안 함)
 
   // 화면이 바뀌었을 때만 등장 애니메이션 재생(같은 화면 클릭 리렌더는 애니메이션·스크롤 유지)
   const vk = currentViewKey();
@@ -3062,6 +3202,7 @@ function render() {
       case 'advanced': screen = advancedHTML(); break;
       case 'wordbook': screen = wordbookHTML(); break;
       case 'aquarium': screen = aquariumHTML(); break;
+      case 'me': screen = meHTML(); break;
       case 'review': screen = reviewHTML(); break;
       case 'preview': screen = previewLevelsHTML(); break;
       case 'previewVocab': screen = previewVocabHTML(); break;
@@ -3078,7 +3219,7 @@ function render() {
       case 'hatchery': screen = hatcheryHTML(); break;
     }
     html += `<div class="scroll">${screen}</div>`;
-    if (['home', 'chapter', 'advanced', 'wordbook', 'aquarium', 'hatchery'].includes(state.screen)) html += navHTML();
+    if (['home', 'chapter', 'advanced', 'wordbook', 'aquarium', 'hatchery', 'me'].includes(state.screen)) html += navHTML();
   } else {
     html += teacherHTML();
   }

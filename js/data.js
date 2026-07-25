@@ -182,6 +182,22 @@ function renderMarks(escaped, emColor) {
 }
 // 마크업 기호(**, ==, %%) 제거 — 평문으로 보여줄 때
 function stripMarks(s) { return String(s == null ? '' : s).replace(/==([^=]+)==/g, '$1').replace(/%%([^%]+)%%/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1'); }
+// 형광펜/굵게(==, %%, **)가 문장 경계를 넘어갈 때, 각 문장이 스스로 열고 닫히도록 보정
+// (문장 단위로 보여주는 지문 복습·발표에서 마크가 짝이 안 맞아 == 가 그대로 보이는 문제 해결)
+function balanceMarks(sentences) {
+  const marks = ['==', '%%', '**'];
+  const open = { '==': false, '%%': false, '**': false };
+  const count = (s, m) => { let n = 0, i = 0; while ((i = s.indexOf(m, i)) !== -1) { n++; i += m.length; } return n; };
+  return sentences.map(s => {
+    let out = '';
+    marks.forEach(m => { if (open[m]) out += m; });   // 이전 문장에서 열린 마크 이어서 열기
+    out += s;
+    marks.forEach(m => { if (count(s, m) % 2 === 1) open[m] = !open[m]; });   // 이 문장에서의 토글 반영
+    marks.forEach(m => { if (open[m]) out += m; });   // 아직 열려 있으면 이 문장 안에서 닫기
+    // 경계에서 생긴 '닫고 바로 열기'(====, %%%%, ****)는 서로 상쇄 → 제거
+    return out.replace(/====/g, '').replace(/%%%%/g, '').replace(/\*\*\*\*/g, '');
+  });
+}
 
 /* =========================================================
  * 어려운 단어 자동 [ ] — 대략 A1~B1(흔한 단어)를 빼고, B2 이상으로 보이는 단어에 대괄호
