@@ -904,6 +904,7 @@ const actions = {
   openChapter(key) { set({ screen: 'chapter', chapterKey: key, pop: null, dexOpen: false }); },   // 챕터 허브 열기
   goAqua() { set({ screen: 'aquarium', pop: null, dexOpen: false }); },
   goMe() { set({ screen: 'me', pop: null, dexOpen: false }); },
+  toggleXpPop() { ui.xpPop = !ui.xpPop; render(); },
   goHatch() { set({ screen: 'hatchery', hatchStage: 'idle', hatchSpecies: null, pop: null, dexOpen: false }); },
   goAdvanced() { set({ screen: 'advanced', pop: null, dexOpen: false }); },
   goWordbook() { ui.wbConfirm = null; ui.wbMsg = ''; ui.wbAddOpen = false; set({ screen: 'wordbook', pop: null, dexOpen: false }); },
@@ -1734,18 +1735,54 @@ function bookCardHTML(day) {
       </div>
     </div>`;
 }
-// 챕터 카드 한 장(홈 목록) — 진행도 표시
+// 레벨 배지(경험치 바 포함) — 누르면 경험치 팝오버
+function levelBadgeHTML() {
+  const pct = Math.round(xpInto() / XP_NEED * 100);
+  return `<div data-act="toggleXpPop" style="display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:7px 11px;cursor:pointer;box-shadow:0 3px 8px -4px rgba(20,36,63,.3);min-width:82px">
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:15px">🐚</span>
+      <div style="line-height:1"><div style="font-size:9px;color:#7d8aa0">레벨</div><div style="font-size:14px;font-weight:700;color:#2f74e6">Lv.${level()}</div></div>
+    </div>
+    <div style="width:100%;height:4px;border-radius:3px;background:#e7edf5;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:3px"></div></div>
+  </div>`;
+}
+// 경험치 팝오버(레벨 배지 클릭 시)
+function xpPopHTML() {
+  const pct = Math.round(xpInto() / XP_NEED * 100);
+  return `<div data-act="toggleXpPop" style="position:absolute;inset:0;z-index:120;background:rgba(10,25,45,.45);display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="width:100%;max-width:330px;background:#fff;border-radius:22px;padding:26px 22px;box-shadow:0 30px 70px -20px rgba(0,0,0,.55);text-align:center">
+      <div style="font-size:42px">🐚</div>
+      <div style="font-size:24px;font-weight:800;color:#14243f;margin-top:6px">Lv.${level()}</div>
+      <div style="font-size:12px;color:#7d8aa0;margin-top:3px">지금까지 <b style="color:#2f74e6">${state.xp}</b> XP 획득</div>
+      <div style="display:flex;justify-content:space-between;font-size:11.5px;color:#7d8aa0;margin:20px 0 6px"><span>다음 레벨까지</span><span>${xpInto()} / ${XP_NEED} XP</span></div>
+      <div style="height:13px;border-radius:8px;background:#eef2f8;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:8px;transition:width .5s"></div></div>
+      <div style="font-size:11px;color:#9aa8bd;margin-top:12px">할 일·문제를 풀면 경험치가 올라가요 ✨</div>
+      <button data-act="toggleXpPop" style="margin-top:18px;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:13px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">닫기</button>
+    </div>
+  </div>`;
+}
+// 진행도(0~1)에 따라 연분홍→연초록으로 섞은 배경색
+function progressColor(t) {
+  t = Math.max(0, Math.min(1, t || 0));
+  const pink = [255, 235, 240], green = [223, 243, 230];   // 연분홍 → 연초록
+  const c = pink.map((v, i) => Math.round(v + (green[i] - v) * t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+// 챕터 카드 한 장(홈 목록) — 진행도에 따라 색이 분홍→초록으로
 function chapterCardHTML(ch) {
   const key = chapterKey(ch);
   const req = chapterRequiredKeys(ch);
   const p = chapProg(key);
   const done = req.filter(k => p.tasks[k]).length;
-  const pct = req.length ? Math.round(done / req.length * 100) : 0;
+  const ratio = req.length ? done / req.length : 0;
+  const pct = Math.round(ratio * 100);
   const complete = req.length > 0 && done === req.length;
   const name = (ch.book && ch.book.chapter) || ch.label || '챕터';
   const title = (ch.book && ch.book.title) || '';
-  return `<div data-act="openChapter" data-arg="${esc(key)}" style="display:flex;gap:13px;align-items:center;background:#fff;border:1.5px solid ${complete ? '#cfe6da' : '#e2e9f2'};border-radius:18px;padding:14px 15px;cursor:pointer;box-shadow:0 8px 20px -14px rgba(20,50,90,.5)">
-    <div style="flex:none;width:46px;height:46px;border-radius:14px;background:${complete ? '#e0f3ea' : '#e7f0fd'};display:flex;align-items:center;justify-content:center;font-size:22px">${complete ? '✅' : '📖'}</div>
+  const bg = req.length ? progressColor(ratio) : '#fff';
+  const bd = complete ? '#a9d8bd' : (req.length ? 'rgba(20,50,90,.08)' : '#e2e9f2');
+  return `<div data-act="openChapter" data-arg="${esc(key)}" style="display:flex;gap:13px;align-items:center;background:${bg};border:1.5px solid ${bd};border-radius:18px;padding:14px 15px;cursor:pointer;box-shadow:0 8px 20px -14px rgba(20,50,90,.5);transition:background .4s ease">
+    <div style="flex:none;width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:22px">${complete ? '✅' : '📖'}</div>
     <div style="flex:1;min-width:0">
       <div style="font-size:14.5px;font-weight:700;color:#14243f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
       ${title ? `<div style="font-size:11.5px;color:#7d8aa0;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title)}</div>` : ''}
@@ -1793,10 +1830,7 @@ function homeHTML() {
           <div style="font-size:11.5px;color:#7d8aa0;margin-top:2px">${esc(todayLabel())}</div>
         </div>
       </div>
-      <div data-act="goAqua" style="display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:7px 11px;cursor:pointer;box-shadow:0 3px 8px -4px rgba(20,36,63,.3)">
-        <span style="font-size:15px">🐚</span>
-        <div style="line-height:1"><div style="font-size:9px;color:#7d8aa0">레벨</div><div style="font-size:14px;font-weight:700;color:#2f74e6">Lv.${level()}</div></div>
-      </div>
+      ${levelBadgeHTML()}
     </div>
 
     ${quoteBannerHTML(q, '오늘 선생님이 고른 문장')}
@@ -1849,10 +1883,7 @@ function chapterHubHTML() {
         <div style="font-size:16px;font-weight:700;color:#14243f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
         <div style="font-size:11.5px;color:#7d8aa0;margin-top:1px">${complete ? '이 챕터를 모두 끝냈어요! 🎉' : `할 일 ${done}/${req.length} 완료`}</div>
       </div>
-      <div data-act="goAqua" style="flex:none;display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:7px 11px;cursor:pointer;box-shadow:0 3px 8px -4px rgba(20,36,63,.3)">
-        <span style="font-size:15px">🐚</span>
-        <div style="line-height:1"><div style="font-size:9px;color:#7d8aa0">레벨</div><div style="font-size:14px;font-weight:700;color:#2f74e6">Lv.${level()}</div></div>
-      </div>
+      <div style="flex:none">${levelBadgeHTML()}</div>
     </div>
 
     ${quoteBannerHTML(day.quote, '선생님이 고른 문장')}
@@ -1992,8 +2023,9 @@ function bookChapterTag(b) {
 // 지문(본문) 글자 수에 비례한 책등 너비(px). 본문이 많을수록 두껍게 — 실제 책처럼.
 function spineWidth(b) {
   const len = ((b && b.passage) || '').replace(/\s+/g, ' ').trim().length;
-  const t = Math.min(1, Math.max(0, (len - 500) / 3500));
-  return Math.round(28 + t * 40); // 28 ~ 68px
+  // 보통 한 챕터(≈3천 자)를 '보통 두께'로, 짧으면 더 얇게. 얇고 두꺼운 정도는 제한(24~46px).
+  const t = Math.min(1, Math.max(0, len / 6000));
+  return Math.round(24 + t * 22);
 }
 // 책등 위 챕터 배지(이미지·자동생성 공통)
 function spineChapterBadge(tag) {
@@ -3241,6 +3273,7 @@ function render() {
   else if (state.role === 'student' && needProfile()) html += profilePickerHTML();
   else if (state.intro && state.role === 'student') html += introHTML();
 
+  if (ui.xpPop && state.role === 'student') html += xpPopHTML();   // 경험치 팝오버
   if (auth && ui.acct.open) html += accountHTML();  // 내 계정(비번 변경/탈퇴)
   if (ui.present.on) html += presentHTML();  // 수업용 전체화면 발표(최상단)
 
