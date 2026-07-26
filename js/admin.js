@@ -162,8 +162,7 @@ const actions = {
   },
   // 팝오버 어휘: 엑셀(CSV) 내려받기 / 올리기
   exportVocab() {
-    const rows = [['word', 'head', 'pos', 'def', 'ex']].concat((ed.day.words || []).map(w => [w.word, w.head || '', w.pos || '', w.def || '', w.ex || '']));
-    const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+    const csv = vocabToCSV(ed.day.words || []);
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -529,6 +528,11 @@ function refreshWords() {
 }
 // CSV 한 칸 이스케이프
 function csvCell(v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+// 팝오버 어휘 → CSV(단어=수정형 head가 있으면 그것, 없으면 지문 원형). 한 단어만 깔끔하게.
+function vocabToCSV(words) {
+  const rows = [['단어', '품사', '뜻', '예문']].concat((words || []).map(w => [w.head || w.word, w.pos || '', w.def || '', w.ex || '']));
+  return rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+}
 // 아주 단순한 CSV 파서(따옴표·쉼표·줄바꿈 처리)
 function parseCSV(text) {
   text = String(text || '').replace(/^﻿/, '');
@@ -554,18 +558,40 @@ function importVocabFile(file) {
     try {
       const rows = parseCSV(String(reader.result || ''));
       if (!rows.length) { toast('빈 파일이에요.', 'err'); render(); return; }
-      const head = rows[0].map(h => (h || '').trim().toLowerCase());
-      const iw = head.indexOf('word'), ih = head.indexOf('head'), ip = head.indexOf('pos'), idf = head.indexOf('def'), ix = head.indexOf('ex');
-      const hasHeader = iw >= 0;
-      const cW = hasHeader ? iw : 0, cH = hasHeader ? ih : -1, cP = hasHeader ? ip : 1, cD = hasHeader ? idf : 2, cE = hasHeader ? ix : 3;
-      const map = {};
+      const hdr = rows[0].map(h => (h || '').trim().toLowerCase());
+      const idx = (...names) => { for (const n of names) { const i = hdr.indexOf(n); if (i >= 0) return i; } return -1; };
+      const cWord = idx('단어', 'word', '표제어'), cHead = idx('head'), cPos = idx('품사', 'pos'), cDef = idx('뜻', 'def'), cEx = idx('예문', 'ex');
+      const hasHeader = cWord >= 0 || cPos >= 0 || cDef >= 0;
+      // 열 인덱스(헤더 없으면 위치로: 단어, 품사, 뜻, 예문)
+      const kWord = hasHeader ? cWord : 0, kHead = hasHeader ? cHead : -1, kPos = hasHeader ? cPos : 1, kDef = hasHeader ? cDef : 2, kEx = hasHeader ? cEx : 3;
+      const cell = (r, c) => (c >= 0 && r[c] != null ? String(r[c]).trim() : '');
+      // 데이터 행 → 레코드(memorize = 외울 형태, keys = 매칭 후보: 단어열·구버전 head열)
+      const recs = [];
       for (let i = hasHeader ? 1 : 0; i < rows.length; i++) {
-        const r = rows[i]; const w = (r[cW] || '').trim(); if (!w) continue;
-        map[w.toLowerCase()] = { head: (cH >= 0 && r[cH] || '').trim(), pos: (cP >= 0 && r[cP] || '').trim(), def: (cD >= 0 && r[cD] || '').trim(), ex: (cE >= 0 && r[cE] || '').trim() };
+        const r = rows[i]; const word = cell(r, kWord); const oldHead = cell(r, kHead);
+        if (!word && !oldHead) continue;
+        recs.push({ memorize: oldHead || word, keys: [word, oldHead].filter(Boolean).map(s => s.toLowerCase()), pos: cell(r, kPos), def: cell(r, kDef), ex: cell(r, kEx) });
       }
+      const list = ed.day.words || [];
+      const apply = (w, rec) => {
+        w.pos = rec.pos; w.def = rec.def; w.ex = rec.ex;
+        // 외울 형태가 지문 원형과 다르면 head로, 같으면 head 비움
+        w.head = (rec.memorize && rec.memorize.toLowerCase() !== (w.word || '').toLowerCase()) ? rec.memorize : '';
+      };
       let filled = 0;
-      (ed.day.words || []).forEach(w => { const m = map[(w.word || '').toLowerCase()]; if (m) { if (cH >= 0) w.head = m.head; w.pos = m.pos; w.def = m.def; w.ex = m.ex; filled++; } });
-      toast(`엑셀에서 ${filled}개 단어의 뜻을 불러왔어요.`, filled ? 'ok' : 'err');
+      if (recs.length === list.length && list.length) {
+        // 행 수가 같으면 '순서대로' 매칭 — 엑셀에서 단어를 바꿔도 안전(지문 원형은 그대로 유지)
+        list.forEach((w, i) => { apply(w, recs[i]); filled++; });
+      } else {
+        // 행 수가 다르면 단어(원형/head)로 매칭
+        const map = {};
+        recs.forEach(rec => rec.keys.forEach(k => { if (!(k in map)) map[k] = rec; }));
+        list.forEach(w => {
+          const rec = map[(w.word || '').toLowerCase()] || (w.head && map[w.head.toLowerCase()]);
+          if (rec) { apply(w, rec); filled++; }
+        });
+      }
+      toast(`엑셀에서 ${filled}개 단어를 불러왔어요.`, filled ? 'ok' : 'err');
       render();
     } catch (e) { toast('파일을 읽지 못했어요: ' + e.message, 'err'); render(); }
   };
@@ -694,7 +720,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v52 (편집기: 위치 반짝임 색을 마젠타로 — 노란 형광펜 위에서도 잘 보이게)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v53 (어휘 엑셀은 수정한 단어만·예습 보통 문장칸 크게)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -874,13 +900,14 @@ function coreEditor(d) {
   const cards = core.map((c, si) => {
     const toks = (c.text || '').split(/\s+/).filter(Boolean);
     return `<div class="qcard">
-      <div class="row" style="align-items:center;margin-bottom:8px">
+      <div class="row" style="align-items:center;margin-bottom:6px">
         <span style="flex:none;font-size:12px;font-weight:700;color:#7d8aa0">문장 ${si + 1}</span>
-        <input class="inp" style="flex:1" data-bind="core.${si}.text" data-rerender="1" value="${esc(c.text)}" placeholder="핵심 문장(영어)">
+        <div style="flex:1"></div>
         <button class="btn ghost sm" data-act="coreResetOne" data-arg="${si}" title="이 문장의 주어·동사·강조 표시 초기화">↺ 표시</button>
         <button class="btn danger sm" data-act="coreDelete" data-arg="${si}">삭제</button>
       </div>
-      ${toks.length ? `<div style="margin-bottom:8px;line-height:2.1">${toks.map((w, wi) => chip(si, wi, w, c)).join('')}</div>` : '<div class="hint" style="margin:0 0 8px">문장을 입력하고 <b>Enter</b>(또는 다른 곳 클릭) 하면 단어를 클릭해 표시할 수 있어요.</div>'}
+      <textarea class="inp" style="width:100%;min-height:56px;line-height:1.55;font-family:'Lora',serif;font-size:15px;resize:vertical" data-bind="core.${si}.text" data-rerender="1" placeholder="핵심 문장(영어)">${esc(c.text)}</textarea>
+      ${toks.length ? `<div style="margin:8px 0;line-height:2.1">${toks.map((w, wi) => chip(si, wi, w, c)).join('')}</div>` : '<div class="hint" style="margin:8px 0">문장을 입력하고 <b>다른 곳 클릭</b>하면 단어를 클릭해 표시할 수 있어요.</div>'}
       <input class="inp" data-bind="core.${si}.ko" value="${esc(c.ko)}" placeholder="우리말 해석 (문장 작문·채점에 사용)">
     </div>`;
   }).join('') || '<div class="empty">아직 핵심 문장이 없어요. 아래에서 지문 문장을 골라 추가하세요.</div>';
