@@ -236,6 +236,31 @@ const actions = {
     toast('"' + w + '" 어휘를 지웠어요 (지문에는 단어만 남겨요).', 'ok');
     render();
   },
+  // 지문 편집기에서 이 단어(<word>) 위치로 스크롤하고 잠깐 반짝(비파괴적: 끝나면 원래대로)
+  locateInEditor(word) {
+    const el = activeEditorEl();
+    if (!el) return;
+    const target = '<' + word + '>';
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+    let node, found = null, at = -1;
+    while ((node = walker.nextNode())) { const i = node.nodeValue.indexOf(target); if (i >= 0) { found = node; at = i; break; } }
+    if (!found) { toast('지문에서 "' + word + '"를 찾지 못했어요.', 'err'); render(); return; }
+    const range = document.createRange();
+    range.setStart(found, at);
+    range.setEnd(found, at + target.length);
+    let span;
+    try { span = document.createElement('span'); span.className = 'ed-locate-flash'; range.surroundContents(span); }
+    catch (e) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); return; }
+    // 인라인 배경을 안 쓰고 CSS 애니메이션으로 반짝(직렬화가 형광펜으로 오해하지 않게)
+    span.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setTimeout(() => {   // 끝나면 원래 DOM으로 복구
+      if (!span.parentNode) return;
+      const parent = span.parentNode;
+      while (span.firstChild) parent.insertBefore(span.firstChild, span);
+      parent.removeChild(span);
+      parent.normalize();
+    }, 2000);
+  },
   addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', explain: '' }); render(); },
   delQ(arg) { const [cat, i] = arg.split(':'); ed.day.quiz[cat].splice(Number(i), 1); render(); },
   qFixWrong(arg) {   // 오류 고치기: 틀린 단어 클릭 표시
@@ -392,11 +417,15 @@ function render() {
   const _winTop = _sc ? _sc.scrollTop : 0;
   const _vl = document.getElementById('vocab-list');
   const _vlTop = _vl ? _vl.scrollTop : 0;
+  const _pe = document.getElementById('passage-editor');   // 지문 편집기 내부 스크롤도 보존(단어 삭제 시 맨 위로 튐 방지)
+  const _peTop = _pe ? _pe.scrollTop : 0;
   root.innerHTML = _html;
   if (_keep) {
     if (_sc) _sc.scrollTop = _winTop;
     const _nvl = document.getElementById('vocab-list');
     if (_nvl) _nvl.scrollTop = _vlTop;
+    const _npe = document.getElementById('passage-editor');
+    if (_npe) _npe.scrollTop = _peTop;
   }
   _lastAdminSig = _sig;
   if (ui.expand) { const t = document.getElementById('pv-editor'); if (t && document.activeElement !== t) t.focus(); }
@@ -665,7 +694,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v50 (PPT 형광펜 수정·팝오버 위치·예문삭제·지문에서 보기)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v51 (편집기: 단어삭제 스크롤 고정·📍 지문에서 위치 반짝임)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -776,6 +805,7 @@ function vocabPanel(d) {
       <div class="row" style="align-items:center">
         <input class="inp" style="flex:1;min-width:80px;font-family:'Lora',serif;font-weight:700" data-bind="words.${i}.head" value="${esc(w.head || w.word)}" placeholder="외울 형태" title="팝오버·카드에 뜰 외울 형태(표제어) — 여기서 스펠링을 바로 고치세요. 비우면 지문 단어 그대로 (예: have sth to oneself)">
         <input class="inp" style="flex:.55" data-bind="words.${i}.pos" value="${esc(w.pos)}" placeholder="품사">
+        <button class="btn ghost sm" data-act="locateInEditor" data-arg="${esc(w.word)}" title="지문에서 이 단어 위치로 이동해 반짝여요" style="flex:none;padding:6px 9px">📍</button>
         <button class="btn danger sm" data-act="delWord" data-arg="${esc(w.word)}" title="이 어휘 삭제 (지문에서는 &lt;&gt;만 벗기고 단어는 남겨요)" style="flex:none;padding:6px 9px">✕</button>
       </div>
       <div style="font-size:10.5px;color:#9aa8bd;margin:3px 2px 0">지문: <span style="font-family:'Lora',serif;color:#6b7a90">${esc(w.word)}</span></div>

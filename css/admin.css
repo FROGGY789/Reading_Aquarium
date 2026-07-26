@@ -87,3 +87,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.7}
 .pw-editor mark{background:#ffe35c;color:#1a1a1a;border-radius:2px;padding:0 .06em}
 .pw-editor b,.pw-editor strong{font-weight:800;color:#0f2440}
 .pw-editor:focus{border-color:#2f74e6 !important;box-shadow:0 0 0 3px rgba(47,116,230,.12)}
+
+/* 📍 지문에서 단어 위치 반짝임(교사 편집기) — 인라인 배경을 안 써서 직렬화에 영향 없음 */
+@keyframes edLocateFlash{0%,100%{background-color:transparent}20%,60%{background-color:#ffd21a}}
+.ed-locate-flash{border-radius:3px;animation:edLocateFlash 1.8s ease}
