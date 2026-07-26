@@ -497,6 +497,25 @@ function wordHintSentence(word) {
     || sents.find(s => new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(stripBrackets(s)));
   return hit ? stripMarks(stripBrackets(hit)) : '';
 }
+// 문단 → 문장 배열(<단어> 마커 유지). 리더에서 팝오버를 '단어가 든 문장' 바로 뒤에 넣기 위함
+function splitSentences(text) {
+  const parts = String(text || '').match(/[^.!?]*[.!?]+(?=\s|$)|[^.!?]+$/g);
+  return parts ? parts.map(s => s.trim()).filter(Boolean) : (String(text || '').trim() ? [String(text).trim()] : []);
+}
+// 이 단어(<word> 팝오버)가 들어있는 책·페이지 찾기(현재 보던 책 우선). 없으면 null
+function locateInBooks(word) {
+  if (!word) return null;
+  const marker = '<' + word + '>';
+  const books = allBooks();
+  const curKey = state.readerBookKey;
+  const ordered = books.slice().sort((a, b) => (b.title === curKey ? 1 : 0) - (a.title === curKey ? 1 : 0));
+  for (const b of ordered) {
+    const pages = passageToPagesRaw(b.passage);
+    for (let i = 0; i < pages.length; i++) if (pages[i].some(p => p.includes(marker))) return { bookKey: b.title, page: i };
+  }
+  return null;
+}
+function wordInPassage(word) { return !!locateInBooks(word); }
 // 다음 수업(다음 Day) 지문의 팝오버([단어]) 단어 카드 — 어휘 예습용
 // 대괄호로 표시되고 어휘 뜻이 등록된 단어(= 실제 팝오버가 뜨는 단어)만 모음
 function nextDayPopoverCards() {
@@ -1048,6 +1067,12 @@ const actions = {
   closeDex() { set({ dexOpen: false }); },
 
   openReader() { set({ screen: 'reader', readerBurning: false, readerPage: 0, readerBookKey: (activeDay().book || {}).title || '' }); },
+  // 팝오버·단어카드에서 '지문에서 보기' — 그 단어가 있는 책 페이지로 이동하고 팝오버를 띄움
+  locateWord(word) {
+    const loc = locateInBooks(word);
+    if (!loc) return;
+    set({ screen: 'reader', readerBurning: false, readerBookKey: loc.bookKey, readerPage: loc.page, pop: word, readPopOff: false, readCtl: false });
+  },
   openBook(i) { const b = allBooks()[Number(i)]; if (b) set({ screen: 'reader', readerBurning: false, readerPage: 0, readerBookKey: b.title }); },
   readerPrev() { if (state.readerPage > 0) set({ readerPage: state.readerPage - 1 }); },
   readerNext() { if (state.readerPage < readerPages().length - 1) set({ readerPage: state.readerPage + 1 }); },
@@ -2318,7 +2343,7 @@ function reviewHTML() {
     <div style="font-family:'IBM Plex Sans KR',sans-serif;background:#14243f;color:#fff;border-radius:14px;padding:13px 15px;margin:18px 0 0;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);text-align:left">
       <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.head || pop.word)}</span><span style="font-size:11px;color:#7fd0e6">${esc(pop.pos)}</span></div>
       <div style="font-size:13px;color:#dbe6f5;margin-top:5px">${esc(pop.def)}</div>
-      ${(() => { const ex = wordHintSentence(pop.word) || pop.ex; return ex ? `<div style="font-size:12px;color:#93a6c2;margin-top:6px;font-style:italic;font-family:'Lora',serif">${esc(ex)}</div>` : ''; })()}
+      ${wordInPassage(pop.word) ? `<div data-act="locateWord" data-arg="${esc(pop.word)}" style="display:inline-flex;align-items:center;gap:5px;margin-top:9px;background:rgba(255,255,255,.14);color:#cfe0f5;font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:9px;cursor:pointer">📖 지문에서 보기</div>` : ''}
     </div>` : '';
 
   const btn = ui.revReady
@@ -2569,10 +2594,9 @@ function readerHTML() {
   const popOn = !state.readPopOff;
   const wStyle = active => `background:${active ? '#c08a3a' : '#f0e2c4'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #c08a3a;border-radius:3px;padding:0 3px;cursor:pointer`;
   const pop = popOn && state.pop && words[state.pop] ? Object.assign({ word: state.pop }, words[state.pop]) : null;
-  const popHTML = pop ? `<div style="font-family:'IBM Plex Sans KR',sans-serif;background:#3a3222;color:#f5f0e6;border-radius:12px;padding:12px 14px;margin:2px 0 16px;box-shadow:0 12px 26px -12px rgba(0,0,0,.5)">
+  const popHTML = pop ? `<div style="font-family:'IBM Plex Sans KR',sans-serif;background:#3a3222;color:#f5f0e6;border-radius:12px;padding:12px 14px;margin:14px 0 14px;box-shadow:0 12px 26px -12px rgba(0,0,0,.5);text-indent:0">
       <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.head || pop.word)}</span><span style="font-size:11px;color:#d8b878">${esc(pop.pos)}</span></div>
       <div style="font-size:13px;color:#e7dcc4;margin-top:5px">${esc(pop.def)}</div>
-      ${(() => { const ex = wordHintSentence(pop.word) || pop.ex; return ex ? `<div style="font-size:12px;color:#bda880;margin-top:5px;font-style:italic;font-family:'Lora',serif">${esc(ex)}</div>` : ''; })()}
     </div>` : '';
   // 형광펜 먼저, 그 다음 팝오버 단어 치환(순서 반대면 span 속성의 '='가 형광펜 정규식을 깨뜨림)
   const renderPara = p => popOn
@@ -2588,7 +2612,19 @@ function readerHTML() {
       ${readCtlBtn({ btnBg: '#ece3d2', btnFg: '#7a6b52' })}
     </div>
     <div style="flex:1;overflow-y:auto;padding:26px 26px 20px;font-family:'Lora',serif;font-size:18px;line-height:${(2 * readLineH()).toFixed(2)};color:#33302b">
-      ${paras.map(p => { const hit = pop && p.includes('<' + state.pop + '>'); return `<p style="margin:0 0 ${hit ? '2' : '18'}px;text-indent:1.1em;text-wrap:pretty">${renderPara(p)}</p>` + (hit ? popHTML : ''); }).join('')}
+      ${paras.map(p => {
+        const hit = pop && p.includes('<' + state.pop + '>');
+        if (!hit) return `<p style="margin:0 0 18px;text-indent:1.1em;text-wrap:pretty">${renderPara(p)}</p>`;
+        // 팝오버는 단어가 든 '문장 바로 다음'에 한 줄 띄우고 표시(문단 끝이 아니라)
+        const sents = splitSentences(p);
+        let k = sents.findIndex(s => s.includes('<' + state.pop + '>'));
+        if (k < 0) k = sents.length - 1;
+        const head = sents.slice(0, k + 1).join(' ');
+        const tail = sents.slice(k + 1).join(' ');
+        return `<p style="margin:0;text-indent:1.1em;text-wrap:pretty">${renderPara(head)}</p>`
+          + popHTML
+          + (tail ? `<p style="margin:0 0 18px;text-indent:0;text-wrap:pretty">${renderPara(tail)}</p>` : '<div style="margin-bottom:18px"></div>');
+      }).join('')}
     </div>
     <div style="padding:12px 22px 22px;border-top:1px solid #e7dfce;background:#f5f0e6">
       <div style="height:5px;border-radius:3px;background:#e3d9c6;overflow:hidden;margin-bottom:12px"><div style="height:100%;width:${readerProgress()};background:#c08a3a;border-radius:3px"></div></div>
@@ -2669,8 +2705,10 @@ function flashcardScreenHTML(mode) {
       ${c.pos ? `<div style="font-size:12px;color:#7fb0d8;font-weight:700;margin-top:6px">${esc(c.pos)}</div>` : ''}
       <div style="height:1px;background:#eef2f8;margin:16px 0"></div>
       <div style="font-size:18px;color:#26303f;line-height:1.6">${esc(c.def) || '<span style=\"color:#b8c2d2\">뜻이 없어요</span>'}</div>
-      ${c.ex ? `<div style="font-size:14px;color:#93a6c2;margin-top:12px;font-style:italic;font-family:'Lora',serif">${esc(c.ex)}</div>` : ''}
-      ${inWb ? `<div style="margin-top:14px;display:inline-flex;align-items:center;gap:5px;background:#fff0d0;color:#8a6412;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:20px">📒 내 단어장에 담았어요</div>` : ''}
+      <div style="display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:14px">
+        ${wordInPassage(c.word) ? `<div data-act="locateWord" data-arg="${esc(c.word)}" style="display:inline-flex;align-items:center;gap:5px;background:#e7f0fd;color:#2f74e6;font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:20px;cursor:pointer">📖 지문에서 보기</div>` : ''}
+        ${inWb ? `<div style="display:inline-flex;align-items:center;gap:5px;background:#fff0d0;color:#8a6412;font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:20px">📒 내 단어장에 담았어요</div>` : ''}
+      </div>
     ` : `
       <div style="font-size:12px;color:#b8c2d2;margin-top:14px">뜻을 아는지 아래에서 골라보세요</div>
       ${hintSent ? `<div style="margin-top:14px;background:#f4f8fd;border:1px solid #dbeafe;border-radius:12px;padding:11px 13px;font-family:'Lora',serif;font-size:14px;color:#3a5578;line-height:1.6">${esc(hintSent)}</div>` : ''}
@@ -3306,8 +3344,8 @@ function exitFS() {
 }
 // 발표용 문장 렌더: <단어>=빨간 형광펜(어휘), ==노랑(핵심문장), %%파랑(문법), **굵게
 function renderPresentText(s, accent) {
-  const h = esc(s).replace(/&lt;([^&]+?)&gt;/g, (m, w) => `<mark style="background:#ffbcbc;color:#7a1220;padding:0 .14em;border-radius:.14em;box-decoration-break:clone;-webkit-box-decoration-break:clone">${w}</mark>`);
-  return renderMarks(h, accent);
+  // 형광펜(==,%%,**) 먼저 적용 후 <단어> 빨간 마크 — 순서 반대면 mark 속성의 '='가 형광펜 정규식을 깨뜨림
+  return renderMarks(esc(s), accent).replace(/&lt;([^&]+?)&gt;/g, (m, w) => `<mark style="background:#ffbcbc;color:#7a1220;padding:0 .14em;border-radius:.14em;box-decoration-break:clone;-webkit-box-decoration-break:clone">${w}</mark>`);
 }
 function presentHTML() {
   const p = ui.present;
