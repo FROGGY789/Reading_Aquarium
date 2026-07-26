@@ -760,7 +760,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v60 (주관식 자유형 문제·버닝 예습을 한 문장씩 읽기로)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v61 (인터랙티브 튜토리얼: 단어탭·OX·카드 직접 해보기 → 첫 알)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>

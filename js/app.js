@@ -696,6 +696,7 @@ const DEFAULT_STATE = {
   introLeaving: false,
   tutorialDone: false,      // 초보자 튜토리얼 완료 여부(가입 후 1회 필수)
   tutStep: 0,               // 튜토리얼 현재 단계
+  tutTap: null, tutOX: null, tutFc: false,   // 튜토리얼 인터랙션(단어 탭·OX·카드 뒤집기)
   daily: null,              // {date, tasks:{...}, rewarded} — 화면 리셋용(자정 넘김 시 몰입화면 복귀)
   chapterKey: null,         // 현재 열려 있는 챕터 키(null이면 홈 목록)
   chapterMode: 'review',    // 챕터 학습 모드: 'review'(복습) / 'preview'(예습)
@@ -1058,10 +1059,18 @@ const actions = {
   goMe() { set({ screen: 'me', pop: null, dexOpen: false }); },
   toggleXpPop() { ui.xpPop = !ui.xpPop; render(); },
   goHatch() { set({ screen: 'hatchery', hatchStage: 'idle', hatchSpecies: null, pop: null, dexOpen: false }); },
-  tutNext() { const n = TUTORIAL_STEPS.length; if ((state.tutStep || 0) >= n - 1) { actions.tutFinish(); return; } set({ tutStep: (state.tutStep || 0) + 1 }); },
-  tutPrev() { set({ tutStep: Math.max(0, (state.tutStep || 0) - 1) }); },
+  tutTapWord() { set({ tutTap: 'brave' }); },
+  tutPickOX(arg) { set({ tutOX: Number(arg) }); },
+  tutFlipCard() { set({ tutFc: true }); },
+  tutNext() {
+    const n = TUTORIAL_STEPS.length; const i = state.tutStep || 0;
+    if (!tutCanAdvance(TUTORIAL_STEPS[i])) return;   // 인터랙티브는 직접 해봐야 통과
+    if (i >= n - 1) { actions.tutFinish(); return; }
+    set({ tutStep: i + 1, tutTap: null, tutOX: null, tutFc: false });   // 다음 단계로 넘어가며 서브상태 초기화
+  },
+  tutPrev() { set({ tutStep: Math.max(0, (state.tutStep || 0) - 1), tutTap: null, tutOX: null, tutFc: false }); },
   tutFinish() {   // 튜토리얼 완료: 알 1개 + XP, 바로 부화장으로
-    set({ tutorialDone: true, tutStep: 0, eggs: (state.eggs || 0) + 1, xp: (state.xp || 0) + 30, screen: 'hatchery', hatchStage: 'idle', hatchSpecies: null });
+    set({ tutorialDone: true, tutStep: 0, tutTap: null, tutOX: null, tutFc: false, eggs: (state.eggs || 0) + 1, xp: (state.xp || 0) + 30, screen: 'hatchery', hatchStage: 'idle', hatchSpecies: null });
   },
   goAdvanced() { set({ screen: 'advanced', pop: null, dexOpen: false }); },
   goWordbook() { ui.wbConfirm = null; ui.wbMsg = ''; ui.wbAddOpen = false; set({ screen: 'wordbook', pop: null, dexOpen: false }); },
@@ -2011,55 +2020,91 @@ function chapterCardHTML(ch, mode) {
 function tutorialActive() {
   return state.role === 'student' && !isTeacherUser() && !state.intro && !needLogin() && !state.tutorialDone && !(ui.present && ui.present.on);
 }
-// 작은 목업 UI(설명용) — 실제 화면 느낌만
 function tutMock(inner) { return `<div style="background:#f4f7fb;border:1px solid #e7edf5;border-radius:16px;padding:14px;margin-top:16px">${inner}</div>`; }
 function tutPill(bg, fg, t) { return `<span style="display:inline-block;background:${bg};color:${fg};font-size:12px;font-weight:700;padding:7px 12px;border-radius:11px;margin:3px">${t}</span>`; }
+// 진짜 해보는 튜토리얼 — kind: 'info'(읽기) / 'tap'(단어 탭) / 'ox'(O·X 풀기) / 'card'(어휘 카드)
 const TUTORIAL_STEPS = [
-  { icon: '🐠', title: '리딩 아쿠아리움에 온 걸 환영해요!', body: () =>
-    `<div style="font-size:13.5px;line-height:1.8;color:#3a4658">영어 지문을 <b>예습하고 복습</b>하면서 실력을 키우고,<br>할 일을 끝낼 때마다 <b>알 🥚</b>을 받아 부화시켜<br><b>나만의 아쿠아리움</b>을 채우는 앱이에요.<br><br>먼저 <b>어떻게 쓰는지</b> 30초만 둘러볼까요? 끝까지 하면<br><b style="color:#2f74e6">첫 알을 선물</b>로 드려요 🎁</div>` },
-  { icon: '🏠', title: '홈 — 복습하기 / 예습하기', body: () =>
-    `<div style="font-size:13.5px;line-height:1.75;color:#3a4658">홈에는 두 갈래가 있어요.</div>${tutMock(
-      `${tutPill('#e7f0fd', '#1f57c4', '📖 복습하기')} ${tutPill('#fbf0d8', '#c98a12', '👀 예습하기')}
-       <div style="font-size:12px;color:#7d8aa0;margin-top:8px;line-height:1.6"><b>복습하기</b> = 수업에서 배운 챕터 다시 익히기<br><b>예습하기</b> = 다음에 배울 챕터 미리 보기</div>`)}` },
-  { icon: '📖', title: '복습하기 — 3가지로 익혀요', body: () =>
-    `<div style="font-size:13.5px;line-height:1.75;color:#3a4658">복습하기에서 챕터를 고르면 할 일이 나와요.</div>${tutMock(
-      `${tutPill('#e0f3ea', '#1f7a4d', '📖 지문 복습')} ${tutPill('#efe7fd', '#7a5bd0', '🧩 어법')} ${tutPill('#fdeede', '#b8480f', '🔤 어휘')}
-       <div style="font-size:12px;color:#7d8aa0;margin-top:8px;line-height:1.6">셋을 <b>모두</b> 끝내면 그 챕터 복습 완료! 알을 하나 받아요 🥚</div>`)}` },
-  { icon: '👇', title: '지문 복습 — 밑줄 단어를 탭!', body: () =>
-    `<div style="font-size:13.5px;line-height:1.75;color:#3a4658">문장을 한 줄씩 다시 읽어요.<br><b>밑줄 친 단어</b>를 탭하면 뜻이 바로 나와요.</div>${tutMock(
-      `<div style="font-family:'Lora',serif;font-size:15px;color:#26303f;text-align:center;line-height:1.9">The sea was <span style="background:#e7f0fd;border-bottom:2px solid #2f74e6;border-radius:3px;padding:0 3px">restless</span> and deep.</div>
-       <div style="font-size:11.5px;color:#9aa8bd;text-align:center;margin-top:8px">우상단 <b>Aa</b>에서 형광펜·행간도 바꿀 수 있어요</div>`)}` },
-  { icon: '🧩', title: '어법 · 어휘 복습', body: () =>
-    `<div style="font-size:13.5px;line-height:1.75;color:#3a4658"><b>어법</b>은 문제를 풀고,<br><b>어휘</b>는 플래시카드로 익혀요.</div>${tutMock(
-      `<div style="display:flex;gap:8px;justify-content:center">${tutPill('#e0f3ea', '#1f7a4d', '알아요 ✓')} ${tutPill('#fbe4e2', '#c0392b', '몰라요 🤔')}</div>
-       <div style="font-size:12px;color:#7d8aa0;margin-top:8px;line-height:1.6"><b>몰라요</b> 한 단어는 <b>내 단어장</b>에 쏙 담겨서, 나중에 딱 맞는 시점에 다시 복습돼요.</div>`)}` },
-  { icon: '👀', title: '예습하기 — 살살 · 보통 · 버닝', body: () =>
-    `<div style="font-size:13.5px;line-height:1.75;color:#3a4658">예습은 <b>난이도 3단계</b> 중에서 골라요.</div>${tutMock(
-      `${tutPill('#e0f3ea', '#1f7a4d', '🟢 살살')} ${tutPill('#fdf3dd', '#a5760f', '🟡 보통')} ${tutPill('#fbe4e2', '#c0392b', '🔴 버닝')}
-       <div style="font-size:12px;color:#7d8aa0;margin-top:8px;line-height:1.6">🟢 어휘 미리보기(개수 선택·보너스!) · 🟡 주어·동사 찾기 · 🔴 지문 전체 읽고 이해도 확인</div>`)}` },
-  { icon: '📚', title: '책 읽기 — 서가에서 탭!', body: () =>
-    `<div style="font-size:13.5px;line-height:1.75;color:#3a4658">홈 아래 <b>서가</b>에서 책을 탭하면 e-북처럼 읽어요.<br>읽다가 <b>모르는 단어를 탭</b>하면 그 자리에 뜻이 떠요.</div>${tutMock(
-      `<div style="display:flex;gap:6px;justify-content:center;align-items:flex-end">
-        <div style="width:20px;height:56px;background:#2f74e6;border-radius:2px"></div>
-        <div style="width:20px;height:56px;background:#17b0c4;border-radius:2px"></div>
-        <div style="width:20px;height:56px;background:#e0a41a;border-radius:2px"></div></div>`)}` },
-  { icon: '🚀', title: '심화 학습 — 더 해보기', body: () =>
-    `<div style="font-size:13.5px;line-height:1.75;color:#3a4658">아래 <b>🚀 심화</b> 탭에는 보너스 학습이 있어요.</div>${tutMock(
-      `${tutPill('#eaf3dd', '#4a7a1e', '📐 어법 학습')} ${tutPill('#e7f0fd', '#1f57c4', '📒 오늘의 단어시험')}
-       <div style="font-size:12px;color:#7d8aa0;margin-top:8px;line-height:1.6">어법을 기본부터 순서대로! 단어시험은 <b>내 단어장</b>을 망각곡선 맞춤으로 출제해요.</div>`)}` },
-  { icon: '🐡', title: '아쿠아리움 — 알을 부화시켜요', body: () =>
-    `<div style="font-size:13.5px;line-height:1.75;color:#3a4658">할 일을 끝내면 <b>알 🥚</b>을 받아요.<br>알을 부화시키면 <b>물고기</b>가 나와 아쿠아리움에서 헤엄쳐요.<br>많이 모을수록 <b>레벨</b>이 오르고 도감이 채워져요!</div>${tutMock(
+  { icon: '🐠', kind: 'info', title: '리딩 아쿠아리움에 온 걸 환영해요!', body: () =>
+    `<div style="font-size:13.5px;line-height:1.8;color:#3a4658">영어를 <b>예습·복습</b>하면서 실력을 키우고,<br>할 일을 끝낼 때마다 <b>알 🥚</b>을 받아 부화시켜<br><b>나만의 아쿠아리움</b>을 채우는 앱이에요.<br><br>지금부터 <b>직접 몇 가지를 해볼게요.</b> 다 하면<br><b style="color:#2f74e6">첫 알을 선물</b>로 드려요 🎁</div>` },
+  { icon: '👇', kind: 'tap', title: '① 밑줄 단어를 탭해봐요!', word: 'brave', def: '용감한',
+    hint: '<b>brave</b>를 한 번 눌러보세요 👆', okmsg: '좋아요! 이렇게 모르는 단어를 탭하면 뜻이 나와요 ✨' },
+  { icon: '🧩', kind: 'ox', title: '② O·X 문제를 풀어봐요!', prompt: '"I am happy." 이 문장은 어법에 맞을까요?', answer: 0,
+    wrongmsg: '앗, 다시! "I am happy."는 <b>맞는</b> 문장이에요 😊', okmsg: '정답이에요! 🎉 이렇게 어법 문제를 풀어요.' },
+  { icon: '🔤', kind: 'card', title: '③ 어휘 카드를 넘겨봐요!', word: 'apple', def: '사과',
+    hint: '카드를 눌러 <b>뜻</b>을 확인해요 👆', okmsg: '잘했어요! 아는 단어는 <b>알아요</b>, 모르면 <b>몰라요</b>를 눌러요.' },
+  { icon: '🗺️', kind: 'info', title: '이렇게 공부해요', body: () =>
+    `<div style="font-size:13px;line-height:1.7;color:#3a4658">방금 해본 것들이 홈에 다 들어 있어요!</div>
+     ${tutMock(`<div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:#3a4658;line-height:1.5">
+       <div>📖 <b>복습하기</b> — 지문 복습·어법·어휘</div>
+       <div>👀 <b>예습하기</b> — 살살🟢 보통🟡 버닝🔴</div>
+       <div>📚 <b>서가</b> — 책을 탭해 읽고, 단어 탭하면 뜻</div>
+       <div>🚀 <b>심화</b> — 어법 학습·오늘의 단어시험</div>
+       <div>📒 <b>내 단어장</b> — 몰랐던 단어 다시 복습</div>
+     </div>`)}` },
+  { icon: '🐡', kind: 'info', title: '알을 부화시켜요', body: () =>
+    `<div style="font-size:13.5px;line-height:1.75;color:#3a4658">할 일을 끝내면 <b>알 🥚</b>을 받아요.<br>부화시키면 <b>물고기</b>가 나와 아쿠아리움에서 헤엄쳐요.<br>많이 모을수록 <b>레벨</b>이 오르고 도감이 채워져요!</div>${tutMock(
       `<div style="text-align:center;font-size:30px">🥚 → 🐠 → 🐡 → 🦈</div>`)}` },
-  { icon: '🎉', title: '준비 끝! 첫 알을 받아요', body: () =>
-    `<div style="font-size:13.5px;line-height:1.8;color:#3a4658">이제 다 배웠어요! 🎊<br>수고한 당신에게 <b style="color:#2f74e6">첫 번째 알 🥚</b>을 선물할게요.<br>아래 버튼을 눌러 <b>바로 부화</b>시켜 봐요!</div>` }
+  { icon: '🎉', kind: 'finish', title: '준비 끝! 첫 알을 받아요', body: () =>
+    `<div style="font-size:13.5px;line-height:1.8;color:#3a4658">직접 다 해봤어요! 🎊<br>수고한 당신에게 <b style="color:#2f74e6">첫 번째 알 🥚</b>을 선물할게요.<br>아래 버튼을 눌러 <b>바로 부화</b>시켜 봐요!</div>` }
 ];
+// 이 단계를 넘어갈 수 있는가(인터랙티브는 직접 해봐야 통과)
+function tutCanAdvance(s) {
+  if (!s) return true;
+  if (s.kind === 'tap') return !!state.tutTap;
+  if (s.kind === 'ox') return state.tutOX === s.answer;
+  if (s.kind === 'card') return !!state.tutFc;
+  return true;
+}
+function tutStepBody(s) {
+  if (s.kind === 'tap') {
+    const tapped = !!state.tutTap;
+    const chip = `<span data-act="tutTapWord" style="background:${tapped ? '#2f74e6' : '#e7f0fd'};color:${tapped ? '#fff' : '#14243f'};border-bottom:2px solid #2f74e6;border-radius:4px;padding:1px 5px;cursor:pointer;font-weight:700">${esc(s.word)}</span>`;
+    return `<div style="font-family:'Lora',serif;font-size:19px;color:#26303f;text-align:center;line-height:2;margin-top:6px">The knight was ${chip} and strong.</div>
+      ${tapped
+        ? `<div style="background:#14243f;color:#fff;border-radius:14px;padding:12px 15px;margin-top:14px"><div style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(s.word)}</div><div style="font-size:13px;color:#dbe6f5;margin-top:4px">${esc(s.def)}</div></div>
+           <div style="font-size:12px;color:#2fa36b;font-weight:700;text-align:center;margin-top:12px">${s.okmsg}</div>`
+        : `<div style="font-size:12.5px;color:#7d8aa0;text-align:center;margin-top:16px">${s.hint}</div>`}`;
+  }
+  if (s.kind === 'ox') {
+    const picked = state.tutOX;
+    const opt = (idx, big, label) => {
+      const on = picked === idx, correct = idx === s.answer;
+      let bg = '#fff', bd = '#e2e9f2', color = '#26303f';
+      if (on && correct) { bg = '#e0f3ea'; bd = '#2fa36b'; color = '#1f7a4d'; }
+      if (on && !correct) { bg = '#fbe4e2'; bd = '#e2564d'; color = '#b23a32'; }
+      return `<div data-act="tutPickOX" data-arg="${idx}" style="flex:1;background:${bg};border:2px solid ${bd};border-radius:16px;padding:18px 10px;text-align:center;cursor:pointer"><div style="font-size:30px;font-weight:800;color:${color};font-family:'Lora',serif;line-height:1">${big}</div><div style="font-size:11px;color:${color};margin-top:4px;font-weight:600">${label}</div></div>`;
+    };
+    return `<div style="font-size:14px;font-weight:700;color:#14243f;text-align:center;margin:6px 0 4px">${esc(s.prompt)}</div>
+      <div style="display:flex;gap:12px;margin-top:12px">${opt(0, 'O', '맞아요')}${opt(1, 'X', '틀려요')}</div>
+      ${picked === s.answer ? `<div style="font-size:12.5px;color:#2fa36b;font-weight:700;text-align:center;margin-top:12px">${s.okmsg}</div>`
+        : picked != null ? `<div style="font-size:12.5px;color:#c0392b;font-weight:700;text-align:center;margin-top:12px">${s.wrongmsg}</div>` : ''}`;
+  }
+  if (s.kind === 'card') {
+    const flip = !!state.tutFc;
+    return `<div data-act="tutFlipCard" style="background:#fff;border:1px solid #e2e9f2;border-radius:20px;padding:26px 20px;text-align:center;box-shadow:0 12px 30px -20px rgba(20,50,90,.5);cursor:pointer;margin-top:6px">
+        <div style="font-family:'Lora',serif;font-size:30px;font-weight:600;color:#14243f">${esc(s.word)} 🍎</div>
+        ${flip ? `<div style="height:1px;background:#eef2f8;margin:14px 0"></div><div style="font-size:20px;color:#26303f">${esc(s.def)}</div>` : `<div style="font-size:12px;color:#b8c2d2;margin-top:12px">카드를 눌러 뒤집기</div>`}
+      </div>
+      ${flip
+        ? `<div style="display:flex;gap:10px;margin-top:12px"><div style="flex:1;border:1.5px solid #cfe6da;background:#fff;color:#1f7a4d;font-size:14px;font-weight:700;padding:12px;border-radius:14px;text-align:center">알아요 ✓</div><div style="flex:1;border:1.5px solid #f3c7c2;background:#fff;color:#c0392b;font-size:14px;font-weight:700;padding:12px;border-radius:14px;text-align:center">몰라요 🤔</div></div>
+           <div style="font-size:12px;color:#2fa36b;font-weight:700;text-align:center;margin-top:12px">${s.okmsg}</div>`
+        : `<div style="font-size:12.5px;color:#7d8aa0;text-align:center;margin-top:14px">${s.hint}</div>`}`;
+  }
+  return s.body();
+}
 function tutorialHTML() {
   const steps = TUTORIAL_STEPS;
   const n = steps.length;
   const i = Math.min(Math.max(0, state.tutStep || 0), n - 1);
   const s = steps[i];
-  const last = i === n - 1;
+  const last = s.kind === 'finish';
+  const canGo = tutCanAdvance(s);
   const dots = steps.map((_, k) => `<div style="width:${k === i ? '20px' : '7px'};height:7px;border-radius:4px;background:${k === i ? '#fff' : 'rgba(255,255,255,.4)'};transition:all .25s"></div>`).join('');
+  const nextBtn = last
+    ? `<button data-act="tutFinish" style="flex:1;border:none;background:#2fa36b;color:#fff;font-size:15px;font-weight:800;padding:14px;border-radius:14px;box-shadow:0 5px 0 #1f7a4d;cursor:pointer">🥚 알 받고 시작하기</button>`
+    : canGo
+      ? `<button data-act="tutNext" style="flex:1;border:none;background:#2f74e6;color:#fff;font-size:15px;font-weight:800;padding:14px;border-radius:14px;box-shadow:0 5px 0 #1f57c4;cursor:pointer">다음 →</button>`
+      : `<button disabled style="flex:1;border:none;background:#c8d4e2;color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:14px;cursor:default">먼저 해보세요 ☝️</button>`;
   return `<div style="position:absolute;inset:0;z-index:120;background:rgba(8,24,45,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center">
     <div style="width:100%;max-width:462px;max-height:94%;overflow-y:auto;background:#fff;border-radius:26px 26px 0 0;box-shadow:0 -20px 60px -20px rgba(0,0,0,.55);animation:riseIn .4s cubic-bezier(.2,.7,.2,1) both">
       <div style="background:linear-gradient(150deg,#1f57c4,#2f74e6 55%,#17b0c4);padding:22px 22px 18px;color:#fff;position:relative">
@@ -2073,12 +2118,10 @@ function tutorialHTML() {
         </div>
       </div>
       <div style="padding:18px 22px 22px">
-        ${s.body()}
+        ${tutStepBody(s)}
         <div style="display:flex;gap:9px;margin-top:22px">
           ${i > 0 ? `<button data-act="tutPrev" style="flex:none;border:1.5px solid #dbe4ef;background:#fff;color:#5f7794;font-size:14px;font-weight:700;padding:14px 18px;border-radius:14px;cursor:pointer">← 이전</button>` : ''}
-          ${last
-            ? `<button data-act="tutFinish" style="flex:1;border:none;background:#2fa36b;color:#fff;font-size:15px;font-weight:800;padding:14px;border-radius:14px;box-shadow:0 5px 0 #1f7a4d;cursor:pointer">🥚 알 받고 시작하기</button>`
-            : `<button data-act="tutNext" style="flex:1;border:none;background:#2f74e6;color:#fff;font-size:15px;font-weight:800;padding:14px;border-radius:14px;box-shadow:0 5px 0 #1f57c4;cursor:pointer">다음 →</button>`}
+          ${nextBtn}
         </div>
       </div>
     </div>
