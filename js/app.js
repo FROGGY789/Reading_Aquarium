@@ -517,7 +517,7 @@ function nextDayPopoverCards() {
 }
 // 플래시카드 덱: preview=다음날 어휘 10개 / vocabPrep=다음날 지문 단어 랜덤 최대 30개 / vocab=오늘 어휘(선택 개수)
 function flashcardCards(mode) {
-  if (mode === 'preview') return dayVocabCards(nextDayAfterActive() || activeDay()).slice(0, 10);
+  if (mode === 'preview') return dayVocabCards(activeDay()).slice(0, 10);   // 예습 살살 = 고른 챕터의 어휘
   if (mode === 'vocabPrep') return state.vpDeck || [];   // 시작 시 랜덤 최대 30개로 고정된 덱
   return dayVocabCards(activeDay()).slice(0, state.vrCount || 0);
 }
@@ -633,12 +633,12 @@ function modeTasks(mode) { return MAIN_TASKS.filter(t => t.mode === (mode || 're
 const BONUS_TASKS = [
   { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', time: '3분', sub: () => `다음 수업 지문 단어 · 플래시카드 ${Math.min(nextDayPopoverCards().length, 30)}개` },
   { key: 'wbStudy',   icon: '📒', bg: '#eef2f8', time: '5분', name: '단어장 학습', sub: () => `내 단어장 단어를 망각곡선 맞춤으로 카드 복습` },
-  { key: 'grammar',   icon: '📐', bg: '#fdeede', time: '2분', wip: true, sub: () => `어법 퀴즈 (공사중)` }
+  { key: 'grammar',   icon: '📐', bg: '#eaf3dd', time: '5분', sub: () => { const n = grammarConcepts().length; return `기본부터 순서대로 어법 개념 ${n}개 · 설명 읽고 문제 풀기`; } }
 ];
 // 특정 챕터(day)에 이 학습 항목이 존재하는가
 function taskAvailableForDay(d, key) {
   if (key === 'wbStudy') return (state.wordbook || []).length > 0;     // 단어장 학습(심화) = 내 단어장 카드
-  if (key === 'grammar') return true;                                  // 어법 퀴즈(공사중) — 항상 노출(비활성)
+  if (key === 'grammar') return grammarConcepts().length > 0;          // 어법 퀴즈 = 커리큘럼 개념이 하나라도 있으면
   if (key === 'review') return passageToReview(dayPassage(d)).length > 0;
   if (key === 'vocab') return dayVocabCards(d).length > 0;             // 어휘 복습 = 플래시카드
   if (key === 'vocabPrep') return nextDayPopoverCards().length > 0;    // 어휘 예습 = 다음 챕터 단어(활성 기준·심화 전용)
@@ -662,12 +662,14 @@ const DEFAULT_STATE = {
   daily: null,              // {date, tasks:{...}, rewarded} — 화면 리셋용(자정 넘김 시 몰입화면 복귀)
   chapterKey: null,         // 현재 열려 있는 챕터 키(null이면 홈 목록)
   chapterMode: 'review',    // 챕터 학습 모드: 'review'(복습) / 'preview'(예습)
+  pickMode: 'review',       // 챕터 고르기 화면 모드
   progress: {},             // 챕터별 진행도 { [key]: {tasks:{}, rewarded} } — 영구(리셋 안 함)
   eggs: 0,
   animals: [],
   xp: 0,
   pullCount: 0,
   quizTask: null, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {},
+  gramCI: 0,                // 어법 커리큘럼: 현재 개념 인덱스
   vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 최대 30개로 고정)
   result: null,
   hatchStage: 'idle', hatchSpecies: null,
@@ -932,7 +934,21 @@ function introBubblesHTML() {
 }
 
 /* ---------- 퀴즈 헬퍼 ---------- */
-function currentQs() { return state.quizTask ? dayQuiz(state.quizTask) : []; }
+// 어법 커리큘럼(모든 챕터 공통) — 제목·설명·문제 중 뭐라도 있는 개념만
+function grammarConcepts() {
+  return (contentSource().grammar || []).filter(c => c && ((c.title || '').trim() || (c.explain || '').trim() || (c.quiz && c.quiz.length)));
+}
+function currentGramConcept() { return grammarConcepts()[state.gramCI || 0] || null; }
+// 어법 커리큘럼: 다음 개념으로(마지막 개념이면 완료 처리·XP·심화로 복귀)
+function gramAdvance() {
+  const total = grammarConcepts().length;
+  if ((state.gramCI || 0) >= total - 1) { completeTask('grammar'); return; }
+  set({ screen: 'grammar', gramCI: (state.gramCI || 0) + 1, result: null, pop: null });
+}
+function currentQs() {
+  if (state.quizTask === 'grammar') { const c = currentGramConcept(); return (c && c.quiz) || []; }
+  return state.quizTask ? dayQuiz(state.quizTask) : [];
+}
 function currentQ() { return currentQs()[state.quizQi] || null; }
 function isRight(q, i) {
   if (!q) return false;
@@ -980,8 +996,10 @@ const actions = {
 
   goHome() { set({ screen: 'home', pop: null, dexOpen: false, readCtl: false }); },
   openChapter(key) { set({ screen: 'chapter', chapterKey: key, chapterMode: 'review', pop: null, dexOpen: false, readCtl: false }); },   // (구) 복습으로 열기
-  openReview(key) { set({ screen: 'chapter', chapterKey: key, chapterMode: 'review', pop: null, dexOpen: false, readCtl: false }); },   // 복습하기로 챕터 열기
-  openPreview(key) { set({ screen: 'chapter', chapterKey: key, chapterMode: 'preview', pop: null, dexOpen: false, readCtl: false }); },  // 예습하기로 챕터 열기
+  goReviewList() { set({ screen: 'pickChapter', pickMode: 'review', pop: null, dexOpen: false, readCtl: false }); },   // 복습하기 → 챕터 고르기
+  goPreviewList() { set({ screen: 'pickChapter', pickMode: 'preview', pop: null, dexOpen: false, readCtl: false }); },  // 예습하기 → 챕터 고르기
+  openReview(key) { set({ screen: 'chapter', chapterKey: key, chapterMode: 'review', pop: null, dexOpen: false, readCtl: false }); },   // 복습 챕터 → 할 일 허브
+  openPreview(key) { set({ screen: 'preview', chapterKey: key, chapterMode: 'preview', pop: null, dexOpen: false, readCtl: false }); },  // 예습 챕터 → 바로 살살/보통/버닝
   goAqua() {
     if (!Array.isArray(state.displayed)) { const uniq = [...new Set(state.animals)]; state.displayed = uniq.slice(0, displayLimit()); }
     set({ screen: 'aquarium', pop: null, dexOpen: false });
@@ -1045,6 +1063,7 @@ const actions = {
       set({ screen: 'vocabPrepCard', vpDeck: deck, fcI: 0, fcFlipped: false, fcHint: false });
     }
     else if (t === 'wbStudy') set({ screen: 'wbStudy', wbsCount: null, wbsDeck: [], wbsI: 0, wbsFlipped: false });   // 단어장 학습(SRS 카드)
+    else if (t === 'grammar') { if (!grammarConcepts().length) return; set({ screen: 'grammar', quizTask: 'grammar', gramCI: 0, pop: null }); }   // 어법 커리큘럼(개념 순서대로)
     else set({ screen: 'quiz', quizTask: t, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {} });
   },
   // 단어장 학습(심화): 복습 개수 선택 → 망각곡선 순서로 덱 구성
@@ -1230,7 +1249,17 @@ const actions = {
       result: { task: state.quizTask, name: QUIZ_META[state.quizTask].name, total: qs.length, correct, score: Math.round(correct / qs.length * 100), wrongs }
     });
   },
-  finishTask() { if (state.result) completeTask(state.result.task); },
+  finishTask() {
+    if (!state.result) return;
+    if (state.result.task === 'grammar') { gramAdvance(); return; }   // 어법: 다음 개념으로(마지막이면 완료)
+    completeTask(state.result.task);
+  },
+  gramStartQuiz() {   // 개념 설명 화면 → 이 개념의 문제 풀기(문제 없으면 다음 개념으로)
+    const c = currentGramConcept();
+    if (!c || !(c.quiz && c.quiz.length)) { gramAdvance(); return; }
+    set({ screen: 'quiz', quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {}, pop: null });
+  },
+  gramNextConcept() { gramAdvance(); },
 
   buyEgg() { if (state.xp < EGG_PRICE) return; set({ xp: state.xp - EGG_PRICE, eggs: state.eggs + 1 }); },
   crackEgg() {
@@ -1925,17 +1954,16 @@ function homeHTML() {
 
   const reviewChs = reviewChapters();
   const previewChs = previewChapters();
-  const emptyBox = msg => `<div style="background:#fff;border:1px dashed #cdd8e6;border-radius:16px;padding:22px 18px;text-align:center;color:#9aa8bd;font-size:12px">${msg}</div>`;
-  const groupSection = (accent, emoji, heading, desc, chs, mode) => `
-    <div style="display:flex;align-items:center;gap:8px;margin:0 0 4px">
-      <div style="width:30px;height:30px;border-radius:10px;background:${accent}1a;display:flex;align-items:center;justify-content:center;font-size:16px">${emoji}</div>
-      <div style="flex:1"><span style="font-size:15px;font-weight:800;color:#14243f">${heading}</span></div>
-      <span style="font-size:11.5px;font-weight:700;color:${accent}">${chs.length}개</span>
-    </div>
-    <div style="font-size:11px;color:#7d8aa0;margin:0 0 11px">${desc}</div>
-    ${chs.length
-      ? `<div style="display:flex;flex-direction:column;gap:11px">${chs.map(c => chapterCardHTML(c, mode)).join('')}</div>`
-      : emptyBox(mode === 'preview' ? '지금 예습할 챕터가 없어요.<br>선생님이 예습 기간을 열면 나타나요 👀' : '지금 복습할 챕터가 없어요.<br>선생님이 복습 기간을 열면 나타나요 📖')}`;
+  const entryCard = (act, accent, emoji, heading, desc, n) => `
+    <div data-act="${act}" style="display:flex;align-items:center;gap:14px;background:#fff;border:1.5px solid #e7edf5;border-left:5px solid ${accent};border-radius:18px;padding:16px 16px;cursor:pointer;box-shadow:0 8px 20px -14px rgba(20,50,90,.5)">
+      <div style="flex:none;width:48px;height:48px;border-radius:14px;background:${accent}1a;display:flex;align-items:center;justify-content:center;font-size:24px">${emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:800;color:#14243f">${heading}</div>
+        <div style="font-size:11.5px;color:#7d8aa0;margin-top:2px;line-height:1.5">${desc}</div>
+      </div>
+      <div style="text-align:center;flex:none"><div style="font-size:16px;font-weight:800;color:${accent}">${n}</div><div style="font-size:9px;color:#9aa8bd">챕터</div></div>
+      <div style="font-size:18px;color:#c3ccda">›</div>
+    </div>`;
 
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -1961,10 +1989,10 @@ function homeHTML() {
 
     ${bookCardHTML(activeDay())}
 
-    ${groupSection('#2f74e6', '📖', '복습하기', '수업에서 배운 챕터를 다시 읽고 어휘·어법을 복습해요. 모두 끝내면 알 🥚', reviewChs, 'review')}
-
-    <div style="height:18px"></div>
-    ${groupSection('#e0a41a', '👀', '예습하기', '다음 수업 챕터를 미리 읽어요. 살살🟢 보통🟡 버닝🔴 중 골라서!', previewChs, 'preview')}
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${entryCard('goReviewList', '#2f74e6', '📖', '복습하기', '배운 챕터를 다시 읽고 어휘·어법 복습', reviewChs.length)}
+      ${entryCard('goPreviewList', '#e0a41a', '👀', '예습하기', '다음 수업 챕터 미리보기 · 살살🟢 보통🟡 버닝🔴', previewChs.length)}
+    </div>
 
     <div style="font-size:13px;font-weight:700;color:#14243f;margin:24px 0 11px">단어장</div>
     <div style="display:flex;flex-direction:column;gap:10px">${wordbookCard}</div>
@@ -1977,6 +2005,28 @@ function homeHTML() {
       <div data-act="doLogout" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#7d8aa0;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">↩︎ 로그아웃</div>
     </div>` : ''}
 
+  </div></div>`;
+}
+
+// 챕터 고르기 화면(복습하기/예습하기에서 진입)
+function pickChapterHTML() {
+  const mode = state.pickMode === 'preview' ? 'preview' : 'review';
+  const isPrev = mode === 'preview';
+  const chs = isPrev ? previewChapters() : reviewChapters();
+  const accent = isPrev ? '#e0a41a' : '#2f74e6';
+  const enter = freshView ? 'animation:riseIn .8s cubic-bezier(.2,.7,.2,1) both' : '';
+  const list = chs.length
+    ? `<div style="display:flex;flex-direction:column;gap:11px">${chs.map(c => chapterCardHTML(c, mode)).join('')}</div>`
+    : `<div style="background:#fff;border:1px dashed #cdd8e6;border-radius:16px;padding:28px 18px;text-align:center;color:#9aa8bd;font-size:12.5px">${isPrev ? '지금 예습할 챕터가 없어요.<br>선생님이 예습 기간을 열면 나타나요 👀' : '지금 복습할 챕터가 없어요.<br>선생님이 복습 기간을 열면 나타나요 📖'}</div>`;
+  return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
+    <div style="display:flex;align-items:center;gap:11px;margin-bottom:18px">
+      <div data-act="goHome" style="flex:none;width:38px;height:38px;border-radius:12px;background:#fff;border:1px solid #e2e9f2;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:${accent};box-shadow:0 3px 8px -4px rgba(20,36,63,.3)">←</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:18px;font-weight:800;color:#14243f">${isPrev ? '👀 예습하기' : '📖 복습하기'}</div>
+        <div style="font-size:11.5px;color:#7d8aa0;margin-top:2px">${isPrev ? '예습할 챕터를 골라요' : '복습할 챕터를 골라요'} · ${chs.length}개</div>
+      </div>
+    </div>
+    ${list}
   </div></div>`;
 }
 
@@ -1996,7 +2046,7 @@ function chapterHubHTML() {
 
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;gap:11px;margin-bottom:18px">
-      <div data-act="goHome" style="flex:none;width:38px;height:38px;border-radius:12px;background:#fff;border:1px solid #e2e9f2;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:#2f74e6;box-shadow:0 3px 8px -4px rgba(20,36,63,.3)">←</div>
+      <div data-act="${isPrev ? 'goPreviewList' : 'goReviewList'}" style="flex:none;width:38px;height:38px;border-radius:12px;background:#fff;border:1px solid #e2e9f2;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:${accent};box-shadow:0 3px 8px -4px rgba(20,36,63,.3)">←</div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:7px">${modeChip}<span style="font-size:16px;font-weight:700;color:#14243f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</span></div>
         <div style="font-size:11.5px;color:#7d8aa0;margin-top:2px">${complete ? '이 챕터를 모두 끝냈어요! 🎉' : `할 일 ${done}/${req.length} 완료`}</div>
@@ -2257,10 +2307,11 @@ function reviewHTML() {
 
   const popOn = !state.readPopOff;
   const wordStyle = active => `background:${active ? '#2f74e6' : '#e7f0fd'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #2f74e6;border-radius:3px;padding:0 3px;cursor:pointer`;
-  const sentHTML = readMarks(esc(sentence).replace(/&lt;([^&]+?)&gt;/g, (m, w) =>
+  // 형광펜(==,%%,**) 먼저 적용 후 팝오버 단어 치환 — 순서 반대면 span 속성의 '='가 형광펜 정규식을 깨뜨림
+  const sentHTML = readMarks(esc(sentence)).replace(/&lt;([^&]+?)&gt;/g, (m, w) =>
     (popOn && words[w])
       ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wordStyle(state.pop === w)}">${esc(w)}</span>`
-      : w));
+      : w);
   const pop = popOn && state.pop && words[state.pop] && sentence.includes('<' + state.pop + '>')
     ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `
@@ -2290,6 +2341,35 @@ function reviewHTML() {
     <div style="font-size:11px;color:#9aa8bd;text-align:center;margin-bottom:10px">${popOn ? '밑줄 친 단어를 탭하면 뜻이 나와요' : '읽기 설정(Aa)에서 단어 팝오버를 켤 수 있어요'}</div>
     ${btn}
     ${readCtlPanel()}
+  </div>`;
+}
+
+/* ---- 어법 커리큘럼: 개념 설명 화면(문제 전에 읽기) ---- */
+function grammarHTML() {
+  const concepts = grammarConcepts();
+  const total = concepts.length || 1;
+  const ci = Math.min(state.gramCI || 0, total - 1);
+  const c = concepts[ci] || { title: '', explain: '', quiz: [] };
+  const enter = freshView ? 'animation:riseIn .8s cubic-bezier(.2,.7,.2,1) both' : '';
+  const qn = (c.quiz && c.quiz.length) || 0;
+  const explainHTML = esc(c.explain || '').replace(/\n/g, '<br>');
+  const btn = qn
+    ? `<button data-act="gramStartQuiz" style="width:100%;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:700;padding:15px;border-radius:15px;box-shadow:0 5px 0 #1f57c4;cursor:pointer">문제 풀기 (${qn}문항) →</button>`
+    : `<button data-act="gramNextConcept" style="width:100%;border:none;background:${ci >= total - 1 ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:15px;border-radius:15px;box-shadow:0 5px 0 ${ci >= total - 1 ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${ci >= total - 1 ? '어법 학습 완료 ✓' : '다음 개념 →'}</button>`;
+  return `<div style="${enter}"><div style="padding:${topPad()} 20px 40px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div data-act="goAdvanced" style="width:30px;height:30px;border-radius:10px;background:#eaf3dd;color:#4a7a1e;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <div style="flex:1"><div style="font-size:15px;font-weight:700;color:#14243f">📐 어법 퀴즈</div></div>
+      <div style="font-size:12px;font-weight:700;color:#7d8aa0">${ci + 1} / ${total}</div>
+    </div>
+    <div style="height:5px;border-radius:3px;background:#e7edf5;overflow:hidden;margin-bottom:16px"><div style="height:100%;width:${Math.round((ci + 1) / total * 100)}%;background:linear-gradient(90deg,#7cbf3f,#2fa36b);border-radius:3px;transition:width .3s"></div></div>
+    <div style="background:#fff;border:1px solid #e2e9f2;border-radius:20px;padding:20px 18px;box-shadow:0 12px 30px -20px rgba(20,50,90,.5)">
+      <div style="display:inline-flex;align-items:center;gap:6px;background:#eaf3dd;color:#4a7a1e;font-size:11px;font-weight:800;padding:4px 11px;border-radius:20px;margin-bottom:12px">개념 ${ci + 1}</div>
+      <div style="font-size:19px;font-weight:800;color:#14243f;line-height:1.4">${esc(c.title || '어법 개념')}</div>
+      ${explainHTML ? `<div style="font-size:14px;line-height:1.85;color:#3a4658;margin-top:14px">${explainHTML}</div>` : `<div style="font-size:13px;color:#9aa8bd;margin-top:12px">설명이 아직 없어요. 바로 문제로 넘어가요.</div>`}
+    </div>
+    <div style="font-size:11px;color:#9aa8bd;text-align:center;margin:14px 0 12px">${qn ? '개념을 이해했으면 문제를 풀어봐요' : '이 개념은 문제 없이 설명만 있어요'}</div>
+    ${btn}
   </div>`;
 }
 
@@ -2429,8 +2509,16 @@ function resultHTML() {
       <div style="display:flex;flex-direction:column;gap:11px">${wrongs}</div>
     </div>` : `
     <div style="text-align:center;padding:26px 20px 6px;color:#2fa36b;font-size:13px;font-weight:600">완벽해요! 오답이 없어요 ⭐</div>`}
-    <div style="padding:22px 20px 0"><button data-act="finishTask" style="width:100%;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:600;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f57c4;cursor:pointer">완료하고 홈으로</button></div>
+    <div style="padding:22px 20px 0"><button data-act="finishTask" style="width:100%;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:600;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f57c4;cursor:pointer">${resultBtnLabel(r)}</button></div>
   </div>`;
+}
+// 결과 화면 버튼 문구: 어법 커리큘럼은 다음 개념/완료로 안내
+function resultBtnLabel(r) {
+  if (r.task === 'grammar') {
+    const total = grammarConcepts().length;
+    return (state.gramCI || 0) >= total - 1 ? '어법 학습 완료 ✓' : '다음 개념 →';
+  }
+  return '완료하고 홈으로';
 }
 
 /* ---- e-북 리더 ---- */
@@ -2474,20 +2562,22 @@ function readerHTML() {
   const pages = readerPages();
   const page = Math.min(state.readerPage, Math.max(0, pages.length - 1));
   const burning = !!state.readerBurning;
-  const paras = burning ? (passageToPagesRaw(book.passage)[page] || []) : (pages[page] || []);
-  // 버닝: <단어> 팝오버 활성 — 이 책의 모든 챕터 어휘를 합쳐서 조회(다른 챕터 단어도 뜨게)
+  // 일반 책 읽기·버닝 모두 <단어> 팝오버 활성(원본 페이지 유지) — 페이지 수는 raw/비raw 동일 구조라 그대로
+  const paras = passageToPagesRaw(book.passage)[page] || [];
+  // 이 책의 모든 챕터 어휘를 합쳐서 조회(다른 챕터 단어도 뜨게)
   const words = (book && book.vocab && Object.keys(book.vocab).length) ? book.vocab : dayVocab(activeDay());
   const popOn = !state.readPopOff;
   const wStyle = active => `background:${active ? '#c08a3a' : '#f0e2c4'};color:${active ? '#fff' : 'inherit'};border-bottom:2px solid #c08a3a;border-radius:3px;padding:0 3px;cursor:pointer`;
-  const pop = burning && popOn && state.pop && words[state.pop] ? Object.assign({ word: state.pop }, words[state.pop]) : null;
+  const pop = popOn && state.pop && words[state.pop] ? Object.assign({ word: state.pop }, words[state.pop]) : null;
   const popHTML = pop ? `<div style="font-family:'IBM Plex Sans KR',sans-serif;background:#3a3222;color:#f5f0e6;border-radius:12px;padding:12px 14px;margin:2px 0 16px;box-shadow:0 12px 26px -12px rgba(0,0,0,.5)">
       <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Lora',serif;font-size:16px;font-weight:700">${esc(pop.head || pop.word)}</span><span style="font-size:11px;color:#d8b878">${esc(pop.pos)}</span></div>
       <div style="font-size:13px;color:#e7dcc4;margin-top:5px">${esc(pop.def)}</div>
       ${(() => { const ex = wordHintSentence(pop.word) || pop.ex; return ex ? `<div style="font-size:12px;color:#bda880;margin-top:5px;font-style:italic;font-family:'Lora',serif">${esc(ex)}</div>` : ''; })()}
     </div>` : '';
-  const renderPara = p => readMarks((burning && popOn)
-    ? esc(p).replace(/&lt;([^&]+?)&gt;/g, (m, w) => words[w] ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wStyle(state.pop === w)}">${esc(w)}</span>` : w)
-    : esc(p).replace(/&lt;([^&]+?)&gt;/g, (m, w) => w));
+  // 형광펜 먼저, 그 다음 팝오버 단어 치환(순서 반대면 span 속성의 '='가 형광펜 정규식을 깨뜨림)
+  const renderPara = p => popOn
+    ? readMarks(esc(p)).replace(/&lt;([^&]+?)&gt;/g, (m, w) => words[w] ? `<span data-act="tapWord" data-arg="${esc(w)}" style="${wStyle(state.pop === w)}">${esc(w)}</span>` : w)
+    : readMarks(esc(p)).replace(/&lt;([^&]+?)&gt;/g, (m, w) => w);
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#f5f0e6">
     <div style="padding:48px 22px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e7dfce">
       <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#ece3d2;color:#7a6b52;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
@@ -2498,7 +2588,7 @@ function readerHTML() {
       ${readCtlBtn({ btnBg: '#ece3d2', btnFg: '#7a6b52' })}
     </div>
     <div style="flex:1;overflow-y:auto;padding:26px 26px 20px;font-family:'Lora',serif;font-size:18px;line-height:${(2 * readLineH()).toFixed(2)};color:#33302b">
-      ${paras.map(p => { const hit = burning && pop && p.includes('<' + state.pop + '>'); return `<p style="margin:0 0 ${hit ? '2' : '18'}px;text-indent:1.1em;text-wrap:pretty">${renderPara(p)}</p>` + (hit ? popHTML : ''); }).join('')}
+      ${paras.map(p => { const hit = pop && p.includes('<' + state.pop + '>'); return `<p style="margin:0 0 ${hit ? '2' : '18'}px;text-indent:1.1em;text-wrap:pretty">${renderPara(p)}</p>` + (hit ? popHTML : ''); }).join('')}
     </div>
     <div style="padding:12px 22px 22px;border-top:1px solid #e7dfce;background:#f5f0e6">
       <div style="height:5px;border-radius:3px;background:#e3d9c6;overflow:hidden;margin-bottom:12px"><div style="height:100%;width:${readerProgress()};background:#c08a3a;border-radius:3px"></div></div>
@@ -2534,17 +2624,18 @@ function previewLevelsHTML() {
       </div>
       <div style="font-size:16px;color:${disabled ? '#c8d2e0' : color}">${disabled ? '—' : '→'}</div>
     </div>`;
+  const chName = (d.book && d.book.chapter) || d.label || '이 챕터';
   return `<div style="padding:${topPad()} 20px 40px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-      <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
-      <span style="font-size:15px;font-weight:700;color:#14243f">지문 예습</span>
+      <div data-act="goPreviewList" style="width:30px;height:30px;border-radius:10px;background:#fbf0d8;color:#c98a12;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <span style="font-size:15px;font-weight:700;color:#14243f">👀 ${esc(chName)} 예습</span>
     </div>
-    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 6px;line-height:1.6">1·2·3단계 중 골라 예습해요. <b>하나만 완료해도</b> 오늘 할 일에 체크돼요 🐠</div>
+    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 6px;line-height:1.6">1·2·3단계 중 골라 예습해요. <b>하나만 완료해도</b> 예습 완료로 체크돼요 🐠</div>
     <div style="display:flex;align-items:center;gap:7px;background:#fff8e6;border:1px solid #f0d79a;border-radius:12px;padding:9px 12px;margin-bottom:14px">
       <span style="font-size:16px">🎁</span><span style="font-size:11.5px;font-weight:600;color:#8a6412;line-height:1.5">3단계를 <b>모두</b> 완료하면 <b>보너스 경험치</b>를 받아요!</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      ${card('previewEasy', 1, '🟢', '#2fa36b', '살살', 'EASY', easyN ? `다음 수업 어휘 ${easyN}개 미리보기 (플래시카드)` : '다음 수업 어휘가 아직 없어요', easyN === 0)}
+      ${card('previewEasy', 1, '🟢', '#2fa36b', '살살', 'EASY', easyN ? `이 챕터 어휘 ${easyN}개 미리보기 (플래시카드)` : '이 챕터 어휘가 아직 없어요', easyN === 0)}
       ${card('previewMedium', 2, '🟡', '#e0a41a', '보통', 'MEDIUM', coreN ? `핵심 문장 ${coreN}개 · 주어·동사 찾기` : '핵심 문장이 없어요', coreN === 0)}
       ${card('previewHard', 3, '🔴', '#e2564d', '버닝', 'BURNING', `지문 전체 읽기${compN ? ` + 이해도 확인 ${compN}문항` : ''}`, dayPassage(d).trim() === '')}
     </div>
@@ -2563,7 +2654,7 @@ function flashcardScreenHTML(mode) {
   const flipped = !!state.fcFlipped;
   const inWb = (state.wordbook || []).some(w => w.word === c.word);
   const badge = mode === 'preview'
-    ? `<span style="display:inline-flex;align-items:center;gap:6px;background:#e0f3ea;color:#1f7a4d;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🟢 1단계 살살 · 다음 수업 어휘</span>`
+    ? `<span style="display:inline-flex;align-items:center;gap:6px;background:#e0f3ea;color:#1f7a4d;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🟢 1단계 살살 · 이 챕터 어휘</span>`
     : mode === 'vocabPrep'
       ? `<span style="display:inline-flex;align-items:center;gap:6px;background:#e7f0fd;color:#1f57c4;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">📘 어휘 예습 · 다음 수업 팝오버 단어</span>`
       : `<span style="display:inline-flex;align-items:center;gap:6px;background:#fdeede;color:#b8480f;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🔤 어휘 복습</span>`;
@@ -3404,7 +3495,7 @@ function render() {
   let html = '';
   if (isTeacherUser()) html += roleToggleHTML();  // 교사 계정에만 학생|교사 토글 표시
   if (isTeacherUser() && ui.asStudent && state.role === 'student'
-      && !['reader', 'quiz', 'result', 'review', 'previewVocab', 'vocabPrepCard', 'previewRead', 'previewMedium', 'vocabReview', 'wordTest', 'compose'].includes(state.screen)) {
+      && !['reader', 'quiz', 'result', 'review', 'grammar', 'previewVocab', 'vocabPrepCard', 'previewRead', 'previewMedium', 'vocabReview', 'wordTest', 'compose'].includes(state.screen)) {
     html += previewClassBarHTML();  // 미리보기: 반 선택 바(몰입 화면 제외)
   }
 
@@ -3414,6 +3505,7 @@ function render() {
     let screen = '';
     switch (state.screen) {
       case 'home': screen = homeHTML(); break;
+      case 'pickChapter': screen = pickChapterHTML(); break;
       case 'chapter': screen = chapterHubHTML(); break;
       case 'advanced': screen = advancedHTML(); break;
       case 'wordbook': screen = wordbookHTML(); break;
@@ -3429,6 +3521,7 @@ function render() {
       case 'compose': screen = composeHTML(); break;
       case 'previewMedium': screen = previewMediumHTML(); break;
       case 'previewRead': screen = previewReadHTML(); break;
+      case 'grammar': screen = grammarHTML(); break;
       case 'quiz': screen = quizHTML(); break;
       case 'result': screen = resultHTML(); break;
       case 'reader': screen = readerHTML(); break;
