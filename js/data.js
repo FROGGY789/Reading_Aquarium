@@ -414,6 +414,7 @@ function quizItemToEdit(q) {
     accept: (q.accept || []).join(', '),
     wrong: q.wrong != null ? q.wrong : -1,            // 오류 고치기: 틀린 단어 인덱스
     chunksText: (q.chunks || []).join(' / '),          // Scramble: 조각(정답 순서)
+    ko: q.ko || '',                                    // Scramble: 우리말 뜻(먼저 보여주고 배열)
     explain: q.explain || ''
   };
 }
@@ -432,6 +433,7 @@ function quizItemToSaved(q) {
     base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
   } else if (q.type === 'scramble') {
     base.chunks = (q.chunksText || '').split('/').map(c => c.trim()).filter(Boolean);
+    if ((q.ko || '').trim()) base.ko = q.ko.trim();   // 우리말 뜻(있으면 학생에게 먼저 보여줌)
   } else {
     base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
   }

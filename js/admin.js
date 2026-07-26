@@ -74,6 +74,27 @@ function setPath(obj, path, val) {
   for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]];
   o[ks[ks.length - 1]] = val;
 }
+function getPath(obj, path) {
+  const ks = path.split('.'); let o = obj;
+  for (let i = 0; i < ks.length; i++) { if (o == null) return undefined; o = o[ks[i]]; }
+  return o;
+}
+// 어법 문제 유형별 표준 지시문(자동 작성) — 비어 있거나 다른 유형의 자동문구였을 때만 교체
+const GRAMMAR_PROMPTS = {
+  mc: '다음 중 어법상 알맞은 것을 고르세요.',
+  ox: '다음 문장이 어법에 맞으면 O, 틀리면 X를 고르세요.',
+  ab: '괄호 안에서 어법에 맞는 표현을 고르세요.',
+  fix: '어법상 틀린 부분을 찾아 바르게 고치세요.',
+  scramble: '뜻을 보고 조각을 바른 순서로 배열해 문장을 만드세요.',
+  input: '빈칸에 어법에 맞는 말을 쓰세요.'
+};
+const GRAMMAR_PROMPT_SET = Object.keys(GRAMMAR_PROMPTS).map(k => GRAMMAR_PROMPTS[k]);
+// prompt가 비었거나 자동문구 중 하나면 새 유형의 자동문구로 채움. 직접 쓴 문구면 그대로 둠. 바뀌면 true
+function autoGrammarPrompt(q, type) {
+  const cur = (q.prompt || '').trim();
+  if (cur === '' || GRAMMAR_PROMPT_SET.includes(cur)) { q.prompt = GRAMMAR_PROMPTS[type] || ''; return true; }
+  return false;
+}
 function toast(msg, type) { ui.msg = msg; ui.msgType = type || ''; }
 // 일정 탭: 다른 챕터의 필드를 직접 수정(현재 편집 중인 챕터면 편집 모델에도 반영)
 function applySchedField(el) {
@@ -266,7 +287,7 @@ const actions = {
       parent.normalize();
     }, 2000);
   },
-  addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', explain: '' }); render(); },
+  addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', ko: '', explain: '' }); render(); },
   delQ(arg) { const [cat, i] = arg.split(':'); ed.day.quiz[cat].splice(Number(i), 1); render(); },
   moveQ(arg) {   // 문항 순서 위/아래 (arg = "cat:i:dir")
     const [cat, i, dir] = arg.split(':'); const list = ed.day.quiz[cat]; const a = Number(i), b = a + Number(dir);
@@ -294,7 +315,7 @@ const actions = {
     const t = gramEd[ci]; gramEd[ci] = gramEd[j]; gramEd[j] = t;
     render();
   },
-  addGramQ(ci) { gramEd[Number(ci)].quiz.push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', explain: '' }); render(); },
+  addGramQ(ci) { gramEd[Number(ci)].quiz.push({ type: 'mc', prompt: GRAMMAR_PROMPTS.mc, sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', ko: '', explain: '' }); render(); },
   delGramQ(arg) { const [ci, i] = arg.split(':').map(Number); gramEd[ci].quiz.splice(i, 1); render(); },
   gramFixWrong(arg) {
     const [ci, i, wi] = arg.split(':').map(Number);
@@ -736,7 +757,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v55 (오늘의 문장을 챕터 일정에서 날짜별로 설정)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v56 (어법 문제 지시문 유형별 자동작성·scramble 뜻 입력)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -1033,7 +1054,9 @@ function quizEditor(cfg) {
                <div style="line-height:2.1">${(q.sentence || '').split(/\s+/).filter(Boolean).map((w, wi) => `<span data-act="${cfg.fixAct}" data-arg="${cfg.delPrefix}${i}:${wi}" style="display:inline-block;margin:2px;padding:3px 8px;border-radius:8px;border:1.5px solid ${Number(q.wrong) === wi ? '#e2564d' : '#e2e9f2'};background:${Number(q.wrong) === wi ? '#fbe4e2' : '#fff'};cursor:pointer;font-family:'Lora',serif;font-size:15px">${esc(w)}</span>`).join('') || '<span class="hint" style="margin:0">위 칸에 문장을 먼저 입력하세요</span>'}</div>
                <input class="inp" style="margin-top:7px" data-bind="${base}.accept"${br} value="${esc(q.accept)}" placeholder="바른 표현 (여러 개면 쉼표: goes, went)">`
             : q.type === 'scramble'
-              ? `<div class="label" style="margin:6px 0 2px">조각을 <b>정답 순서대로</b>, <b>/</b> 로 구분 (2~3단어씩)</div>
+              ? `<div class="label" style="margin:6px 0 2px">우리말 뜻 (학생에게 먼저 보여줘요)</div>
+                 <input class="inp" data-bind="${base}.ko"${br} value="${esc(q.ko || '')}" placeholder="예: 바다는 늘 사람들을 끌어당겨 왔다.">
+                 <div class="label" style="margin:8px 0 2px">조각을 <b>정답 순서대로</b>, <b>/</b> 로 구분 (2~3단어씩)</div>
                  <input class="inp" data-bind="${base}.chunksText"${br} value="${esc(q.chunksText || '')}" placeholder="The sea / has always / drawn people.">`
               : `<input class="inp" style="margin-top:7px" data-bind="${base}.accept"${br} value="${esc(q.accept)}" placeholder="정답 (여러 개면 쉼표: retreat, 후퇴하다)">`}
       <input class="inp" style="margin-top:7px" data-bind="${base}.explain"${br} value="${esc(q.explain)}" placeholder="해설">
@@ -1184,7 +1207,13 @@ rootEl.addEventListener('change', e => {
   if (!bind) return;
   let v = el.value;
   if (el.dataset.type === 'number') v = Number(v);
-  setPath(el.dataset.broot === 'gram' ? gramEd : ed.day, bind, v);
+  const rootObj = el.dataset.broot === 'gram' ? gramEd : ed.day;
+  setPath(rootObj, bind, v);
+  // 어법 문제: 유형을 바꾸면 지시문(prompt)을 그 유형 표준 문구로 자동 채움
+  if (el.dataset.broot === 'gram' && /\.type$/.test(bind)) {
+    const q = getPath(rootObj, bind.replace(/\.type$/, ''));
+    if (q) autoGrammarPrompt(q, v);
+  }
   if (el.dataset.rerender) render();
 });
 

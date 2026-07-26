@@ -2471,7 +2471,8 @@ function quizHTML() {
     const ansChip = ci => `<span ${checked ? '' : `data-act="scrTap" data-arg="${ci}"`} style="display:inline-block;margin:3px;padding:6px 11px;border-radius:10px;background:#2f74e6;color:#fff;font-family:'Lora',serif;font-size:16px;cursor:${checked ? 'default' : 'pointer'}">${esc(chunks[ci])}</span>`;
     const poolChip = ci => `<span data-act="scrTap" data-arg="${ci}" style="display:inline-block;margin:3px;padding:6px 11px;border-radius:10px;border:1.5px solid #cfe0f5;background:#fff;color:#26303f;font-family:'Lora',serif;font-size:16px;cursor:pointer">${esc(chunks[ci])}</span>`;
     const pool = shuffled.filter(ci => !order.includes(ci));
-    body = `<div style="min-height:64px;background:#f4f8fd;border:1.5px dashed ${ansBd};border-radius:14px;padding:10px 12px;margin-top:10px;text-align:center">${order.length ? order.map(ansChip).join('') : '<span style="color:#9aa8bd;font-size:12.5px;line-height:2.4">아래 조각을 눌러 순서대로 문장을 만드세요</span>'}</div>
+    body = `${cq.ko ? `<div style="background:#eef4ff;border:1px solid #d5e3fb;border-radius:12px;padding:11px 13px;margin-top:10px;font-size:14px;color:#2f4a72;text-align:center">뜻: ${esc(cq.ko)}</div>` : ''}
+      <div style="min-height:64px;background:#f4f8fd;border:1.5px dashed ${ansBd};border-radius:14px;padding:10px 12px;margin-top:10px;text-align:center">${order.length ? order.map(ansChip).join('') : '<span style="color:#9aa8bd;font-size:12.5px;line-height:2.4">아래 조각을 눌러 순서대로 문장을 만드세요</span>'}</div>
       ${!checked ? `<div style="text-align:center;margin-top:12px">${pool.map(poolChip).join('') || '<span style="color:#b8c2d2;font-size:12px">모든 조각을 놓았어요</span>'}</div>` : ''}
       ${checked && !ok ? `<div style="text-align:center;font-size:13px;color:#2fa36b;font-family:'Lora',serif;margin-top:10px">정답: ${esc(chunks.join(' '))}</div>` : ''}`;
   } else {
