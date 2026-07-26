@@ -262,6 +262,16 @@ const actions = {
   },
   addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', explain: '' }); render(); },
   delQ(arg) { const [cat, i] = arg.split(':'); ed.day.quiz[cat].splice(Number(i), 1); render(); },
+  moveQ(arg) {   // 문항 순서 위/아래 (arg = "cat:i:dir")
+    const [cat, i, dir] = arg.split(':'); const list = ed.day.quiz[cat]; const a = Number(i), b = a + Number(dir);
+    if (!list || b < 0 || b >= list.length) return;
+    const t = list[a]; list[a] = list[b]; list[b] = t; render();
+  },
+  moveGramQ(arg) {   // 어법 개념 문항 순서 (arg = "ci:i:dir")
+    const [ci, i, dir] = arg.split(':').map(Number); const list = gramEd[ci] && gramEd[ci].quiz; const b = i + dir;
+    if (!list || b < 0 || b >= list.length) return;
+    const t = list[i]; list[i] = list[b]; list[b] = t; render();
+  },
   qFixWrong(arg) {   // 오류 고치기: 틀린 단어 클릭 표시
     const [cat, i, wi] = arg.split(':');
     const q = ed.day.quiz[cat][Number(i)]; if (!q) return;
@@ -720,7 +730,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v53 (어휘 엑셀은 수정한 단어만·예습 보통 문장칸 크게)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v54 (문항 순서 위·아래 이동 — 복습·어법·예습 공통)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -968,7 +978,7 @@ function grammarTab(d) {
       <div class="label">개념 설명 (학생이 문제 풀기 전에 읽어요)</div>
       <textarea class="inp" style="min-height:80px;line-height:1.6" data-bind="${base}.explain" data-broot="gram" placeholder="이 어법 개념을 학생 눈높이로 설명하세요. 예) 영어 문장은 '누가(주어) + 무엇을 한다(동사)'가 뼈대예요. …">${esc(c.explain)}</textarea>
       <div class="label" style="margin-top:10px">이 개념의 어법 문제</div>
-      ${quizEditor({ list: c.quiz, basePath: `${ci}.quiz`, ns: 'g' + ci, broot: 'gram', delAct: 'delGramQ', delPrefix: `${ci}:`, fixAct: 'gramFixWrong', addAct: 'addGramQ', addArg: ci, name: '어법 문제', emptyMsg: '이 개념에 문제를 추가해 보세요. 개념 설명만 있어도 학생에게 보여집니다.' })}
+      ${quizEditor({ list: c.quiz, basePath: `${ci}.quiz`, ns: 'g' + ci, broot: 'gram', delAct: 'delGramQ', delPrefix: `${ci}:`, moveAct: 'moveGramQ', fixAct: 'gramFixWrong', addAct: 'addGramQ', addArg: ci, name: '어법 문제', emptyMsg: '이 개념에 문제를 추가해 보세요. 개념 설명만 있어도 학생에게 보여집니다.' })}
     </div>`;
   }).join('');
   return `<div class="card" style="background:#f2f8ea;border-color:#d9e6c9">
@@ -1003,6 +1013,8 @@ function quizEditor(cfg) {
           <option value="input" ${q.type === 'input' ? 'selected' : ''}>주관식</option>
         </select>
         <div style="flex:1"></div>
+        <button class="btn ghost sm" data-act="${cfg.moveAct}" data-arg="${cfg.delPrefix}${i}:-1" ${i === 0 ? 'disabled' : ''} title="위로" style="padding:6px 9px">▲</button>
+        <button class="btn ghost sm" data-act="${cfg.moveAct}" data-arg="${cfg.delPrefix}${i}:1" ${i === list.length - 1 ? 'disabled' : ''} title="아래로" style="padding:6px 9px">▼</button>
         <button class="btn danger sm" data-act="${cfg.delAct}" data-arg="${cfg.delPrefix}${i}">삭제</button>
       </div>
       <input class="inp" data-bind="${base}.prompt"${br} value="${esc(q.prompt)}" placeholder="문제 ${(q.type === 'ab' || q.type === 'scramble') ? '(비워도 됨)' : ''}">
@@ -1041,7 +1053,7 @@ function quizEditor(cfg) {
   </div>`;
 }
 function qcat(cat) {
-  return quizEditor({ list: ed.day.quiz[cat], basePath: `quiz.${cat}`, ns: cat, broot: '', delAct: 'delQ', delPrefix: `${cat}:`, fixAct: 'qFixWrong', addAct: 'addQ', addArg: cat, name: QUIZ_META[cat].name });
+  return quizEditor({ list: ed.day.quiz[cat], basePath: `quiz.${cat}`, ns: cat, broot: '', delAct: 'delQ', delPrefix: `${cat}:`, moveAct: 'moveQ', fixAct: 'qFixWrong', addAct: 'addQ', addArg: cat, name: QUIZ_META[cat].name });
 }
 
 /* ---- 탭 3: 학생 · 설정 ---- */
