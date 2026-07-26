@@ -1766,7 +1766,58 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "input",
+            "prompt": "[      ]에 들어갈 한 단어로 알맞은 것은?",
+            "explain": "To부정사의 의미상의 주어는 for + 목적격!",
+            "sentence": "It is useless [        ] me to describe to you how terrible Violet, Klaus, and even Sunny felt in the time that followed.",
+            "accept": [
+              "For",
+              "for"
+            ]
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 중 'was to leave'의 올바른 해석은?",
+            "explain": "",
+            "sentence": "Mr. Poe announced that they were to leave his household the next morning.",
+            "options": [
+              "떠나야 한다",
+              "떠날 운명이다",
+              "떠날 수 있다",
+              "떠날 의도를 가지고 있다"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "input",
+            "prompt": "다음 문장에서 '서로서로'를 의미하는 표현은? (3명 이상)",
+            "explain": "",
+            "sentence": "Violet, Klaus, and Sunny looked at one another.",
+            "accept": [
+              "One another",
+              "one another"
+            ]
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 어법적으로 옳지 않은 곳을 바르게 고치시오.",
+            "explain": "instruct (지시하다, 명령하다) + that절(당위성) 인 경우에, that절의 동사에는 \"SHOULD\"가 생략되어 있습니다!",
+            "sentence": "“Your parents’ will,” Mr. Poe said, “instructs that you are raised in the most  convenient way possible.",
+            "wrong": 9,
+            "accept": [
+              "be"
+            ]
+          },
+          {
+            "type": "ab",
+            "prompt": "다음 중 어법적으로 올바른 것은?",
+            "explain": "",
+            "sentence": "They heard him [to cough / coughing] into his handkerchief",
+            "answer": 1
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
