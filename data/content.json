@@ -1662,5 +1662,11 @@
       "previewTo": "2026-07-26"
     }
   ],
-  "grammar": []
+  "grammar": [],
+  "quote": {
+    "en": "",
+    "ko": "",
+    "teacher": "",
+    "comment": ""
+  }
 }
