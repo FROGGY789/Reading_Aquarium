@@ -95,6 +95,12 @@ function applySchedField(el) {
     if (val) day[field] = val; else delete day[field];
     if (isCur) ed.day[field] = val;
   }
+  else if (field.indexOf('quote') === 0) {   // quoteEn / quoteKo / quoteTeacher / quoteComment → day.quote.{en,ko,teacher,comment}
+    const key = field.slice(5).toLowerCase();
+    day.quote = day.quote || {};
+    day.quote[key] = val;
+    if (isCur) { ed.day.quote = ed.day.quote || {}; ed.day.quote[key] = val; }
+  }
 }
 // 날짜 재정렬 후에도 현재 편집 중이던 챕터 선택을 유지
 function resortKeepSel() {
@@ -730,7 +736,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v54 (문항 순서 위·아래 이동 — 복습·어법·예습 공통)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v55 (오늘의 문장을 챕터 일정에서 날짜별로 설정)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -945,17 +951,6 @@ function coreEditor(d) {
 /* ---- 탭 3: 복습 · 퀴즈 ---- */
 function quizTab(d) {
   return `<div class="card">
-    <h2>오늘 선생님이 고른 문장</h2>
-    <div class="row">
-      <input class="inp" data-bind="quote.en" value="${esc(d.quote.en)}" placeholder="영어 문장">
-      <input class="inp" data-bind="quote.ko" value="${esc(d.quote.ko)}" placeholder="우리말 해석">
-    </div>
-    <div class="row" style="margin-top:8px">
-      <input class="inp" style="flex:.6" data-bind="quote.teacher" value="${esc(d.quote.teacher)}" placeholder="선생님 이름">
-      <input class="inp" style="flex:1.4" data-bind="quote.comment" value="${esc(d.quote.comment)}" placeholder="한마디">
-    </div>
-  </div>
-  <div class="card">
     <h2>복습 문제</h2>
     <div class="hint">문제를 비워두면 그 문항은 출제되지 않아요. 문항이 하나도 없으면 학생 홈에서 숨겨집니다. (어법 퀴즈는 <b>📐 어법 퀴즈</b> 탭에서 따로 관리해요.)</div>
     ${qcat('sentence')}
@@ -1122,6 +1117,17 @@ function scheduleTab() {
             ${rangeField('previewFrom', '예습 시작일')}<span style="color:#9aa8bd;font-size:12px">~</span>${rangeField('previewTo', '예습 종료일')}
           </div>
         </div>
+        <div style="margin-top:9px;padding-top:9px;border-top:1px dashed #e2e9f2">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:11px;font-weight:800;color:#8a5fd6;white-space:nowrap">💬 오늘의 문장</span>
+            <input data-sched="${i}" data-schedfield="quoteEn" value="${esc((d.quote && d.quote.en) || '')}" placeholder="영어 문장" style="${cell};flex:2;min-width:180px">
+            <input data-sched="${i}" data-schedfield="quoteKo" value="${esc((d.quote && d.quote.ko) || '')}" placeholder="우리말 해석" style="${cell};flex:1.6;min-width:140px">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px">
+            <input data-sched="${i}" data-schedfield="quoteTeacher" value="${esc((d.quote && d.quote.teacher) || '')}" placeholder="선생님 이름" style="${cell};flex:.7;min-width:100px">
+            <input data-sched="${i}" data-schedfield="quoteComment" value="${esc((d.quote && d.quote.comment) || '')}" placeholder="한마디" style="${cell};flex:2;min-width:160px">
+          </div>
+        </div>
       </div>`;
     }).join('');
     return `<div class="card">
@@ -1136,7 +1142,7 @@ function scheduleTab() {
   }).join('');
   return `<div class="card">
     <h2>📅 챕터 일정</h2>
-    <div class="hint">책별로 챕터를 정리하고, 각 챕터의 <b>공개 기간</b>을 정하세요. <b>📖 복습 공개</b> 기간엔 학생 홈 <b>복습하기</b>에, <b>👀 예습 공개</b> 기간엔 <b>예습하기</b>에 나타나요. 기간을 비워두면 <b>지문 날짜부터</b> 계속 열립니다. 자세한 내용(지문·단어·문제)은 <b>✏️ 편집</b>으로 채워요.</div>
+    <div class="hint">책별로 챕터를 정리하고, 각 챕터의 <b>공개 기간</b>을 정하세요. <b>📖 복습 공개</b> 기간엔 학생 홈 <b>복습하기</b>에, <b>👀 예습 공개</b> 기간엔 <b>예습하기</b>에 나타나요. 기간을 비워두면 <b>지문 날짜부터</b> 계속 열립니다. <b>💬 오늘의 문장</b>도 여기서 <b>날짜별</b>로 설정해요. 자세한 내용(지문·단어·문제)은 <b>✏️ 편집</b>으로 채워요.</div>
   </div>
   ${books || '<div class="card">아직 챕터가 없어요.</div>'}
   <div style="margin:4px 0 10px"><button class="btn ghost" data-act="addDay">＋ 새 챕터(새 책)</button></div>`;
