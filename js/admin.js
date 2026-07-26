@@ -287,6 +287,12 @@ const actions = {
       parent.normalize();
     }, 2000);
   },
+  toggleShelf(i) {   // 서가 공개/미공개 토글(챕터 일정)
+    const d = content.days[Number(i)]; if (!d) return;
+    d.shelfHidden = !d.shelfHidden;
+    if (Number(i) === ed.dayIndex) ed.day.shelfHidden = d.shelfHidden;
+    render();
+  },
   addQ(cat) { ed.day.quiz[cat].push({ type: 'mc', prompt: '', sentence: '', options: ['', '', '', ''], answer: 0, accept: '', wrong: -1, chunksText: '', ko: '', explain: '' }); render(); },
   delQ(arg) { const [cat, i] = arg.split(':'); ed.day.quiz[cat].splice(Number(i), 1); render(); },
   moveQ(arg) {   // 문항 순서 위/아래 (arg = "cat:i:dir")
@@ -757,7 +763,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v56 (어법 문제 지시문 유형별 자동작성·scramble 뜻 입력)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v57 (리더 문단 유지·심화 정리·책두께 균일·서가 공개토글·교사 공통 전체체험)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -1127,6 +1133,7 @@ function scheduleTab() {
           <input type="date" data-sched="${i}" data-schedfield="date" value="${esc(d.date || '')}" title="지문 날짜(수업일)" style="${cell};flex:none;color-scheme:light">
           <input data-sched="${i}" data-schedfield="chapter" value="${esc((d.book && d.book.chapter) || '')}" placeholder="챕터 이름 (예: Ch1 · 도입부)" style="${cell};flex:1;min-width:150px">
           <select data-sched="${i}" data-schedfield="class" style="${cell};flex:none">${classOpts(d.class)}</select>
+          <button class="btn ${d.shelfHidden ? 'ghost' : 'ghost'} sm" data-act="toggleShelf" data-arg="${i}" title="학생 서가에 이 책(챕터)을 보일지" style="${d.shelfHidden ? 'color:#b23a32;border-color:#f3c7c2' : 'color:#1f7a4d;border-color:#bfe4cf'}">${d.shelfHidden ? '🚫 서가 미공개' : '📚 서가 공개'}</button>
           <button class="btn ghost sm" data-act="editChapter" data-arg="${i}">✏️ 편집</button>
           <button class="btn danger sm" data-act="delChapterAt" data-arg="${i}">삭제</button>
         </div>

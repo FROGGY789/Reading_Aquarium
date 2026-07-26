@@ -430,8 +430,11 @@ function _inRange(today, from, to) {
 // 이 챕터의 복습/예습 창이 지금 열려 있는가(기간 미설정이면 지문 날짜<=오늘로 폴백)
 function reviewOpen(ch) { const r = _inRange(todayKey(), ch && ch.reviewFrom, ch && ch.reviewTo); return r === null ? ((ch && ch.date || '') <= todayKey()) : r; }
 function previewOpen(ch) { const r = _inRange(todayKey(), ch && ch.previewFrom, ch && ch.previewTo); return r === null ? ((ch && ch.date || '') <= todayKey()) : r; }
-function reviewChapters() { return sortedChapters().filter(reviewOpen); }
-function previewChapters() { return sortedChapters().filter(previewOpen); }
+// 교사가 학생 미리보기에서 '공통'을 볼 때 = 일정·반과 상관없이 모든 챕터 체험
+function teacherAllAccess() { return isTeacherUser() && ui.asStudent && !(ui.viewClass || ''); }
+function allChaptersSorted() { return contentSource().days.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')); }
+function reviewChapters() { return teacherAllAccess() ? allChaptersSorted() : sortedChapters().filter(reviewOpen); }
+function previewChapters() { return teacherAllAccess() ? allChaptersSorted() : sortedChapters().filter(previewOpen); }
 // 챕터 고유 키(진행도 저장용) — 날짜 + 라벨
 function chapterKey(ch) { return ch ? ((ch.date || '') + '|' + (ch.label || '')) : ''; }
 // 진행도 저장 키: 챕터 + 학습 모드(복습/예습을 따로 완료·보상)
@@ -440,7 +443,7 @@ function activeProgKey() { return progKey(activeDay(), state.chapterMode); }
 // 현재 열려 있는 챕터: state.chapterKey가 가리키는 것, 없으면 가장 최근 복습 챕터
 function activeDay() {
   if (state.chapterKey) {
-    const hit = sortedChapters().find(c => chapterKey(c) === state.chapterKey);
+    const hit = allChaptersSorted().find(c => chapterKey(c) === state.chapterKey);
     if (hit) return hit;
   }
   const rc = reviewChapters();
@@ -497,10 +500,23 @@ function wordHintSentence(word) {
     || sents.find(s => new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(stripBrackets(s)));
   return hit ? stripMarks(stripBrackets(hit)) : '';
 }
-// 문단 → 문장 배열(<단어> 마커 유지). 리더에서 팝오버를 '단어가 든 문장' 바로 뒤에 넣기 위함
+// 문단 → 문장 배열(<단어>·==·%% 마커 유지, 글자 절대 안 잃음).
+// 문장 끝(. ! ?) 뒤에 닫는 마크(= % * " ' ) ] ” ’)를 건너뛴 다음이 공백/끝이면 문장 경계로 봄.
+// (Mr.Poe, 3.14, book.== 같은 경우에 텍스트가 잘려나가던 문제 방지)
 function splitSentences(text) {
-  const parts = String(text || '').match(/[^.!?]*[.!?]+(?=\s|$)|[^.!?]+$/g);
-  return parts ? parts.map(s => s.trim()).filter(Boolean) : (String(text || '').trim() ? [String(text).trim()] : []);
+  text = String(text || '');
+  const closers = '=%*"\')]”’';
+  const out = []; let buf = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]; buf += ch;
+    if (ch === '.' || ch === '!' || ch === '?') {
+      let j = i + 1;
+      while (j < text.length && closers.indexOf(text[j]) >= 0) { buf += text[j]; j++; }
+      if (j >= text.length || /\s/.test(text[j])) { const t = buf.trim(); if (t) out.push(t); buf = ''; i = j - 1; }
+    }
+  }
+  if (buf.trim()) out.push(buf.trim());
+  return out.length ? out : (text.trim() ? [text.trim()] : []);
 }
 // 이 단어(<word> 팝오버)가 들어있는 책·페이지 찾기(현재 보던 책 우선). 없으면 null
 function locateInBooks(word) {
@@ -650,14 +666,12 @@ const MAIN_TASKS = [
 // 현재 학습 모드('review'=복습 / 'preview'=예습)의 할 일 목록
 function modeTasks(mode) { return MAIN_TASKS.filter(t => t.mode === (mode || 'review')); }
 const BONUS_TASKS = [
-  { key: 'vocabPrep', icon: '📘', bg: '#e7f0fd', time: '3분', sub: () => `다음 수업 지문 단어 · 플래시카드 ${Math.min(nextDayPopoverCards().length, 30)}개` },
-  { key: 'wbStudy',   icon: '📒', bg: '#eef2f8', time: '5분', name: '단어장 학습', sub: () => `내 단어장 단어를 망각곡선 맞춤으로 카드 복습` },
-  { key: 'grammar',   icon: '📐', bg: '#eaf3dd', time: '5분', sub: () => { const n = grammarConcepts().length; return `기본부터 순서대로 어법 개념 ${n}개 · 설명 읽고 문제 풀기`; } }
+  { key: 'grammar', icon: '📐', bg: '#eaf3dd', time: '5분', name: '어법 학습', sub: () => { const n = grammarConcepts().length; return n ? `기본부터 순서대로 어법 개념 ${n}개 · 설명 읽고 문제 풀기` : '어법 커리큘럼 준비 중이에요'; } }
 ];
 // 특정 챕터(day)에 이 학습 항목이 존재하는가
 function taskAvailableForDay(d, key) {
   if (key === 'wbStudy') return (state.wordbook || []).length > 0;     // 단어장 학습(심화) = 내 단어장 카드
-  if (key === 'grammar') return grammarConcepts().length > 0;          // 어법 퀴즈 = 커리큘럼 개념이 하나라도 있으면
+  if (key === 'grammar') return true;                                 // 어법 학습 = 항상 노출(개념 없으면 '준비 중'으로 표시)
   if (key === 'review') return passageToReview(dayPassage(d)).length > 0;
   if (key === 'vocab') return dayVocabCards(d).length > 0;             // 어휘 복습 = 플래시카드
   if (key === 'vocabPrep') return nextDayPopoverCards().length > 0;    // 어휘 예습 = 다음 챕터 단어(활성 기준·심화 전용)
@@ -1822,9 +1836,10 @@ function hatchCinematicHTML() {
 
 /* ---- 홈 ---- */
 // 할 일/보너스 카드 한 줄(홈·심화 학습 공용)
-function taskName(cfg) { return QUIZ_META[cfg.key] ? QUIZ_META[cfg.key].name : (cfg.name || '지문 복습'); }
+function taskName(cfg) { return cfg.name || (QUIZ_META[cfg.key] ? QUIZ_META[cfg.key].name : '지문 복습'); }
 function taskRowHTML(cfg) {
-  if (cfg.wip) {   // 공사중(비활성)
+  const wip = cfg.wip || (cfg.key === 'grammar' && grammarConcepts().length === 0);   // 어법: 개념 없으면 준비 중
+  if (wip) {   // 공사중(비활성)
     return `<div style="display:flex;align-items:center;gap:12px;background:#f7f8fa;border:1.5px dashed #d7deea;border-radius:16px;padding:13px 15px;opacity:.72">
       <div style="width:40px;height:40px;border-radius:12px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:19px;filter:grayscale(.5)">${cfg.icon}</div>
       <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#8a97a8">${taskName(cfg)}</div><div style="font-size:11px;color:#9aa8bd;margin-top:1px">${cfg.sub(0)}</div></div>
@@ -2108,21 +2123,14 @@ function advancedHTML() {
       <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#14243f">오늘의 단어시험</div><div style="font-size:11px;color:#7d8aa0;margin-top:1px">${dueN ? `복습할 단어 ${dueN}개 · 망각곡선 맞춤 출제` : '오늘 복습할 단어가 없어요 — 잘하고 있어요!'}</div></div>
       <div style="font-size:11px;font-weight:700;color:${dueN ? '#2f74e6' : '#b8c2d2'}">${dueN ? '시작 →' : '—'}</div>
     </div>` : '';
-  const composeN = composeSentences().length;
-  const composeCard = composeN ? `
-    <div data-act="startCompose" style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 15px;cursor:pointer">
-      <div style="width:40px;height:40px;border-radius:12px;background:#e0f3ea;display:flex;align-items:center;justify-content:center;font-size:19px">✍️</div>
-      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:#14243f">문장 작문하기</div><div style="font-size:11px;color:#7d8aa0;margin-top:1px">해석 보고 영어 문장 만들기 · ${composeN}문장</div></div>
-      <div style="font-size:11px;font-weight:700;color:#2f74e6">시작 →</div>
-    </div>` : '';
-  const any = bonusRows || wordTestCard || composeCard;
+  const any = bonusRows || wordTestCard;
 
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
       <div style="width:38px;height:38px;border-radius:12px;background:#efe7fd;display:flex;align-items:center;justify-content:center;font-size:20px">🚀</div>
       <div><div style="font-size:18px;font-weight:800;color:#14243f">심화 학습</div><div style="font-size:11.5px;color:#7d8aa0;margin-top:1px">보너스 학습 · 원할 때 자유롭게</div></div>
     </div>
-    ${any ? `<div style="display:flex;flex-direction:column;gap:10px">${wordTestCard}${composeCard}${bonusRows}</div>`
+    ${any ? `<div style="display:flex;flex-direction:column;gap:10px">${wordTestCard}${bonusRows}</div>`
       : `<div style="text-align:center;color:#9aa8bd;font-size:13px;padding:40px 0">아직 열린 심화 학습이 없어요.<br>오늘 할 일을 먼저 끝내볼까요? 😊</div>`}
   </div></div>`;
 }
@@ -2215,10 +2223,7 @@ function bookChapterTag(b) {
 }
 // 지문(본문) 글자 수에 비례한 책등 너비(px). 본문이 많을수록 두껍게 — 실제 책처럼.
 function spineWidth(b) {
-  const len = ((b && b.passage) || '').replace(/\s+/g, ' ').trim().length;
-  // 보통 한 챕터(≈3천 자)를 '보통 두께'로, 짧으면 더 얇게. 얇고 두꺼운 정도는 제한(24~46px).
-  const t = Math.min(1, Math.max(0, len / 6000));
-  return Math.round(24 + t * 22);
+  return 20;   // 모든 책 두께 일정하게(얇게)
 }
 // 책등 위 챕터 배지(이미지·자동생성 공통)
 function spineChapterBadge(tag) {
@@ -2554,6 +2559,7 @@ function allBooks() {
   const cls = viewingClass();
   contentSource().days.forEach(d => {
     if (cls !== null && !dayMatchesClass(d, cls)) return;   // 다른 반 책은 서가에서 제외(공통은 포함)
+    if (d.shelfHidden && !teacherAllAccess()) return;       // 교사가 '미공개'로 둔 챕터는 서가에서 숨김(교사 공통 미리보기는 다 보임)
     const p = dayPassage(d);
     if (!p.trim()) return;
     const title = ((d.book && d.book.title) || '').trim() || '제목 없는 책';

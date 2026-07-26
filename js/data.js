@@ -460,6 +460,7 @@ function dayToEdit(day) {
     classTarget: day.class || '',   // 대상 반('' = 공통/전체)
     reviewFrom: day.reviewFrom || '', reviewTo: day.reviewTo || '',     // 복습 문제 공개 기간(비우면 지문 날짜 기준)
     previewFrom: day.previewFrom || '', previewTo: day.previewTo || '',  // 예습 문제 공개 기간
+    shelfHidden: !!day.shelfHidden,   // 서가 미공개(체크 시 학생 서가에서 숨김)
     quote: Object.assign({ en: '', ko: '', teacher: '', comment: '' }, day.quote || {}),
     book: Object.assign({ title: '', author: '', chapter: '', cover: '', spine: '' }, day.book || {}),
     passageText,
@@ -507,6 +508,7 @@ function editToDay(e) {
     const v = (e[k] || '').trim();
     if (v) out[k] = v;   // 공개 기간(비우면 필드 생략 → 지문 날짜 기준 폴백)
   });
+  if (e.shelfHidden) out.shelfHidden = true;   // 서가 미공개
   return out;
 }
 
