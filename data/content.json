@@ -1246,12 +1246,12 @@
         },
         "enthusiasm": {
           "pos": "n.",
-          "def": "열의, 의욕",
+          "def": "열의, 열정",
           "ex": ""
         },
         "as well": {
           "pos": "phr.",
-          "def": "~도 역시",
+          "def": "~도 또한",
           "ex": ""
         },
         "possessions": {
@@ -1262,43 +1262,43 @@
         },
         "bleak": {
           "pos": "adj.",
-          "def": "암울한, 절망적인",
+          "def": "암울한",
           "ex": ""
         },
         "charred rubble": {
           "pos": "n.",
-          "def": "새까맣게 탄 잔해",
+          "def": "불타 검게 된 잔해",
           "ex": ""
         },
         "remains": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "유해, 남은 것들",
           "ex": ""
         },
         "unharmed": {
           "pos": "adj.",
-          "def": "다치지 않은, 온전한",
+          "def": "다치지 않은",
           "ex": ""
         },
         "microscope": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "현미경",
           "ex": ""
         },
         "fused": {
-          "pos": "",
-          "def": "",
+          "pos": "v.",
+          "def": "녹아 붙다",
           "ex": "",
           "head": "fuse"
         },
         "ash": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "재",
           "ex": ""
         },
         "teething rings": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "치발기",
           "ex": "",
           "head": "teething ring"
         },
@@ -1310,23 +1310,23 @@
         },
         "fragments": {
           "pos": "n.",
-          "def": "조각",
+          "def": "파편",
           "ex": "",
           "head": "fragment"
         },
         "scorched": {
           "pos": "adj.",
-          "def": "그을린",
+          "def": "그슬린",
           "ex": ""
         },
         "recuperate from": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "~에서 회복하다",
           "ex": ""
         },
         "household": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "가정",
           "ex": ""
         },
         "agreeable": {
@@ -1335,8 +1335,8 @@
           "ex": ""
         },
         "busy attending to": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "~을 처리하느라 바쁜",
           "ex": ""
         },
         "affairs": {
@@ -1346,8 +1346,8 @@
           "head": "affair"
         },
         "barely": {
-          "pos": "",
-          "def": "",
+          "pos": "adv.",
+          "def": "간신히",
           "ex": ""
         },
         "grotesque": {
@@ -1363,7 +1363,7 @@
         },
         "obnoxious": {
           "pos": "adj.",
-          "def": "아주 밉살스러운",
+          "def": "밉살스러운",
           "ex": ""
         },
         "ghastly": {
@@ -1372,203 +1372,203 @@
           "ex": ""
         },
         "given": {
-          "pos": "",
-          "def": "",
+          "pos": "prep.",
+          "def": "~을 고려하면",
           "ex": ""
         },
         "dull": {
-          "pos": "",
-          "def": "",
+          "pos": "adj.",
+          "def": "지루한",
           "ex": ""
         },
         "boiled": {
-          "pos": "",
-          "def": "",
+          "pos": "v.",
+          "def": "삶다",
           "ex": "",
           "head": "boil"
         },
         "blanched": {
-          "pos": "",
-          "def": "",
+          "pos": "adj.",
+          "def": "데친, 삶은",
           "ex": ""
         },
         "string beans": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "강낭콩 꼬투리",
           "ex": "",
           "head": "string bean"
         },
         "moping around": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "풀이 죽어 지내는",
           "ex": ""
         },
         "tossing": {
-          "pos": "",
-          "def": "",
+          "pos": "v.",
+          "def": "던지다",
           "ex": "",
           "head": "toss"
         },
         "as if": {
-          "pos": "",
-          "def": "",
+          "pos": "conj.",
+          "def": "마치 ~인 것처럼",
           "ex": ""
         },
         "well-respected": {
-          "pos": "",
-          "def": "",
+          "pos": "adj.",
+          "def": "존경받는",
           "ex": "",
           "head": "well-respect"
         },
         "erupted into": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "갑자기 ~을 터뜨리다",
           "ex": "",
           "head": "erupt into"
         },
         "made arrangements": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "준비를 해두다",
           "ex": "",
           "head": "make arrangements"
         },
         "relative": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "친척",
           "ex": ""
         },
         "will": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "유언장",
           "ex": ""
         },
         "instructs": {
-          "pos": "",
-          "def": "",
+          "pos": "v.",
+          "def": "지시하다",
           "ex": "",
           "head": "instruct"
         },
         "be used to": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "~에 익숙하다",
           "ex": "",
           "head": "be used to N"
         },
         "urban": {
-          "pos": "",
-          "def": "",
+          "pos": "adj.",
+          "def": "도시의",
           "ex": ""
         },
         "swallowed": {
-          "pos": "",
-          "def": "",
+          "pos": "v.",
+          "def": "삼키다",
           "ex": "",
           "head": "swallow"
         },
         "chewy": {
-          "pos": "",
-          "def": "",
+          "pos": "adj.",
+          "def": "질긴",
           "ex": ""
         },
         "sighed": {
-          "pos": "",
-          "def": "",
+          "pos": "v.",
+          "def": "한숨 쉬다",
           "ex": "",
           "head": "sigh"
         },
         "geographically": {
-          "pos": "",
-          "def": "",
+          "pos": "adv.",
+          "def": "지리적으로",
           "ex": ""
         },
         "That’s why": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "그래서",
           "ex": ""
         },
         "by trade": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "직업으로",
           "ex": ""
         },
         "companies": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "극단",
           "ex": "",
           "head": "company"
         },
         "count": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "백작",
           "ex": ""
         },
         "cut short": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "도중에 끝내다",
           "ex": ""
         },
         "guardian": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "후견인",
           "ex": ""
         },
         "creaked shut": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "삐걱거리며 닫히다",
           "ex": "",
           "head": "creak shut"
         },
         "glumly": {
-          "pos": "",
-          "def": "",
+          "pos": "adv.",
+          "def": "우울하게",
           "ex": ""
         },
         "few belongings": {
-          "pos": "",
-          "def": "",
+          "pos": "n.",
+          "def": "몇 안 되는 소지품",
           "ex": ""
         },
         "distastefully": {
-          "pos": "",
-          "def": "",
+          "pos": "adv.",
+          "def": "못마땅하게",
           "ex": ""
         },
         "cramped": {
-          "pos": "",
-          "def": "",
+          "pos": "adj.",
+          "def": "비좁은",
           "ex": ""
         },
         "crawled": {
-          "pos": "",
-          "def": "",
+          "pos": "v.",
+          "def": "기어가다",
           "ex": "",
           "head": "crawl"
         },
         "solemnly": {
-          "pos": "",
-          "def": "",
+          "pos": "adv.",
+          "def": "엄숙하게",
           "ex": ""
         },
         "From time to time": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "때때로",
           "ex": ""
         },
         "tossed and turned": {
-          "pos": "",
-          "def": "",
+          "pos": "phr.",
+          "def": "잠을 설치다",
           "ex": "",
           "head": "toss and turn"
         },
         "snoring": {
-          "pos": "",
-          "def": "",
+          "pos": "v.",
+          "def": "코를 골다",
           "ex": "",
           "head": "snore"
         },
         "stuck": {
-          "pos": "",
-          "def": "",
+          "pos": "v.",
+          "def": "찌르다; 붙다",
           "ex": "",
           "head": "stick - stuck - stuck"
         }
