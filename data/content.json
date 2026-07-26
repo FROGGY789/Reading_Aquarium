@@ -35,8 +35,7 @@
         "charming": {
           "pos": "adj.",
           "def": "매력적인, 멋진",
-          "ex": "The house had a charming garden.",
-          "head": "charm"
+          "ex": "The house had a charming garden."
         },
         "resourceful": {
           "pos": "adj.",
@@ -984,5 +983,6 @@
       },
       "class": "2026 여름방학 영방반"
     }
-  ]
+  ],
+  "grammar": []
 }
