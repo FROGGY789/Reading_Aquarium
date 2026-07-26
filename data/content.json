@@ -807,36 +807,36 @@
         ],
         "sentence": [
           {
-            "type": "ab",
-            "prompt": "둘 중 어법적으로 옳은 것을 고르시오.",
-            "explain": "부정어(not)가 문장 앞에 오면서 도치가 발생했죠. 주어는 'happy ending'으로, 단수기 때문에 수 일치를 시켜 동사 'is'를 사용합니다.",
-            "sentence": "In this book, not only [ is / are ] there no happy ending, there is no happy beginning and very few happy things in the middle. This is because not very many happy things happened in the lives of the three Baudelaire youngsters.",
-            "answer": 0
-          },
-          {
             "type": "fix",
-            "prompt": "이 문장의 동사는?",
-            "explain": ", (콤마) 후에 관계대명사 that은 사용할 수 없어요!",
-            "sentence": "This particular morning it was gray and cloudy, that didn’t bother the Baudelaire youngsters one bit.",
-            "wrong": 8,
+            "prompt": "문장을 읽고 어법상 틀린 부분을 찾아 바르게 고치시오.",
+            "explain": "",
+            "sentence": "Sunny made a noise sounded like an angry bird, and Klaus picked her up and held her.",
+            "wrong": 4,
             "accept": [
-              "which"
+              "that sounded",
+              "which sounded"
             ]
           },
           {
-            "type": "scramble",
-            "prompt": "바이올렛은 머리카락처럼 사소한 것에 마음을 빼앗기고 싶어 한 적이 없었다.",
-            "explain": "as ... as ~ = ~만큼 ... 한",
-            "chunks": [
-              "She",
-              "as",
-              "her hair",
-              "never wanted",
-              "something",
-              "as",
-              "to be distracted",
-              "trivial",
-              "by"
+            "type": "mc",
+            "prompt": "다음 문장에서 'must'의 의미는?",
+            "explain": "",
+            "sentence": "She understood the words he was saying but thought he must be joking, playing a terrible joke on her and her brother and sister.",
+            "options": [
+              "~ 해야 한다",
+              "~ 했어야 한다",
+              "~ 임에 틀림없다"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "fix",
+            "prompt": "문장을 읽고 어법상 틀린 부분을 찾아 바르게 고치시오.",
+            "explain": "where + 완전절 / which + 불완전절",
+            "sentence": "I was sent to  retrieve you here, and to take you to my home, which you’ll stay for some time while we  figure things out.",
+            "wrong": 14,
+            "accept": [
+              "where"
             ]
           }
         ],
