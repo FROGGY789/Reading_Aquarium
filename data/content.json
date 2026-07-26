@@ -808,15 +808,15 @@
         "sentence": [
           {
             "type": "ab",
-            "prompt": "둘 중 어법적으로 옳은 것을 고르시오.",
-            "explain": "부정어(not)가 문장 앞에 오면서 도치가 발생했죠. 주어는 'happy ending'으로, 단수기 때문에 수 일치를 시켜 동사 'is'를 사용합니다.",
-            "sentence": "In this book, not only [ is / are ] there no happy ending, there is no happy beginning and very few happy things in the middle. This is because not very many happy things happened in the lives of the three Baudelaire youngsters.",
+            "prompt": "다음 중 어법적으로 옳은 것을 고르시오.",
+            "explain": "Not (부정어)로 인해 뒤 부분에 도치가 발생했어요. 주어는 'no happy ending' (단수)이니, is가 답이겠죠?",
+            "sentence": "In this book, not only [ is / are ] there no happy ending, there is no happy beginning and very few happy things in the middle.",
             "answer": 0
           },
           {
             "type": "fix",
-            "prompt": "이 문장의 동사는?",
-            "explain": ", (콤마) 후에 관계대명사 that은 사용할 수 없어요!",
+            "prompt": "다음 문장에서 어법적으로 옳지 않은 부분을 찾아 고치시오.",
+            "explain": ",(콤마) 뒤에는 관계대명사 that이 올 수 없어요!",
             "sentence": "This particular morning it was gray and cloudy, that didn’t bother the Baudelaire youngsters one bit.",
             "wrong": 8,
             "accept": [
@@ -824,19 +824,27 @@
             ]
           },
           {
-            "type": "scramble",
-            "prompt": "바이올렛은 머리카락처럼 사소한 것에 마음을 빼앗기고 싶어 한 적이 없었다.",
-            "explain": "as ... as ~ = ~만큼 ... 한",
-            "chunks": [
-              "She",
-              "as",
-              "her hair",
-              "never wanted",
-              "something",
-              "as",
-              "to be distracted",
-              "trivial",
-              "by"
+            "type": "ab",
+            "prompt": "다음 중 어법적으로 옳은 것을 고르시오.",
+            "explain": "",
+            "sentence": "And he knew much about the tiny, slimy animals [ finding / found ] at Briny Beach",
+            "answer": 1
+          },
+          {
+            "type": "ox",
+            "prompt": "다음 문장에서 'As'의 의미는 '~할 때' 이다.",
+            "explain": "",
+            "sentence": "As the figure reached them, the children saw with relief that it was not anybody frightening at all, but somebody they knew: Mr. Poe.",
+            "answer": 0
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 어법적으로 옳지 않은 부분을 찾아 고치시오.",
+            "explain": "사역동사(make) + O + 동사원형(look)",
+            "sentence": "Mr. Poe took off his top hat, which had made his head looking large and square in the fog",
+            "wrong": 12,
+            "accept": [
+              "look"
             ]
           }
         ],
@@ -1158,7 +1166,40 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "fix",
+            "prompt": "다음 문장을 읽고 어법적으로 잘못된 부분을 찾아 고치시오.",
+            "explain": "",
+            "sentence": "Sunny made a noise sounded like an angry bird.",
+            "wrong": 4,
+            "accept": [
+              "that sounded",
+              "which sounded"
+            ]
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 문장에서 'must' 가 뜻하는 바는?",
+            "explain": "",
+            "sentence": "She understood the words he was saying but thought he must be joking",
+            "options": [
+              "~ 해야 한다",
+              "~ 임에 틀림 없다"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장을 읽고 어법적으로 잘못된 부분을 찾아 고치시오.",
+            "explain": "where + 완전절 / which + 불완전절",
+            "sentence": "I was sent to  retrieve you here, and to take you to my home, which you’ll stay for some time while we  figure things out.",
+            "wrong": 14,
+            "accept": [
+              "where"
+            ]
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
