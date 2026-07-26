@@ -1158,7 +1158,40 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "fix",
+            "prompt": "다음 문장을 읽고 어법적으로 잘못된 부분을 찾아 고치시오.",
+            "explain": "",
+            "sentence": "Sunny made a noise sounded like an angry bird.",
+            "wrong": 4,
+            "accept": [
+              "that sounded",
+              "which sounded"
+            ]
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 문장에서 'must' 가 뜻하는 바는?",
+            "explain": "",
+            "sentence": "She understood the words he was saying but thought he must be joking",
+            "options": [
+              "~ 해야 한다",
+              "~ 임에 틀림 없다"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장을 읽고 어법적으로 잘못된 부분을 찾아 고치시오.",
+            "explain": "where + 완전절 / which + 불완전절",
+            "sentence": "I was sent to  retrieve you here, and to take you to my home, which you’ll stay for some time while we  figure things out.",
+            "wrong": 14,
+            "accept": [
+              "where"
+            ]
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
