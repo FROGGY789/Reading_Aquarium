@@ -909,6 +909,179 @@
       "reviewTo": "2026-07-27",
       "previewFrom": "2026-07-26",
       "previewTo": "2026-07-26"
+    },
+    {
+      "date": "2026-07-26",
+      "label": "Ch 01-2",
+      "quote": {
+        "en": "",
+        "ko": "",
+        "teacher": "",
+        "comment": ""
+      },
+      "book": {
+        "title": "The Bad Beginning",
+        "author": "Lemony Snicket",
+        "chapter": "Chapter 01-2",
+        "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
+        "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
+      },
+      "passage": "A Series of Unfortunate Events By Lemony Snicket\n\nThe Bad Beginning Chapter 1-2.\n\n“It’s a nice day,” Violet said finally, <making conversation>. Sunny made a noise %%that%% sounded like an angry bird, and Klaus picked her up and held her.\n\n“Yes, it is a nice day,’ Mr. Poe said <absently>, <staring> out at the empty beach. “I’m afraid I have some very bad news for you children.”\n\nThe three Baudelaire <siblings> looked him. Violet, with some embarrassment； felt the stone in her left hand and was glad she had not thrown it at Mr. Poe.\n\n“Your parents,” Mr. Poe said, “have <perished> in a terrible fire.”\n\nThe children didn’t say anything.\n\n“They perished,” Mr. Poe said, “in a fire %%that%% destroyed the entire house. I’m very, very sorry to tell you this, my dears.”\n\nViolet took her eyes off Mr. Poe and stared out at the ocean. Mr. Poe had never called the Baudelaire children “my dears” before. She understood the words he was saying but thought he %%must be joking%%, playing a terrible joke on her and her brother and sister.\n\n“‘Perished,’” Mr. Poe said, “means ‘killed.’”\n\n“We know what the word ‘perished’ means,” Klaus said, <crossly>. ==He did know what the word “perished” meant, but he was still <having trouble> understanding exactly what %%it%% was %%that%% Mr. Poe had said.== %%It%% seemed to him %%that%% Mr. Poe %%must%% somehow %%have misspoken%%.\n\n“The <fire department> arrived, of course,” Mr. Poe said, “but they were too late. The entire house was <engulfed> in fire. It <burned to the ground>.”\n\nKlaus pictured all the books in the library, going up in flames. Now he’d never read all of them.\n\nMr. Poe coughed several times into his handkerchief before continuing. ==“I was sent to <retrieve> you here, and to take you to my home%%, where%% you’ll stay for some time while we <figure things out>.== I am the <executor> of your parents' <estate>. That means I will be <handling> their enormous <fortune> and <figuring out> where you children will go. When Violet <comes of age>, the fortune will be yours, but the bank will <take charge of> it until you are old enough.”\n\nAlthough he said he was the <executor>, Violet felt like Mr. Poe was the <executioner>. He had simply walked down the beach to them and changed their lives forever.\n\n“Come with me,” Mr. Poe said, and held out his hand. In order to take it, Violet had to drop the stone she was holding. Klaus took Violet’s other hand, and Sunny took Klaus’s other hand， and in that <manner> the three Baudelaire children—the Baudelaire <orphans>, now —were led away from the beach and from their previous lives.",
+      "vocab": {
+        "making conversation": {
+          "pos": "v.",
+          "def": "대화를 나누다",
+          "ex": "",
+          "head": "make conversation"
+        },
+        "absently": {
+          "pos": "adv.",
+          "def": "멍하니, 딴생각하며",
+          "ex": ""
+        },
+        "staring": {
+          "pos": "v.",
+          "def": "~를 응시하다",
+          "ex": "",
+          "head": "stare at~"
+        },
+        "siblings": {
+          "pos": "n.",
+          "def": "형제자매",
+          "ex": "",
+          "head": "sibling"
+        },
+        "perished": {
+          "pos": "v.",
+          "def": "죽다, 사망하다",
+          "ex": "",
+          "head": "perish"
+        },
+        "crossly": {
+          "pos": "adv.",
+          "def": "화난 듯이, 퉁명스럽게",
+          "ex": ""
+        },
+        "having trouble": {
+          "pos": "phr.",
+          "def": "~하는 데 어려움을 겪다",
+          "ex": "",
+          "head": "have trouble ~ing"
+        },
+        "fire department": {
+          "pos": "n.",
+          "def": "소방서",
+          "ex": ""
+        },
+        "engulfed": {
+          "pos": "v.",
+          "def": "집어삼키다, 휩싸다",
+          "ex": "",
+          "head": "engulf"
+        },
+        "burned to the ground": {
+          "pos": "phr.",
+          "def": "완전히 불타버리다",
+          "ex": "",
+          "head": "burn to the ground"
+        },
+        "retrieve": {
+          "pos": "v.",
+          "def": "되찾다, 회수하다",
+          "ex": ""
+        },
+        "figure things out": {
+          "pos": "phr.",
+          "def": "상황을 이해하다",
+          "ex": ""
+        },
+        "executor": {
+          "pos": "n.",
+          "def": "(유언)집행인",
+          "ex": ""
+        },
+        "estate": {
+          "pos": "n.",
+          "def": "유산, 재산",
+          "ex": ""
+        },
+        "handling": {
+          "pos": "v.",
+          "def": "처리하다, 다루다",
+          "ex": "",
+          "head": "handle"
+        },
+        "fortune": {
+          "pos": "n.",
+          "def": "재산, 큰 부",
+          "ex": ""
+        },
+        "figuring out": {
+          "pos": "v.",
+          "def": "이해하다, 해결하다",
+          "ex": "",
+          "head": "figure out"
+        },
+        "comes of age": {
+          "pos": "phr.",
+          "def": "성인이 되다",
+          "ex": "",
+          "head": "come of age"
+        },
+        "take charge of": {
+          "pos": "phr.",
+          "def": "~를 맡다, 책임지다",
+          "ex": "",
+          "head": "take charge of~"
+        },
+        "executioner": {
+          "pos": "n.",
+          "def": "사형 집행인",
+          "ex": ""
+        },
+        "manner": {
+          "pos": "n.",
+          "def": "방식, 태도",
+          "ex": ""
+        },
+        "orphans": {
+          "pos": "n.",
+          "def": "고아",
+          "ex": "",
+          "head": "orphan"
+        }
+      },
+      "coreSentences": [
+        {
+          "text": "He did know what the word “perished” meant, but he was still having trouble understanding exactly what it was that Mr. Poe had said.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "“I was sent to retrieve you here, and to take you to my home, where you’ll stay for some time while we figure things out.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        }
+      ],
+      "quiz": {
+        "preview": [],
+        "vocab": [],
+        "sentence": [],
+        "vocabPrep": [],
+        "sentPrep": [],
+        "grammar": []
+      },
+      "class": "2026 여름방학 영방반",
+      "reviewFrom": "2026-07-27",
+      "reviewTo": "2026-07-27",
+      "previewFrom": "2026-07-26",
+      "previewTo": "2026-07-26"
     }
   ],
   "grammar": []
