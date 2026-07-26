@@ -660,9 +660,9 @@ async function loadWordbook() {
 
 // 오늘 할 일 구성(문항이 있는 카테고리만 노출)
 const MAIN_TASKS = [
-  { key: 'review',   icon: '📖',  bg: '#e0f3ea', time: '20분', mode: 'review',  sub: () => '단어 팝오버로 다시 읽기' },
-  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', time: '10분', mode: 'review',  sub: n => `어법 유형 문제 ${n}문항` },
   { key: 'vocab',    icon: '🔤',  bg: '#fdeede', time: '10분', mode: 'review',  sub: () => `플래시카드로 단어 복습 (알아요/몰라요)` },
+  { key: 'sentence', icon: '🧩',  bg: '#efe7fd', time: '10분', mode: 'review',  sub: n => `어법 유형 문제 ${n}문항` },
+  { key: 'review',   icon: '📖',  bg: '#e0f3ea', time: '20분', mode: 'review',  sub: () => '단어 팝오버로 다시 읽기' },
   { key: 'preview',  icon: '👀',  bg: '#e7f0fd', time: '5분',  mode: 'preview', sub: () => `난이도 선택 · 살살 🟢 보통 🟡 버닝 🔴` }
 ];
 // 현재 학습 모드('review'=복습 / 'preview'=예습)의 할 일 목록
