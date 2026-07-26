@@ -807,36 +807,20 @@
         ],
         "sentence": [
           {
-            "type": "fix",
-            "prompt": "문장을 읽고 어법상 틀린 부분을 찾아 바르게 고치시오.",
-            "explain": "",
-            "sentence": "Sunny made a noise sounded like an angry bird, and Klaus picked her up and held her.",
-            "wrong": 4,
-            "accept": [
-              "that sounded",
-              "which sounded"
-            ]
-          },
-          {
-            "type": "mc",
-            "prompt": "다음 문장에서 'must'의 의미는?",
-            "explain": "",
-            "sentence": "She understood the words he was saying but thought he must be joking, playing a terrible joke on her and her brother and sister.",
-            "options": [
-              "~ 해야 한다",
-              "~ 했어야 한다",
-              "~ 임에 틀림없다"
-            ],
-            "answer": 2
+            "type": "ab",
+            "prompt": "다음 중 어법적으로 옳은 것을 고르시오.",
+            "explain": "Not (부정어)로 인해 뒤 부분에 도치가 발생했어요. 주어는 'no happy ending' (단수)이니, is가 답이겠죠?",
+            "sentence": "In this book, not only [ is / are ] there no happy ending, there is no happy beginning and very few happy things in the middle.",
+            "answer": 0
           },
           {
             "type": "fix",
-            "prompt": "문장을 읽고 어법상 틀린 부분을 찾아 바르게 고치시오.",
-            "explain": "where + 완전절 / which + 불완전절",
-            "sentence": "I was sent to  retrieve you here, and to take you to my home, which you’ll stay for some time while we  figure things out.",
-            "wrong": 14,
+            "prompt": "다음 문장에서 어법적으로 옳지 않은 부분을 찾아 고치시오.",
+            "explain": ",(콤마) 뒤에는 관계대명사 that이 올 수 없어요!",
+            "sentence": "This particular morning it was gray and cloudy, that didn’t bother the Baudelaire youngsters one bit.",
+            "wrong": 8,
             "accept": [
-              "where"
+              "which"
             ]
           }
         ],
