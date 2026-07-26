@@ -700,6 +700,7 @@ const DEFAULT_STATE = {
   chapterKey: null,         // 현재 열려 있는 챕터 키(null이면 홈 목록)
   chapterMode: 'review',    // 챕터 학습 모드: 'review'(복습) / 'preview'(예습)
   pickMode: 'review',       // 챕터 고르기 화면 모드
+  reviewMode: 'review',     // 지문 읽기 화면 모드: 'review'(복습) / 'burning'(예습 버닝)
   progress: {},             // 챕터별 진행도 { [key]: {tasks:{}, rewarded} } — 영구(리셋 안 함)
   eggs: 0,
   animals: [],
@@ -991,6 +992,7 @@ function currentQs() {
 function currentQ() { return currentQs()[state.quizQi] || null; }
 function isRight(q, i) {
   if (!q) return false;
+  if (q.type === 'free') return true;   // 자유형: 무엇을 써도 정답(느낌·생각 쓰기)
   if (q.type === 'mc' || q.type === 'ab' || q.type === 'ox') return state.picks[i] === q.answer;
   if (q.type === 'fix') {
     const v = NORM(state.inputs[i]);
@@ -1009,7 +1011,7 @@ function canCheck() {
   if (cq.type === 'mc' || cq.type === 'ab' || cq.type === 'ox') return state.picks[qi] != null;
   if (cq.type === 'fix') return state.picks[qi] != null && !!(state.inputs[qi] && state.inputs[qi].trim());
   if (cq.type === 'scramble') return ((state.scr && state.scr[qi]) || []).length === (cq.chunks || []).length;
-  return !!(state.inputs[qi] && state.inputs[qi].trim());
+  return !!(state.inputs[qi] && state.inputs[qi].trim());   // input·free: 뭔가 쓰면 확인 가능
 }
 // 조각 순서 섞기(문항별 고정 — 리렌더에도 안 변함)
 function seededShuffle(arr, seed) {
@@ -1104,7 +1106,7 @@ const actions = {
 
   startTask(t) {
     if (!taskAvailable(t)) return;
-    if (t === 'review') { armReviewGate(); set({ screen: 'review', pop: null, revIndex: 0 }); }
+    if (t === 'review') { armReviewGate(); set({ screen: 'review', reviewMode: 'review', pop: null, revIndex: 0 }); }
     else if (t === 'preview') set({ screen: 'preview', pop: null });   // 3단계 난이도 선택
     else if (t === 'vocab') set({ screen: 'vocabReview', vrCount: null, fcI: 0, fcFlipped: false, fcHint: false });   // 어휘 복습(플래시카드)
     else if (t === 'vocabPrep') {   // 어휘 예습(플래시카드) — 다음 수업 지문 단어 랜덤 최대 30개
@@ -1146,7 +1148,7 @@ const actions = {
     if (!dayCoreSentencesRich(activeDay()).length) return;
     set({ screen: 'previewMedium', pmIndex: 0, pmPhaseIdx: 0, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false });
   },
-  previewHard() { set({ screen: 'reader', readerBurning: true, readerPage: 0 }); },
+  previewHard() { armReviewGate(); set({ screen: 'review', reviewMode: 'burning', revIndex: 0, pop: null }); },   // 버닝: 지문 복습처럼 한 문장씩 읽기
   // 2단계 보통: 주어/동사 클릭 채점
   pmToggle(arg) {
     if (state.pmReveal) return;   // 정답 공개 상태에선 잠금
@@ -1264,7 +1266,10 @@ const actions = {
   reviewNext() {
     if (!ui.revReady) return;   // 2초 전에는 무시
     const total = passageToReviewSentences(dayPassage(activeDay())).length;
-    if ((state.revIndex || 0) >= total - 1) { completeTask('review'); return; }
+    if ((state.revIndex || 0) >= total - 1) {
+      if (state.reviewMode === 'burning') { actions.burnToComprehension(); return; }   // 버닝: 다 읽으면 이해도 확인
+      completeTask('review'); return;
+    }
     armReviewGate();
     set({ revIndex: (state.revIndex || 0) + 1, pop: null });
   },
@@ -2460,19 +2465,24 @@ function reviewHTML() {
       ${wordInPassage(pop.word) ? `<div data-act="locateWord" data-arg="${esc(pop.word)}" style="display:inline-flex;align-items:center;gap:5px;margin-top:9px;background:rgba(255,255,255,.14);color:#cfe0f5;font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:9px;cursor:pointer">📖 지문에서 보기</div>` : ''}
     </div>` : '';
 
+  const burning = state.reviewMode === 'burning';
+  const accent = burning ? '#e2564d' : '#2f74e6';
+  const lastLabel = burning ? (dayQuiz('preview').length ? '이해도 확인 🔥' : '예습 완료 ✓') : '복습 완료 ✓';
+  const lastBg = burning ? (last ? '#e2564d' : '#e2564d') : (last ? '#2fa36b' : '#2f74e6');
+  const lastShadow = burning ? '#b23a32' : (last ? '#1f7a4d' : '#1f57c4');
   const btn = ui.revReady
-    ? `<button data-act="reviewNext" style="width:100%;border:none;background:${last ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${last ? '복습 완료 ✓' : '다음 문장 →'}</button>`
+    ? `<button data-act="reviewNext" style="width:100%;border:none;background:${last ? lastBg : (burning ? '#e2564d' : '#2f74e6')};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? lastShadow : (burning ? '#b23a32' : '#1f57c4')};cursor:pointer">${last ? lastLabel : '다음 문장 →'}</button>`
     : `<button disabled style="width:100%;border:none;background:#c3d2e6;color:#fff;font-size:13.5px;font-weight:600;padding:14px;border-radius:15px;cursor:default">잠깐 읽어볼까요… ⏳</button>`;
 
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:${topPad()} 20px 24px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div data-act="goHome" style="display:flex;align-items:center;gap:8px;cursor:pointer"><div style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center">←</div><span style="font-size:13px;font-weight:600;color:#14243f">지문 복습</span></div>
+      <div data-act="${burning ? 'goPreview' : 'goHome'}" style="display:flex;align-items:center;gap:8px;cursor:pointer"><div style="width:30px;height:30px;border-radius:10px;background:${burning ? '#fbe4e2' : '#e7f0fd'};color:${accent};display:flex;align-items:center;justify-content:center">←</div><span style="font-size:13px;font-weight:600;color:#14243f">${burning ? '🔴 버닝 · 지문 읽기' : '지문 복습'}</span></div>
       <div style="display:flex;align-items:center;gap:10px">
         <div style="font-size:12px;font-weight:700;color:#7d8aa0">${i + 1} / ${total}</div>
-        ${readCtlBtn({ btnBg: '#e7f0fd', btnFg: '#2f74e6' })}
+        ${readCtlBtn({ btnBg: burning ? '#fbe4e2' : '#e7f0fd', btnFg: accent })}
       </div>
     </div>
-    <div style="height:5px;border-radius:3px;background:#e7edf5;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:${Math.round((i + 1) / total * 100)}%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:3px;transition:width .3s"></div></div>
+    <div style="height:5px;border-radius:3px;background:#e7edf5;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:${Math.round((i + 1) / total * 100)}%;background:linear-gradient(90deg,${accent},#17b0c4);border-radius:3px;transition:width .3s"></div></div>
     <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;padding:10px 4px">
       <div style="font-family:'Lora',serif;font-size:23px;line-height:${(1.75 * readLineH()).toFixed(2)};color:#26303f;text-align:center;${animate ? 'animation:fadeup .35s ease' : ''}">${sentHTML}</div>
       ${popHTML}
@@ -2589,6 +2599,11 @@ function quizHTML() {
       <div style="min-height:64px;background:#f4f8fd;border:1.5px dashed ${ansBd};border-radius:14px;padding:10px 12px;margin-top:10px;text-align:center">${order.length ? order.map(ansChip).join('') : '<span style="color:#9aa8bd;font-size:12.5px;line-height:2.4">아래 조각을 눌러 순서대로 문장을 만드세요</span>'}</div>
       ${!checked ? `<div style="text-align:center;margin-top:12px">${pool.map(poolChip).join('') || '<span style="color:#b8c2d2;font-size:12px">모든 조각을 놓았어요</span>'}</div>` : ''}
       ${checked && !ok ? `<div style="text-align:center;font-size:13px;color:#2fa36b;font-family:'Lora',serif;margin-top:10px">정답: ${esc(chunks.join(' '))}</div>` : ''}`;
+  } else if (cq.type === 'free') {
+    body = `<div style="margin-top:10px">
+      <textarea id="quiz-input" placeholder="자유롭게 네 생각·느낌을 써 보세요 ✍️" ${checked ? 'readonly' : ''} style="width:100%;min-height:130px;border:1.5px solid ${checked ? '#2fa36b' : '#e2e9f2'};background:#fff;border-radius:14px;padding:14px 16px;font-family:'IBM Plex Sans KR',sans-serif;font-size:15px;line-height:1.65;color:#14243f;outline:none;resize:vertical">${esc(state.inputs[qi] || '')}</textarea>
+      <div style="font-size:11px;color:#9aa8bd;margin-top:6px">정답·오답이 없어요. 떠오르는 대로 자유롭게 쓰면 돼요 😊</div>
+    </div>`;
   } else {
     const ok = isRight(cq, qi);
     const inputBd = checked ? (ok ? '#2fa36b' : '#e2564d') : '#e2e9f2';
@@ -2600,10 +2615,17 @@ function quizHTML() {
   let feedback = '';
   if (checked) {
     const ok = isRight(cq, qi);
-    feedback = `<div style="margin-top:14px;border-radius:14px;padding:12px 14px;background:${ok ? '#e0f3ea' : '#fbe4e2'};color:${ok ? '#1f7a4d' : '#b23a32'}">
-      <div style="font-size:13px;font-weight:700;margin-bottom:5px">${ok ? '정답이에요! 🎉' : '아쉬워요'}</div>
-      <div style="font-size:12.5px;line-height:1.6;opacity:.92">${esc(cq.explain)}</div>
-    </div>`;
+    if (cq.type === 'free') {
+      feedback = `<div style="margin-top:14px;border-radius:14px;padding:12px 14px;background:#e0f3ea;color:#1f7a4d">
+        <div style="font-size:13px;font-weight:700;margin-bottom:${cq.explain ? '5px' : '0'}">잘 적었어요! ✍️ 네 생각이 멋져요</div>
+        ${cq.explain ? `<div style="font-size:12.5px;line-height:1.6;opacity:.92">${esc(cq.explain)}</div>` : ''}
+      </div>`;
+    } else {
+      feedback = `<div style="margin-top:14px;border-radius:14px;padding:12px 14px;background:${ok ? '#e0f3ea' : '#fbe4e2'};color:${ok ? '#1f7a4d' : '#b23a32'}">
+        <div style="font-size:13px;font-weight:700;margin-bottom:5px">${ok ? '정답이에요! 🎉' : '아쉬워요'}</div>
+        <div style="font-size:12.5px;line-height:1.6;opacity:.92">${esc(cq.explain)}</div>
+      </div>`;
+    }
   }
 
   const footer = checked
@@ -3752,7 +3774,7 @@ function bindQuizInput() {
     if (btn) btn.classList.toggle('on', canCheck());
   });
   inp.addEventListener('keydown', e => {
-    if (e.key !== 'Enter') return;
+    if (e.key !== 'Enter' || inp.tagName === 'TEXTAREA') return;   // 자유형 textarea는 Enter로 줄바꿈
     if (state.checked[state.quizQi]) actions.quizNext();
     else actions.quizCheck();
   });

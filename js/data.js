@@ -434,6 +434,8 @@ function quizItemToSaved(q) {
   } else if (q.type === 'scramble') {
     base.chunks = (q.chunksText || '').split('/').map(c => c.trim()).filter(Boolean);
     if ((q.ko || '').trim()) base.ko = q.ko.trim();   // 우리말 뜻(있으면 학생에게 먼저 보여줌)
+  } else if (q.type === 'free') {
+    // 자유형: 정답 없음 — 문제(prompt)만 있으면 됨
   } else {
     base.accept = (q.accept || '').split(',').map(a => a.trim()).filter(Boolean);
   }
@@ -442,7 +444,8 @@ function quizItemToSaved(q) {
       : base.type === 'ox' ? (base.prompt || '').trim().length > 0
         : base.type === 'fix' ? ((base.sentence || '').trim() && base.accept.length >= 1 && base.wrong >= 0)
           : base.type === 'scramble' ? base.chunks.length >= 2
-            : base.accept.length >= 1;
+            : base.type === 'free' ? (base.prompt || '').trim().length > 0
+              : base.accept.length >= 1;
   return ok ? base : null;
 }
 function dayToEdit(day) {

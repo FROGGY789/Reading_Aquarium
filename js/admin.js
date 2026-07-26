@@ -760,7 +760,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v59 (초보자 튜토리얼: 가입 후 전체기능 안내 → 첫 알 지급)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v60 (주관식 자유형 문제·버닝 예습을 한 문장씩 읽기로)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -1029,15 +1029,16 @@ function quizEditor(cfg) {
           <option value="ab" ${q.type === 'ab' ? 'selected' : ''}>[A/B] 고르기</option>
           <option value="fix" ${q.type === 'fix' ? 'selected' : ''}>오류 고치기</option>
           <option value="scramble" ${q.type === 'scramble' ? 'selected' : ''}>Scramble(순서 맞추기)</option>
-          <option value="input" ${q.type === 'input' ? 'selected' : ''}>주관식</option>
+          <option value="input" ${q.type === 'input' ? 'selected' : ''}>주관식(정답 있음)</option>
+          <option value="free" ${q.type === 'free' ? 'selected' : ''}>주관식(자유형·정답 없음)</option>
         </select>
         <div style="flex:1"></div>
         <button class="btn ghost sm" data-act="${cfg.moveAct}" data-arg="${cfg.delPrefix}${i}:-1" ${i === 0 ? 'disabled' : ''} title="위로" style="padding:6px 9px">▲</button>
         <button class="btn ghost sm" data-act="${cfg.moveAct}" data-arg="${cfg.delPrefix}${i}:1" ${i === list.length - 1 ? 'disabled' : ''} title="아래로" style="padding:6px 9px">▼</button>
         <button class="btn danger sm" data-act="${cfg.delAct}" data-arg="${cfg.delPrefix}${i}">삭제</button>
       </div>
-      <input class="inp" data-bind="${base}.prompt"${br} value="${esc(q.prompt)}" placeholder="문제 ${(q.type === 'ab' || q.type === 'scramble') ? '(비워도 됨)' : ''}">
-      ${q.type === 'scramble' ? '' : `<input class="inp" style="margin-top:7px" data-bind="${base}.sentence"${br} data-rerender="1" value="${esc(q.sentence)}" placeholder="${q.type === 'ab' ? '문장에 [정답/오답] 넣기 — 예: She [was/were] happy.' : q.type === 'fix' ? '틀린 부분이 든 문장 — 예: She go to school.' : '예문/제시 문장 (선택)'}">`}
+      <input class="inp" data-bind="${base}.prompt"${br} value="${esc(q.prompt)}" placeholder="${q.type === 'free' ? '질문 — 예: 이 이야기를 읽고 어떤 느낌이 들었나요?' : '문제 ' + ((q.type === 'ab' || q.type === 'scramble') ? '(비워도 됨)' : '')}">
+      ${(q.type === 'scramble' || q.type === 'free') ? '' : `<input class="inp" style="margin-top:7px" data-bind="${base}.sentence"${br} data-rerender="1" value="${esc(q.sentence)}" placeholder="${q.type === 'ab' ? '문장에 [정답/오답] 넣기 — 예: She [was/were] happy.' : q.type === 'fix' ? '틀린 부분이 든 문장 — 예: She go to school.' : '예문/제시 문장 (선택)'}">`}
       ${q.type === 'mc'
         ? `<div class="label" style="margin-bottom:2px">보기 (동그라미로 정답 선택, 2개 이상)</div>${opts}`
         : q.type === 'ox'
@@ -1061,7 +1062,9 @@ function quizEditor(cfg) {
                  <input class="inp" data-bind="${base}.ko"${br} value="${esc(q.ko || '')}" placeholder="예: 바다는 늘 사람들을 끌어당겨 왔다.">
                  <div class="label" style="margin:8px 0 2px">조각을 <b>정답 순서대로</b>, <b>/</b> 로 구분 (2~3단어씩)</div>
                  <input class="inp" data-bind="${base}.chunksText"${br} value="${esc(q.chunksText || '')}" placeholder="The sea / has always / drawn people.">`
-              : `<input class="inp" style="margin-top:7px" data-bind="${base}.accept"${br} value="${esc(q.accept)}" placeholder="정답 (여러 개면 쉼표: retreat, 후퇴하다)">`}
+              : q.type === 'free'
+                ? `<div class="label" style="margin:6px 0 2px">✍️ 정답이 없는 <b>자유 서술형</b>이에요. 학생이 느낌·생각을 쓰면 무엇이든 완료 처리돼요.</div>`
+                : `<input class="inp" style="margin-top:7px" data-bind="${base}.accept"${br} value="${esc(q.accept)}" placeholder="정답 (여러 개면 쉼표: retreat, 후퇴하다)">`}
       <input class="inp" style="margin-top:7px" data-bind="${base}.explain"${br} value="${esc(q.explain)}" placeholder="해설">
     </div>`;
   }).join('');
