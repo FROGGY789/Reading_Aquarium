@@ -679,16 +679,42 @@
         },
         {
           "text": "She felt the slender, smooth stone in her left hand, which she had been about to try to skip as far as she could.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            11,
+            22
+          ],
+          "verb": [
+            1,
+            12,
+            13,
+            23
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "One of the things Violet, Klaus, and Sunny really liked about their parents was that they didn‘t send their children away when they had company over, but allowed them to join the adults at the dinner table and participate in the conversation as long as they helped clear the table.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            4,
+            5,
+            6,
+            7,
+            15,
+            22,
+            45
+          ],
+          "verb": [
+            9,
+            13,
+            16,
+            17,
+            23,
+            27,
+            46
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
@@ -1054,8 +1080,20 @@
       "coreSentences": [
         {
           "text": "He did know what the word “perished” meant, but he was still having trouble understanding exactly what it was that Mr. Poe had said.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            4,
+            5,
+            9,
+            17,
+            20,
+            21
+          ],
+          "verb": [
+            1,
+            2,
+            6
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
