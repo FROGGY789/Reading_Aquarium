@@ -454,7 +454,9 @@ function dayQuiz(cat) { return dayQuizOf(activeDay(), cat); }
 function dayQuizOf(d, cat) { return (d && d.quiz && d.quiz[cat]) || []; }
 // 홈 상단 배너용 '오늘의 문장' — 가장 최근에 열린 챕터 중 문장이 있는 것
 function todayQuote() {
-  const chs = unlockedChapters();
+  const gq = contentSource().quote;   // 전체 공통 '오늘의 문장'(교사 일정 탭에서 하나만 설정)
+  if (gq && gq.en) return gq;
+  const chs = unlockedChapters();     // (구버전 호환) 날짜별 문장이 있으면 최근 것
   for (let i = chs.length - 1; i >= 0; i--) { if (chs[i].quote && chs[i].quote.en) return chs[i].quote; }
   return null;
 }
@@ -552,7 +554,7 @@ function nextDayPopoverCards() {
 }
 // 플래시카드 덱: preview=다음날 어휘 10개 / vocabPrep=다음날 지문 단어 랜덤 최대 30개 / vocab=오늘 어휘(선택 개수)
 function flashcardCards(mode) {
-  if (mode === 'preview') return dayVocabCards(activeDay()).slice(0, 10);   // 예습 살살 = 고른 챕터의 어휘
+  if (mode === 'preview') return dayVocabCards(activeDay()).slice(0, state.pvCount || 0);   // 예습 살살 = 고른 챕터 어휘(선택 개수)
   if (mode === 'vocabPrep') return state.vpDeck || [];   // 시작 시 랜덤 최대 30개로 고정된 덱
   return dayVocabCards(activeDay()).slice(0, state.vrCount || 0);
 }
@@ -610,7 +612,7 @@ function composeSentences() { return dayCoreSentencesRich(activeDay()).filter(c 
 function pmAdvance() {
   const sents = dayCoreSentencesRich(activeDay());
   if ((state.pmIndex || 0) >= sents.length - 1) { completeTask('preview'); return; }
-  set({ pmIndex: (state.pmIndex || 0) + 1, pmPhaseIdx: 0, pmSel: [], pmMsg: '' });
+  set({ pmIndex: (state.pmIndex || 0) + 1, pmPhaseIdx: 0, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false });
 }
 // '몰라요' 단어를 내 단어장에 담기(중복 제거) + 클라우드 저장
 function addToWordbook(card) {
@@ -703,6 +705,8 @@ const DEFAULT_STATE = {
   pullCount: 0,
   quizTask: null, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {},
   gramCI: 0,                // 어법 커리큘럼: 현재 개념 인덱스
+  pvCount: null, pvBonus: false,   // 예습 살살: 선택 개수 / 보너스 여부
+  pmWrong: 0, pmReveal: false,     // 예습 보통: 틀린 횟수 / 정답 공개
   vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 최대 30개로 고정)
   result: null,
   hatchStage: 'idle', hatchSpecies: null,
@@ -1124,14 +1128,21 @@ const actions = {
     set({ wbsI: state.wbsI + 1, wbsFlipped: false });
   },
   // 지문 예습 난이도 선택 — 살살: 다음날 어휘 플래시카드
-  previewEasy() { if (flashcardCards('preview').length) set({ screen: 'previewVocab', fcI: 0, fcFlipped: false, fcHint: false }); },
+  previewEasy() { if (dayVocabCards(activeDay()).length) set({ screen: 'previewVocab', pvCount: null, pvBonus: false, fcI: 0, fcFlipped: false, fcHint: false }); },
+  pvPick(n) {   // 예습 살살: 볼 단어 개수 선택(50개·전체는 보너스 경험치)
+    const total = dayVocabCards(activeDay()).length;
+    const count = n === 'all' ? total : Math.min(Number(n), total);
+    const bonus = n === 'all' || Number(n) >= 50;
+    set({ pvCount: count, pvBonus: bonus, fcI: 0, fcFlipped: false, fcHint: false });
+  },
   previewMedium() {
     if (!dayCoreSentencesRich(activeDay()).length) return;
-    set({ screen: 'previewMedium', pmIndex: 0, pmPhaseIdx: 0, pmSel: [], pmMsg: '' });
+    set({ screen: 'previewMedium', pmIndex: 0, pmPhaseIdx: 0, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false });
   },
   previewHard() { set({ screen: 'reader', readerBurning: true, readerPage: 0 }); },
   // 2단계 보통: 주어/동사 클릭 채점
   pmToggle(arg) {
+    if (state.pmReveal) return;   // 정답 공개 상태에선 잠금
     const wi = Number(arg);
     const sel = (state.pmSel || []).slice();
     const p = sel.indexOf(wi);
@@ -1146,8 +1157,18 @@ const actions = {
     const target = (c[phase] || []).slice().sort((a, b) => a - b);
     const sel = (state.pmSel || []).slice().sort((a, b) => a - b);
     const ok = target.length === sel.length && target.every((v, i) => v === sel[i]);
-    if (!ok) { set({ pmMsg: 'wrong' }); return; }
-    if (state.pmPhaseIdx < phases.length - 1) { set({ pmPhaseIdx: state.pmPhaseIdx + 1, pmSel: [], pmMsg: '' }); return; }
+    if (!ok) {
+      const w = (state.pmWrong || 0) + 1;
+      if (w >= 3) { set({ pmWrong: w, pmReveal: true, pmSel: target, pmMsg: 'reveal' }); return; }   // 3번 이상 틀리면 정답 공개+넘어가기
+      set({ pmWrong: w, pmMsg: 'wrong' }); return;
+    }
+    if (state.pmPhaseIdx < phases.length - 1) { set({ pmPhaseIdx: state.pmPhaseIdx + 1, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false }); return; }
+    pmAdvance();
+  },
+  pmProceed() {   // 정답 공개 후 넘어가기
+    const c = dayCoreSentencesRich(activeDay())[state.pmIndex]; if (!c) return;
+    const phases = ['subject', 'verb'].filter(k => (c[k] || []).length);
+    if (state.pmPhaseIdx < phases.length - 1) { set({ pmPhaseIdx: state.pmPhaseIdx + 1, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false }); return; }
     pmAdvance();
   },
   pmNext() { pmAdvance(); },   // 표시 마크가 없는 문장: 읽고 다음
@@ -1166,7 +1187,10 @@ const actions = {
     const mode = fcModeFor(state.screen);
     const cards = flashcardCards(mode);
     const doneTask = mode === 'preview' ? 'preview' : mode === 'vocabPrep' ? 'vocabPrep' : 'vocab';
-    if ((state.fcI || 0) >= cards.length - 1) { completeTask(doneTask); return; }
+    if ((state.fcI || 0) >= cards.length - 1) {
+      if (mode === 'preview' && state.pvBonus) state.xp = (state.xp || 0) + 20;   // 살살 50개·전체 완료 보너스 경험치
+      completeTask(doneTask); return;
+    }
     set({ fcI: (state.fcI || 0) + 1, fcFlipped: false, fcHint: false });
   },
   // 오늘의 단어시험(보너스): 복습 예정 단어를 간격반복 순서로 30문항
@@ -2618,7 +2642,7 @@ function readerHTML() {
       </div>
       ${readCtlBtn({ btnBg: '#ece3d2', btnFg: '#7a6b52' })}
     </div>
-    <div style="flex:1;overflow-y:auto;padding:26px 26px 20px;font-family:'Lora',serif;font-size:18px;line-height:${(2 * readLineH()).toFixed(2)};color:#33302b">
+    <div id="reader-scroll" style="flex:1;overflow-y:auto;padding:26px 26px 20px;font-family:'Lora',serif;font-size:18px;line-height:${(2 * readLineH()).toFixed(2)};color:#33302b">
       ${paras.map(p => {
         const hit = pop && p.includes('<' + state.pop + '>');
         if (!hit) return `<p style="margin:0 0 18px;text-indent:1.1em;text-wrap:pretty">${renderPara(p)}</p>`;
@@ -2652,7 +2676,7 @@ function readerHTML() {
 /* ---- 지문 예습: 난이도 선택 ---- */
 function previewLevelsHTML() {
   const d = activeDay();
-  const easyN = flashcardCards('preview').length;   // 살살 = 다음 수업 어휘
+  const easyN = dayVocabCards(activeDay()).length;   // 살살 = 이 챕터 어휘(개수는 살살에서 학생이 선택)
   const coreN = dayCoreSentences(d).length;
   const compN = dayQuiz('preview').length;
   const card = (act, stage, emoji, color, name, en, desc, disabled) => `
@@ -2741,7 +2765,23 @@ function flashcardScreenHTML(mode) {
     <div style="margin-top:10px">${controls}</div>
   </div>`;
 }
-function previewVocabHTML() { return flashcardScreenHTML('preview'); }
+function previewVocabHTML() {
+  if (state.pvCount != null) return flashcardScreenHTML('preview');
+  const total = dayVocabCards(activeDay()).length;
+  const btn = (label, val, bonus) => `<button data-act="pvPick" data-arg="${val}" style="position:relative;border:1.5px solid ${bonus ? '#f0c65a' : '#e2e9f2'};background:${bonus ? '#fff8e6' : '#fff'};color:#14243f;font-size:16px;font-weight:700;padding:16px;border-radius:15px;cursor:pointer;box-shadow:0 5px 14px -10px rgba(20,50,90,.5)">${label}${bonus ? ` <span style="font-size:11px;color:#b0851f;font-weight:700">🎁 보너스</span>` : ''}</button>`;
+  const opts = [10, 30, 50].filter(n => n < total);
+  return `<div style="padding:${topPad()} 20px 40px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div data-act="goPreview" style="width:30px;height:30px;border-radius:10px;background:#e0f3ea;color:#2fa36b;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <span style="font-size:15px;font-weight:700;color:#14243f">🟢 살살 · 어휘 미리보기</span>
+    </div>
+    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 16px;line-height:1.6">이 챕터 단어를 플래시카드로 미리 봐요. 몇 개를 볼까요? (총 ${total}개)<br><b style="color:#b0851f">50개·전체</b>를 고르면 <b>보너스 경험치</b>를 받아요 🎁</div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      ${opts.map(n => btn(n + '개', n, n >= 50)).join('')}
+      ${btn('전체 ' + total + '개', 'all', true)}
+    </div>
+  </div>`;
+}
 function vocabPrepCardHTML() { return flashcardScreenHTML('vocabPrep'); }
 /* ---- 문장 작문하기(보너스): 해석 → 영어 조각 순서 맞추기 ---- */
 function composeHTML() {
@@ -2976,17 +3016,27 @@ function previewMediumHTML() {
   const prompt = !grading ? '문장을 소리 내어 읽어보세요'
     : phase === 'subject' ? '👆 주어(주부)를 모두 클릭하세요'
       : '👆 동사를 클릭하세요';
+  const lastPhase = state.pmPhaseIdx >= phases.length - 1;
+  const proceedLabel = !lastPhase ? '다음 단계 →' : (i >= total - 1 ? '예습 완료 ✓' : '다음 문장 →');
   const btn = grading
-    ? `<button data-act="pmCheck" style="width:100%;border:none;background:${phaseColor};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${phase === 'verb' ? '#1f7a4d' : '#1f57c4'};cursor:pointer">확인</button>`
+    ? (state.pmReveal
+      ? `<button data-act="pmProceed" style="width:100%;border:none;background:#2fa36b;color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f7a4d;cursor:pointer">${proceedLabel}</button>`
+      : `<button data-act="pmCheck" style="width:100%;border:none;background:${phaseColor};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${phase === 'verb' ? '#1f7a4d' : '#1f57c4'};cursor:pointer">확인</button>`)
     : `<button data-act="pmNext" style="width:100%;border:none;background:${i >= total - 1 ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${i >= total - 1 ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${i >= total - 1 ? '예습 완료 ✓' : '다음 문장 →'}</button>`;
-  const feedback = state.pmMsg === 'wrong'
-    ? `<div style="text-align:center;font-size:13px;font-weight:700;color:#c0392b;background:#fbe4e2;border-radius:12px;padding:10px;margin-top:12px">다시 체크해 보세요 🤔</div>` : '';
+  const feedback = state.pmMsg === 'reveal'
+    ? `<div style="text-align:center;font-size:13px;font-weight:700;color:#1f7a4d;background:#e0f3ea;border-radius:12px;padding:10px 12px;margin-top:12px">3번 틀렸어요. <b>색칠된 부분이 정답</b>이에요 — 해석과 함께 확인하고 넘어가요.</div>`
+    : state.pmMsg === 'wrong'
+      ? `<div style="text-align:center;font-size:13px;font-weight:700;color:#c0392b;background:#fbe4e2;border-radius:12px;padding:10px;margin-top:12px">다시 해석해 보세요 🤔 (${state.pmWrong || 0}/3)</div>` : '';
 
   return `<div style="padding:${topPad()} 20px 30px;min-height:100%;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div data-act="goPreview" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       <span style="display:inline-flex;align-items:center;gap:6px;background:#fdf3dd;color:#a5760f;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🟡 2단계 보통 · 문장 구조</span>
       <span style="font-size:12px;font-weight:700;color:#14243f">${i + 1}/${total}</span>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:7px;background:#fff8e6;border:1px solid #f0d79a;border-radius:12px;padding:9px 12px;margin:4px 0 8px">
+      <span style="font-size:14px;line-height:1.4">⚠️</span>
+      <span style="font-size:11.5px;font-weight:600;color:#8a6412;line-height:1.55">반드시 <b>해석하면서</b> 주어·동사를 찾으세요! <span style="font-weight:500;color:#a5760f">(해석하지 않으면 아무 의미가 없어요.)</span></span>
     </div>
     <div style="text-align:center;font-size:13.5px;font-weight:700;color:${phase === 'verb' ? '#2fa36b' : (grading ? '#2f74e6' : '#7d8aa0')};margin:6px 0 4px">${prompt}</div>
     ${subPassed ? `<div style="text-align:center;font-size:10.5px;color:#9aa8bd;margin-bottom:2px">🔵 주어 완료 — 이제 동사예요</div>` : ''}
@@ -3591,10 +3641,16 @@ function render() {
   // 같은 화면의 리렌더면 스크롤 위치 보존(초기화되는 느낌 방지)
   const oldScroller = appEl.querySelector('.scroll');
   const savedTop = oldScroller ? oldScroller.scrollTop : 0;
+  const oldReader = document.getElementById('reader-scroll');   // 책 리더는 내부 div가 따로 스크롤됨(단어 탭 시 맨 위로 튐 방지)
+  const savedReaderTop = oldReader ? oldReader.scrollTop : 0;
   appEl.innerHTML = html;
   if (!freshView && savedTop) {
     const newScroller = appEl.querySelector('.scroll');
     if (newScroller) newScroller.scrollTop = savedTop;
+  }
+  if (!freshView && savedReaderTop) {
+    const nr = document.getElementById('reader-scroll');
+    if (nr) nr.scrollTop = savedReaderTop;
   }
   bindQuizInput();
 }

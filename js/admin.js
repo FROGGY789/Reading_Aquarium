@@ -35,7 +35,9 @@ async function boot() {
   content.supabase = content.supabase || { url: '', anonKey: '' };
   if (!content.days.length) content.days = [{ date: _todayKey(), label: '', quote: {}, book: {}, passage: '', vocab: {}, quiz: {} }];
   content.grammar = Array.isArray(content.grammar) ? content.grammar : [];
-  gEd = { studentsText: content.students.join('\n'), classesText: content.classes.join('\n'), sbUrl: content.supabase.url || '', sbKey: content.supabase.anonKey || '' };
+  content.quote = content.quote || {};
+  const _q = content.quote;
+  gEd = { studentsText: content.students.join('\n'), classesText: content.classes.join('\n'), sbUrl: content.supabase.url || '', sbKey: content.supabase.anonKey || '', qEn: _q.en || '', qKo: _q.ko || '', qTeacher: _q.teacher || '', qComment: _q.comment || '' };
   gramEd = content.grammar.map(gramConceptToEdit);
   openDay(bestDayIndex());
   ui.loaded = true;
@@ -63,6 +65,7 @@ function commit() {
     content.students = gEd.studentsText.split('\n').map(s => s.trim()).filter(Boolean);
     content.classes = gEd.classesText.split('\n').map(s => s.trim()).filter(Boolean);
     content.supabase = { url: gEd.sbUrl.trim(), anonKey: gEd.sbKey.trim() };
+    content.quote = { en: (gEd.qEn || '').trim(), ko: (gEd.qKo || '').trim(), teacher: (gEd.qTeacher || '').trim(), comment: (gEd.qComment || '').trim() };
   }
   if (gramEd) {
     // 완전히 빈 개념(제목·설명·문항 모두 없음)은 저장에서 제외
@@ -115,12 +118,6 @@ function applySchedField(el) {
   else if (['reviewFrom', 'reviewTo', 'previewFrom', 'previewTo'].includes(field)) {
     if (val) day[field] = val; else delete day[field];
     if (isCur) ed.day[field] = val;
-  }
-  else if (field.indexOf('quote') === 0) {   // quoteEn / quoteKo / quoteTeacher / quoteComment → day.quote.{en,ko,teacher,comment}
-    const key = field.slice(5).toLowerCase();
-    day.quote = day.quote || {};
-    day.quote[key] = val;
-    if (isCur) { ed.day.quote = ed.day.quote || {}; ed.day.quote[key] = val; }
   }
 }
 // 날짜 재정렬 후에도 현재 편집 중이던 챕터 선택을 유지
@@ -763,7 +760,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v57 (리더 문단 유지·심화 정리·책두께 균일·서가 공개토글·교사 공통 전체체험)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v58 (오늘의문장 하나로·살살 개수선택+보너스·보통 3회틀리면 정답공개·리더 스크롤 고정)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -1147,17 +1144,6 @@ function scheduleTab() {
             ${rangeField('previewFrom', '예습 시작일')}<span style="color:#9aa8bd;font-size:12px">~</span>${rangeField('previewTo', '예습 종료일')}
           </div>
         </div>
-        <div style="margin-top:9px;padding-top:9px;border-top:1px dashed #e2e9f2">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="font-size:11px;font-weight:800;color:#8a5fd6;white-space:nowrap">💬 오늘의 문장</span>
-            <input data-sched="${i}" data-schedfield="quoteEn" value="${esc((d.quote && d.quote.en) || '')}" placeholder="영어 문장" style="${cell};flex:2;min-width:180px">
-            <input data-sched="${i}" data-schedfield="quoteKo" value="${esc((d.quote && d.quote.ko) || '')}" placeholder="우리말 해석" style="${cell};flex:1.6;min-width:140px">
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px">
-            <input data-sched="${i}" data-schedfield="quoteTeacher" value="${esc((d.quote && d.quote.teacher) || '')}" placeholder="선생님 이름" style="${cell};flex:.7;min-width:100px">
-            <input data-sched="${i}" data-schedfield="quoteComment" value="${esc((d.quote && d.quote.comment) || '')}" placeholder="한마디" style="${cell};flex:2;min-width:160px">
-          </div>
-        </div>
       </div>`;
     }).join('');
     return `<div class="card">
@@ -1170,9 +1156,22 @@ function scheduleTab() {
       <button class="btn ghost sm" data-act="addChapterToBook" data-arg="${esc(bt)}" style="margin-top:10px">＋ 이 책에 챕터 추가</button>
     </div>`;
   }).join('');
-  return `<div class="card">
+  const qcell = 'padding:9px 11px;background:#fff;border:1px solid #e2e9f2;border-radius:10px;font-size:13px';
+  return `<div class="card" style="background:#faf7ff;border-color:#e3d9f7">
+    <h2>💬 오늘의 문장</h2>
+    <div class="hint">학생 홈 맨 위에 뜨는 <b>한 개</b>의 문장이에요(전체 공통). 여기서만 설정하면 됩니다.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <input data-gbind="qEn" value="${esc(gEd.qEn)}" placeholder="영어 문장" style="${qcell};flex:2;min-width:200px">
+      <input data-gbind="qKo" value="${esc(gEd.qKo)}" placeholder="우리말 해석" style="${qcell};flex:1.6;min-width:150px">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <input data-gbind="qTeacher" value="${esc(gEd.qTeacher)}" placeholder="선생님 이름" style="${qcell};flex:.7;min-width:110px">
+      <input data-gbind="qComment" value="${esc(gEd.qComment)}" placeholder="한마디" style="${qcell};flex:2;min-width:170px">
+    </div>
+  </div>
+  <div class="card">
     <h2>📅 챕터 일정</h2>
-    <div class="hint">책별로 챕터를 정리하고, 각 챕터의 <b>공개 기간</b>을 정하세요. <b>📖 복습 공개</b> 기간엔 학생 홈 <b>복습하기</b>에, <b>👀 예습 공개</b> 기간엔 <b>예습하기</b>에 나타나요. 기간을 비워두면 <b>지문 날짜부터</b> 계속 열립니다. <b>💬 오늘의 문장</b>도 여기서 <b>날짜별</b>로 설정해요. 자세한 내용(지문·단어·문제)은 <b>✏️ 편집</b>으로 채워요.</div>
+    <div class="hint">책별로 챕터를 정리하고, 각 챕터의 <b>공개 기간</b>을 정하세요. <b>📖 복습 공개</b> 기간엔 학생 홈 <b>복습하기</b>에, <b>👀 예습 공개</b> 기간엔 <b>예습하기</b>에 나타나요. 기간을 비워두면 <b>지문 날짜부터</b> 계속 열립니다. 자세한 내용(지문·단어·문제)은 <b>✏️ 편집</b>으로 채워요.</div>
   </div>
   ${books || '<div class="card">아직 챕터가 없어요.</div>'}
   <div style="margin:4px 0 10px"><button class="btn ghost" data-act="addDay">＋ 새 챕터(새 책)</button></div>`;
