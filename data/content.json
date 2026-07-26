@@ -1780,7 +1780,7 @@
     },
     {
       "date": "2026-07-26",
-      "label": "",
+      "label": "Chapter 02-2",
       "quote": {
         "en": "",
         "ko": "",
@@ -1794,9 +1794,397 @@
         "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
         "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
       },
-      "passage": "",
-      "vocab": {},
-      "coreSentences": [],
+      "passage": "A Series of Unfortunate Events By Lemony Snicket\n\nThe Bad Beginning Chapter 2-2.\n\nViolet opened the door of the automobile and got out to shake the woman’s hand. ==It felt firm and warm, and for the first time in a long while Violet felt <as if> her life and the lives of her <siblings> might <turn out> well after all.== “Yes,” she said. “Yes, we are. I am Violet Baudelaire, and this is my brother Klaus and my sister Sunny. And this is Mr. Poe%%, who%% has been <arranging> things for us since the death of our parents.”\n\n“Yes, I heard about the accident,” the woman said, as everyone said how do you do. “I am Justice Strauss.”\n\n“That’s an unusual first name,” Klaus <remarked>.\n\n“It is my <title>,” she explained, “not my <first name>. I <serve as> a <judge> on the <High Court>.”\n\n“How fascinating,” Violet said. “And are you married to Count Olaf?”\n\n“Goodness me no,” Justice Strauss said. “I don’t actually know him that well. He is my next-door neighbor.”\n\nThe children looked from the <well-scrubbed> house of Justice Strauss to the <dilapidated> one next door. The bricks were <stained> with <soot> and <grime>. There were only two small windows%%, which%% were closed with the shades drawn even though it was a nice day. ==Rising above the windows %%was%% a tall and dirty tower that <tilted> slightly to the left.== The front door needed to be repainted, and <carved> in the middle of it %%was%% an image of an eye. The entire building <sagged> to the side, like a <crooked tooth>.\n\n“Oh!” said Sunny, and everyone knew what she meant. She meant, “What a terrible place! I don’t want to live there at all!”\n\n“Well, it was nice to meet you,” Violet said to Justice Strauss.\n\n“Yes,” said Justice Strauss, gesturing to her flowerpot. “Perhaps one day you could <come over> and help me with my gardening.”\n\n“That would be very pleasant,” Violet said, very sadly. ==%%It%% would, of course, be very pleasant %%to help%% Justice Strauss with her gardening, but Violet <could not help thinking> that %%it%% would be far more pleasant %%to live%% in Justice Strauss’s house, instead of Count Olaf’s.== What kind of a man, Violet wondered, would <carve> an image of an eye into his front door?\n\nMr. Poe <tipped> his hat to Justice Strauss%%, who%% smiled at the children and disappeared into her lovely house. Klaus stepped forward and knocked on Count Olaf’s door, his <knuckles> <rapping> right in the middle of the carved eye. There was a <pause>, and then the door <creaked open> and the children saw Count Olaf for the first time.\n\n“Hello hello hello,” Count Olaf said in a <wheezy> whisper. He was very tall and very thin, dressed in a gray suit %%that%% had many dark <stains> on it. His face was <unshaven>, and rather than two eyebrows, like most human beings have, he had just one long one. His eyes were very, very shiny%%, which made%% him look both hungry and angry. “Hello, my children. Please step into your new home, and wipe your feet outside so no mud gets indoors.”\n\n==As they stepped into the house, Mr. Poe behind them, the Baudelaire orphans realized %%what a ridiculous thing%% Count Olaf had just said. The room %%in which%% they %%found%% themselves was the dirtiest they had ever seen, and a little bit of mud from outdoors %%wouldn’t have made%% a bit of difference.== Even by the <dim> light of the one <bare lightbulb> %%that%% <hung> from the <ceiling>, the three children could see that everything in this room was <filthy>, %%from%% the <stuffed> head of a lion %%which%% was %%nailed to%% the wall %%to%% the bowl of apple cores %%which%% sat on a small wooden table. Klaus <willed himself not to cry> as he looked around.\n\n“This room looks like it needs a little work,” Mr. Poe said, <peering> around in the <gloom>.\n\n==“I realize that my <humble> home isn’t <as fancy as> the Baudelaire mansion,”== Count Olaf said, “but perhaps with a bit of your money we could fix it up a little nicer.”\n\nMr. Poe’s eyes <widened> in surprise, and his coughs <echoed> in the dark room before he spoke. “The Baudelaire fortune,” he said <sternly>, “will not be used for such <matters>. In fact, it will not be used at all, until Violet is <of age>.”\n\nCount Olaf turned to Mr. Poe with a <glint> in his eye like an angry dog. For a moment Violet thought he was going to <strike> Mr. Poe across the face. But then he <swallowed>— the children could %%see%% his Adam’s apple %%bob%% in his skinny throat—and <shrugged> his <patchy> shoulders.\n\n“All right then,” he said. “It’s the same to me. Thank you very much, Mr. Poe, for bringing them here. Children, I will now show you to your room.”\n\n“Good-bye, Violet, Klaus, and Sunny,” Mr. Poe said, stepping back through the front door. “I hope you will be very happy here. I will continue to see you <occasionally>, and you can always <contact> me at the bank if you have any questions.”\n\n“But we don’t even know where the bank is,” Klaus said.\n\n“I have a map of the city,” Count Olaf said. “Good-bye, Mr. Poe.”\n\n==He leaned forward to shut the door, and the Baudelaire orphans <were> too <overcome with> despair to get a last <glimpse> of Mr. Poe.== They now wished they could all stay at the Poe household, even though it smelled. Rather than looking at the door, then, the orphans looked down, and saw that although Count Olaf was wearing shoes, he wasn’t wearing any socks. They could see, in the space of <pale> skin between his <tattered> <trouser cuff> and his black shoe, that Count Olaf had an image of an eye tattooed on his ankle, matching the eye on his front door. ==They wondered how many other eyes were in Count Olaf’s house, and whether, for the rest of their lives, they would always feel <as though> Count Olaf were watching them even when he wasn't nearby.==",
+      "vocab": {
+        "as if": {
+          "pos": "접속사",
+          "def": "마치 ~인 것처럼",
+          "ex": "Violet opened the door of the automobile and got out to shake the woman’s hand, as if her life and the lives of her siblings might turn out well after all."
+        },
+        "siblings": {
+          "pos": "명사",
+          "def": "형제자매",
+          "ex": "...as if her life and the lives of her siblings might turn out well after all.",
+          "head": "sibling"
+        },
+        "turn out": {
+          "pos": "동사구",
+          "def": "결국 ~으로 밝혀지다",
+          "ex": "...as if her life and the lives of her siblings might turn out well after all."
+        },
+        "arranging": {
+          "pos": "동사",
+          "def": "주선하다, 정리하다",
+          "ex": "Mr. Poe, who has been arranging things for us since the death of our parents.",
+          "head": "arrange"
+        },
+        "remarked": {
+          "pos": "동사",
+          "def": "언급하다, 말하다",
+          "ex": "“That’s an unusual first name,” Klaus remarked.",
+          "head": "remark"
+        },
+        "title": {
+          "pos": "명사",
+          "def": "직함, 호칭",
+          "ex": "“It is my title,” she explained, “not my first name.”"
+        },
+        "first name": {
+          "pos": "명사",
+          "def": "이름 (성씨 제외)",
+          "ex": "“It is my title,” she explained, “not my first name.”"
+        },
+        "serve as": {
+          "pos": "동사구",
+          "def": "~의 역할을 하다, ~로 근무하다",
+          "ex": "I serve as a judge on the High Court."
+        },
+        "judge": {
+          "pos": "명사",
+          "def": "판사",
+          "ex": "I serve as a judge on the High Court."
+        },
+        "High Court": {
+          "pos": "명사",
+          "def": "고등법원",
+          "ex": "I serve as a judge on the High Court."
+        },
+        "well-scrubbed": {
+          "pos": "형용사",
+          "def": "싹싹 문질러 닦은, 깨끗한",
+          "ex": "The children looked from the well-scrubbed house of Justice Strauss to the dilapidated one of Count Olaf."
+        },
+        "dilapidated": {
+          "pos": "형용사",
+          "def": "허물어져 가는, 낡아빠진",
+          "ex": "The children looked from the well-scrubbed house of Justice Strauss to the dilapidated one of Count Olaf."
+        },
+        "stained": {
+          "pos": "형용사",
+          "def": "얼룩진, 때가 탄",
+          "ex": "The bricks were stained with soot and grime..."
+        },
+        "soot": {
+          "pos": "명사",
+          "def": "그을음, 검댕",
+          "ex": "The bricks were stained with soot and grime..."
+        },
+        "grime": {
+          "pos": "명사",
+          "def": "때, 더러움",
+          "ex": "The bricks were stained with soot and grime..."
+        },
+        "tilted": {
+          "pos": "동사",
+          "def": "기울다, 갸우뚱하다",
+          "ex": "...and the entire building tilted slightly to the left...",
+          "head": "tilt"
+        },
+        "carved": {
+          "pos": "동사",
+          "def": "조각하다, 새기다",
+          "ex": "...and standard front door with an eye carved into it.",
+          "head": "carve"
+        },
+        "sagged": {
+          "pos": "형용사",
+          "def": "처진, 주저앉은",
+          "ex": "The roof sagged in the middle..."
+        },
+        "crooked tooth": {
+          "pos": "명사구",
+          "def": "삐뚤어진 치아, 총랑니",
+          "ex": "...like a tooth extra in a mouth with crooked teeth."
+        },
+        "come over": {
+          "pos": "동사구",
+          "def": "(감정 등이) 엄습하다, 다가오다",
+          "ex": "A cold feeling came over the children as they looked at the house."
+        },
+        "could not help thinking": {
+          "pos": "숙어",
+          "def": "~라고 생각하지 않을 수 없었다",
+          "ex": "...and they could not help thinking that Count Olaf was watching them..."
+        },
+        "carve": {
+          "pos": "동사",
+          "def": "조각하다, 새기다",
+          "ex": "...with an eye carved into the front door."
+        },
+        "tipped": {
+          "pos": "명사",
+          "def": "끝, 첨단",
+          "ex": "...from the tip of his long beard to his toes.",
+          "head": "tip"
+        },
+        "knuckles": {
+          "pos": "명사",
+          "def": "손가락 마디, 관절",
+          "ex": "Justice Strauss rapped her knuckles against the heavy wooden door.",
+          "head": "knuckle"
+        },
+        "rapping": {
+          "pos": "동사",
+          "def": "톡톡 치다, 두드리다",
+          "ex": "Justice Strauss rapped her knuckles against the heavy wooden door.",
+          "head": "rap"
+        },
+        "pause": {
+          "pos": "명사",
+          "def": "잠시 멈춤, 휴지",
+          "ex": "After a long pause, the door creaked open."
+        },
+        "creaked open": {
+          "pos": "동사구",
+          "def": "삐걱거리며 열리다",
+          "ex": "After a long pause, the door creaked open...",
+          "head": "creak open"
+        },
+        "wheezy": {
+          "pos": "형용사",
+          "def": "웩웩거리는, 헐떡이는 소리의",
+          "ex": "...and a tall, wheezy man stepped out."
+        },
+        "stains": {
+          "pos": "명사",
+          "def": "얼룩, 때",
+          "ex": "He wore a shirt covered in dirty stains...",
+          "head": "stain"
+        },
+        "unshaven": {
+          "pos": "형용사",
+          "def": "면도를 하지 않은",
+          "ex": "...and his face was completely unshaven."
+        },
+        "dim": {
+          "pos": "형용사",
+          "def": "어둑한, 희미한",
+          "ex": "They walked into the dim hallway..."
+        },
+        "bare lightbulb": {
+          "pos": "명사구",
+          "def": "알몸 전구, 갓 없는 전구",
+          "ex": "...lit only by a single bare lightbulb..."
+        },
+        "hung": {
+          "pos": "동사",
+          "def": "매달리다, 걸리다 (3단 변화)",
+          "ex": "...a single bare lightbulb that hung from the ceiling.",
+          "head": "hang-hung-hung"
+        },
+        "ceiling": {
+          "pos": "명사",
+          "def": "천장",
+          "ex": "...that hung from the high ceiling."
+        },
+        "filthy": {
+          "pos": "형용사",
+          "def": "아주 더러운, 불결한",
+          "ex": "The hallway was filthy and smelled of old cabbage."
+        },
+        "stuffed": {
+          "pos": "형용사",
+          "def": "가득 찬, 빽빽이 채워진",
+          "ex": "...and the dirty room was stuffed with dusty boxes."
+        },
+        "willed himself not to cry": {
+          "pos": "숙어",
+          "def": "~하려고 마음을 굳게 먹다, 의지를 가다듬다",
+          "ex": "Violet willed herself to look closely at the room.",
+          "head": "will oneself to V"
+        },
+        "peering": {
+          "pos": "동사",
+          "def": "응시하다, 유심히 보다",
+          "ex": "...and peer into the gloom of the hallway.",
+          "head": "peer"
+        },
+        "gloom": {
+          "pos": "명사",
+          "def": "어둠, 우울",
+          "ex": "...and peer into the gloom of the dark house."
+        },
+        "humble": {
+          "pos": "형용사",
+          "def": "초라한, 누추한, 겸손한",
+          "ex": "“It’s a bit humble,” Count Olaf said in his raspy voice."
+        },
+        "as fancy as": {
+          "pos": "숙어",
+          "def": "~만큼 화려한, 고급스러운",
+          "ex": "“Not as fancy as your old house, I’m sure.”"
+        },
+        "widened": {
+          "pos": "동사",
+          "def": "커지다, 넓어지다",
+          "ex": "Count Olaf’s eyes widened with dark intensity.",
+          "head": "widen"
+        },
+        "echoed": {
+          "pos": "동사",
+          "def": "울려 퍼지다, 메아리치다",
+          "ex": "His harsh voice echoed through the empty house.",
+          "head": "echo"
+        },
+        "sternly": {
+          "pos": "부사",
+          "def": "엄하게, 단호하게",
+          "ex": "“Quiet!” Count Olaf said sternly to the children."
+        },
+        "matters": {
+          "pos": "명사",
+          "def": "문제, 중요 건",
+          "ex": "“It is a matter of money and law.”",
+          "head": "matter"
+        },
+        "of age": {
+          "pos": "형용사구",
+          "def": "성인이 된, 나이가 찬",
+          "ex": "...until Violet comes of age and inherits the fortune."
+        },
+        "glint": {
+          "pos": "명사",
+          "def": "반짝임, 번득임",
+          "ex": "There was a sharp glint in Count Olaf’s shiny eyes."
+        },
+        "strike": {
+          "pos": "숙어",
+          "def": "A의 얼굴을 때리다, 뺨을 치다",
+          "ex": "He struck Klaus across his face with the back of his hand.",
+          "head": "strike A across A's face"
+        },
+        "swallowed": {
+          "pos": "동사",
+          "def": "침을 삼키다, 삼키다",
+          "ex": "Klaus swallowed hard and tried not to cry.",
+          "head": "swallow"
+        },
+        "shrugged": {
+          "pos": "동사",
+          "def": "어깨를 으쓱하다",
+          "ex": "Count Olaf merely shrugged his bony shoulders.",
+          "head": "shrug"
+        },
+        "patchy": {
+          "pos": "형용사",
+          "def": "드문드문한, 누더기 같은",
+          "ex": "...a patchy yard filled with weeds and stones."
+        },
+        "occasionally": {
+          "pos": "부사",
+          "def": "가끔, 때때로",
+          "ex": "Occasionally, a car would pass by on the dirty street."
+        },
+        "contact": {
+          "pos": "명사",
+          "def": "연락, 접촉",
+          "ex": "“We must keep in contact,” Justice Strauss whispered."
+        },
+        "were": {
+          "pos": "숙어",
+          "def": "~할 예정이다, ~해야 한다",
+          "ex": "You are to stay in this room until called.",
+          "head": "be to V"
+        },
+        "overcome with": {
+          "pos": "숙어",
+          "def": "~로 사로잡힌, 휩싸인",
+          "ex": "Violet was overcome with fear and anger.",
+          "head": "be overcome with"
+        },
+        "glimpse": {
+          "pos": "명사",
+          "def": "언뜻 봄, 흘끗 봄",
+          "ex": "They caught a glimpse of the dirty kitchen through the door."
+        },
+        "pale": {
+          "pos": "형용사",
+          "def": "창백한, 핏기 없는",
+          "ex": "Klaus looked pale and exhausted from the journey."
+        },
+        "tattered": {
+          "pos": "명사",
+          "def": "너덜너덜함, 누더기",
+          "ex": "...his coat was worn to tatters at the elbows.",
+          "head": "tatter"
+        },
+        "trouser cuff": {
+          "pos": "명사구",
+          "def": "바짓단, 바지 밑단",
+          "ex": "...down to his dirty trouser cuffs."
+        },
+        "as though": {
+          "pos": "접속사",
+          "def": "마치 ~인 것처럼",
+          "ex": "It looked as though no one had cleaned the house in years."
+        }
+      },
+      "coreSentences": [
+        {
+          "text": "It felt firm and warm, and for the first time in a long while Violet felt as if her life and the lives of her siblings might turn out well after all.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Rising above the windows was a tall and dirty tower that tilted slightly to the left.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "It would, of course, be very pleasant to help Justice Strauss with her gardening, but Violet could not help thinking that it would be far more pleasant to live in Justice Strauss’s house, instead of Count Olaf’s.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "As they stepped into the house, Mr. Poe behind them, the Baudelaire orphans realized what a ridiculous thing Count Olaf had just said.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "The room in which they found themselves was the dirtiest they had ever seen, and a little bit of mud from outdoors wouldn’t have made a bit of difference.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "“I realize that my humble home isn’t as fancy as the Baudelaire mansion,”",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "He leaned forward to shut the door, and the Baudelaire orphans were too overcome with despair to get a last glimpse of Mr. Poe.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "They wondered how many other eyes were in Count Olaf’s house, and whether, for the rest of their lives, they would always feel as though Count Olaf were watching them even when he wasn't nearby.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        }
+      ],
       "quiz": {
         "preview": [],
         "vocab": [],
