@@ -1733,7 +1733,38 @@
         }
       ],
       "quiz": {
-        "preview": [],
+        "preview": [
+          {
+            "type": "ox",
+            "prompt": "Mr. Poe의 가족은 Baudelaire 삼남매에게 친절했다.",
+            "explain": "Their home destroyed, the Baudelaires had to recuperate from their terrible loss in the  Poe household, which was not at all agreeable.",
+            "answer": 1
+          },
+          {
+            "type": "mc",
+            "prompt": "Mr.Poe가 저녁 식사 중 삼 남에게 어떤 소식을 전했는가?",
+            "explain": "",
+            "options": [
+              "부모님이 돌아오신다는 소식",
+              "새로운 학교로 전학 간다는 소식",
+              "다음 날 다른 친척 집으로 떠난다는 소식",
+              "Mr. Poe씨가 삼남매를 입양하기로 했다는 소식"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "input",
+            "prompt": "Baudelaire 삼남매를 데려가는 친척의 이름은?",
+            "explain": "he said finally, “for you to be raised by a distant relative of yours who lives on the other side of town. His name is Count Olaf.”",
+            "accept": [
+              "Olaf",
+              "올라프",
+              "Count Olaf",
+              "count olaf",
+              "Count olaf"
+            ]
+          }
+        ],
         "vocab": [],
         "sentence": [],
         "vocabPrep": [],
