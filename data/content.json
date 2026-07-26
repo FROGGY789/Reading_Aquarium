@@ -1575,73 +1575,158 @@
       },
       "coreSentences": [
         {
-          "text": "It is useless [ ] me to describe to you how terrible Violet, Klaus, and even Sunny felt in the time that followed.",
-          "subject": [],
-          "verb": [],
+          "text": "It is useless for me to describe to you how terrible Violet, Klaus, and even Sunny felt in the time that followed.",
+          "subject": [
+            0,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "verb": [
+            1,
+            16,
+            21
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "And even Sunny, who of course was too young to really understand what was going on, bit things with less enthusiasm.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            2,
+            12
+          ],
+          "verb": [
+            6,
+            13,
+            15,
+            14,
+            16
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
-          "text": "As I’m sure you know, to be in one’s own room, in one’s own bed, can often make a bleak situation a little better, but the beds of the Baudelaire orphans had been reduced to charred rubble.",
-          "subject": [],
-          "verb": [],
+          "text": "As I am sure you know, to be in one’s own room, in one’s own bed, can often make a bleak situation a little better, but the beds of the Baudelaire orphans had been reduced to charred rubble.",
+          "subject": [
+            1,
+            5,
+            26,
+            4,
+            27
+          ],
+          "verb": [
+            2,
+            5,
+            16,
+            18,
+            32,
+            33,
+            34
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "“Good,” said Albert, who had a piece of potato stuck between his teeth.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            2
+          ],
+          "verb": [
+            1,
+            4
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "“I have made arrangements,” he said finally, “for you to be raised by a distant relative of yours who lives on the other side of town.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            4
+          ],
+          "verb": [
+            1,
+            2,
+            5,
+            19
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "On the other hand, they had never heard of Count Olaf and didn’t know what he would be like.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            4,
+            15
+          ],
+          "verb": [
+            5,
+            6,
+            7,
+            12,
+            13,
+            16,
+            17
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "he had already stood up from the table, and with a slight wave of his hand departed from the room.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            14,
+            15
+          ],
+          "verb": [
+            1,
+            2,
+            3,
+            16
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "Sunny crawled around solemnly biting each of Edgar and Albert’s shoes, leaving small teeth marks in each one so she would not be forgotten.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            19
+          ],
+          "verb": [
+            1,
+            20,
+            21,
+            22,
+            23
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "From time to time, the Baudelaire children looked at one another, but with their future such a mystery they could think of nothing to say.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            4,
+            5,
+            6,
+            18
+          ],
+          "verb": [
+            7,
+            19,
+            20
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
