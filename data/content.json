@@ -1212,7 +1212,7 @@
     },
     {
       "date": "2026-07-26",
-      "label": "",
+      "label": "Ch 02-1",
       "quote": {
         "en": "",
         "ko": "",
@@ -1226,9 +1226,512 @@
         "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
         "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
       },
-      "passage": "",
-      "vocab": {},
-      "coreSentences": [],
+      "passage": "A Series of Unfortunate Events By Lemony Snicket\n\nThe Bad Beginning Chapter 2-1.\n\n==%%It%% is useless %%[         ] me to describe%% to you how terrible Violet, Klaus, and even Sunny felt in the time %%that%% followed.== If you have ever lost someone very important to you, then you already know how it feels, and if you haven’t, you cannot possibly imagine it. For the Baudelaire children, it was of course especially terrible because they had lost both their parents at the same time, and for several days they felt %%so%% miserable %%( )%% they could <scarcely> get out of bed. Klaus found he had <little> interest in books. The gears in Violet’s inventive brain seemed to stop. ==And even Sunny%%, who%% of course was %%too%% young %%to%% really understand what was <going on>, bit things with less <enthusiasm>.==\n\nOf course, %%it%% didn’t %%make%% things any easier %%that%% they had lost their home <as well>, and all their <possessions>. ==As I’m sure you know, to be in one’s own room, in one’s own bed, can often make a <bleak> situation a little better, but the beds of the Baudelaire orphans had been reduced to <charred rubble>.== Mr. Poe had taken them to the <remains> of the Baudelaire mansion to see if anything had been <unharmed>； and it was terrible: Violet’s <microscope> had <fused> together in the heat of the fire, Klaus’s favorite pen had turned to <ash>, and all of Sunny’s <teething rings> had melted. Here and there, the children could see <traces> of the enormous home they had loved: <fragments> of their grand piano, an elegant bottle %%in which%% Mr. Baudelaire kept brandy, the <scorched> cushion of the windowseat %%where%% their mother liked to sit and read.\n\nTheir home destroyed, the Baudelaires had to <recuperate from> their terrible loss in the Poe <household>%%, which%% was not at all <agreeable>. Mr. Poe was <scarcely> at home, because he was very <busy attending to> the Baudelaire <affairs>, and when he was home he was often coughing %%so%% much %%(        )%% he could <barely> have a conversation. Mrs. Poe purchased clothing for the orphans %%that%% was in <grotesque> colors, and <itched>. And the two Poe children— Edgar and Albert—were loud and <obnoxious> boys %%with whom%% the Baudelaires had to share a tiny room %%that%% smelled of some sort of <ghastly> flower.\n\nBut even <given> the surroundings, the children had mixed feelings when, over a <dull> dinner of <boiled> chicken, boiled potatoes, and <blanched>—the word “blanched” here means “boiled”一<string beans>, Mr. Poe announced that they %%were to leave%% his household the next morning.\n\n==“Good,” said Albert%%, who had%% a piece of potato %%stuck%% between his teeth.== “Now we can get our room back. I’m tired of sharing it. Violet and Klaus are always <moping around>, and are never any fun.”\n\n‘And the baby bites,“ Edgar said, <tossing> a chicken bone to the floor <as if> he were an animal in a zoo and not the son of a <well-respected> member of the banking community.\n\n“Where will we go?” Violet asked nervously.\n\nMr. Poe opened his mouth to say something, but <erupted into> a brief fit of coughing. ==“I have <made arrangements>,” he said finally, “%%for you to be raised%% by a distant <relative> of yours %%who%% lives on the other side of town.== His name is Count Olaf.”\n\nViolet, Klaus, and Sunny looked at %%one another%%, unsure of what to think. On one hand, they didn’t want to live with the Poes any longer. ==On the other hand, they had never heard of Count Olaf and didn’t know what he would be like.==\n\n“Your parents’ <will>,” Mr. Poe said, “<instructs> %%that you be raised%% in the most convenient way possible. Here in the city, you'll <be used to> your surroundings, and this Count Olaf is the only relative %%who%% lives within the <urban> limits.”\n\nKlaus thought this over for a minute as he <swallowed> a <chewy> bit of bean. “But our parents never mentioned Count Olaf to us. Just how is he related to us, exactly?”\n\nMr. Poe <sighed> and looked down at Sunny%%, who%% was biting a fork and listening closely. “He is either a third cousin four times removed； or a fourth cousin three times removed. He is not your closest relative on the family tree, but he is the closest <geographically>. <That’s why>—”\n\n“If he lives in the city,” Violet said, “why didn’t our parents ever invite him over?”\n\n“Possibly because he was very busy,” Mr. Poe said. “He’s an actor <by trade>, and often travels around the world with various theater <companies>.”\n\n“I thought he was a <count>,” Klaus said.\n\n“He is both a count and an actor,” Mr. Poe said. “Now, I don’t mean to <cut short> our dinner, but you children have to pack up your things, and I have to return to the bank to do some more work. Like your new legal <guardian>, I am very busy myself.”\n\nThe three Baudelaire children had many more questions for Mr. Poe, but ==he had already stood up from the table, and with a slight wave of his hand departed from the room.== They %%heard%% him coughing into his handkerchief and then the front door <creaked shut> as he left the house.\n\n“Well,” Mrs. Poe said, “you three had better start packing. Edgar, Albert, please %%help%% me clear the table.”\n\nThe Baudelaire orphans went to the bedroom and <glumly> packed their <few belongings>. Klaus looked <distastefully> at each ugly shirt Mrs. Poe had bought for him as he folded them and put them into a small suitcase. Violet looked around the <cramped>, smelly room %%in which%% they had been living. And ==Sunny <crawled> around <solemnly> biting each of Edgar and Albert’s shoes, leaving small teeth marks in each one so she would not be forgotten. <From time to time>, the Baudelaire children looked at one another, but with their future such a mystery they could think of nothing to say.== At bedtime, they <tossed and turned> all night, <scarcely> getting any sleep between the loud <snoring> of Edgar and Albert and their own worried thoughts. Finally, Mr. Poe knocked on the door and <stuck> his head into the bedroom.",
+      "vocab": {
+        "scarcely": {
+          "pos": "adv.",
+          "def": "거의 ~않게",
+          "ex": ""
+        },
+        "little": {
+          "pos": "adj.",
+          "def": "거의 없는",
+          "ex": ""
+        },
+        "going on": {
+          "pos": "phr.",
+          "def": "일어나다, 진행되다",
+          "ex": "",
+          "head": "go on"
+        },
+        "enthusiasm": {
+          "pos": "n.",
+          "def": "열의, 열정",
+          "ex": ""
+        },
+        "as well": {
+          "pos": "phr.",
+          "def": "~도 또한",
+          "ex": ""
+        },
+        "possessions": {
+          "pos": "n.",
+          "def": "소유물",
+          "ex": "",
+          "head": "possession"
+        },
+        "bleak": {
+          "pos": "adj.",
+          "def": "암울한",
+          "ex": ""
+        },
+        "charred rubble": {
+          "pos": "n.",
+          "def": "불타 검게 된 잔해",
+          "ex": ""
+        },
+        "remains": {
+          "pos": "n.",
+          "def": "유해, 남은 것들",
+          "ex": ""
+        },
+        "unharmed": {
+          "pos": "adj.",
+          "def": "다치지 않은",
+          "ex": ""
+        },
+        "microscope": {
+          "pos": "n.",
+          "def": "현미경",
+          "ex": ""
+        },
+        "fused": {
+          "pos": "v.",
+          "def": "녹아 붙다",
+          "ex": "",
+          "head": "fuse"
+        },
+        "ash": {
+          "pos": "n.",
+          "def": "재",
+          "ex": ""
+        },
+        "teething rings": {
+          "pos": "n.",
+          "def": "치발기",
+          "ex": "",
+          "head": "teething ring"
+        },
+        "traces": {
+          "pos": "n.",
+          "def": "흔적",
+          "ex": "",
+          "head": "trace"
+        },
+        "fragments": {
+          "pos": "n.",
+          "def": "파편",
+          "ex": "",
+          "head": "fragment"
+        },
+        "scorched": {
+          "pos": "adj.",
+          "def": "그슬린",
+          "ex": ""
+        },
+        "recuperate from": {
+          "pos": "phr.",
+          "def": "~에서 회복하다",
+          "ex": ""
+        },
+        "household": {
+          "pos": "n.",
+          "def": "가정",
+          "ex": ""
+        },
+        "agreeable": {
+          "pos": "adj.",
+          "def": "쾌적한, 마음에 드는",
+          "ex": ""
+        },
+        "busy attending to": {
+          "pos": "phr.",
+          "def": "~을 처리하느라 바쁜",
+          "ex": ""
+        },
+        "affairs": {
+          "pos": "n.",
+          "def": "일, 업무",
+          "ex": "",
+          "head": "affair"
+        },
+        "barely": {
+          "pos": "adv.",
+          "def": "간신히",
+          "ex": ""
+        },
+        "grotesque": {
+          "pos": "adj.",
+          "def": "기괴한",
+          "ex": ""
+        },
+        "itched": {
+          "pos": "v.",
+          "def": "가렵다",
+          "ex": "",
+          "head": "itch"
+        },
+        "obnoxious": {
+          "pos": "adj.",
+          "def": "밉살스러운",
+          "ex": ""
+        },
+        "ghastly": {
+          "pos": "adj.",
+          "def": "끔찍한",
+          "ex": ""
+        },
+        "given": {
+          "pos": "prep.",
+          "def": "~을 고려하면",
+          "ex": ""
+        },
+        "dull": {
+          "pos": "adj.",
+          "def": "지루한",
+          "ex": ""
+        },
+        "boiled": {
+          "pos": "v.",
+          "def": "삶다",
+          "ex": "",
+          "head": "boil"
+        },
+        "blanched": {
+          "pos": "adj.",
+          "def": "데친, 삶은",
+          "ex": ""
+        },
+        "string beans": {
+          "pos": "n.",
+          "def": "강낭콩 꼬투리",
+          "ex": "",
+          "head": "string bean"
+        },
+        "moping around": {
+          "pos": "phr.",
+          "def": "풀이 죽어 지내는",
+          "ex": ""
+        },
+        "tossing": {
+          "pos": "v.",
+          "def": "던지다",
+          "ex": "",
+          "head": "toss"
+        },
+        "as if": {
+          "pos": "conj.",
+          "def": "마치 ~인 것처럼",
+          "ex": ""
+        },
+        "well-respected": {
+          "pos": "adj.",
+          "def": "존경받는",
+          "ex": "",
+          "head": "well-respect"
+        },
+        "erupted into": {
+          "pos": "phr.",
+          "def": "갑자기 ~을 터뜨리다",
+          "ex": "",
+          "head": "erupt into"
+        },
+        "made arrangements": {
+          "pos": "phr.",
+          "def": "준비를 해두다",
+          "ex": "",
+          "head": "make arrangements"
+        },
+        "relative": {
+          "pos": "n.",
+          "def": "친척",
+          "ex": ""
+        },
+        "will": {
+          "pos": "n.",
+          "def": "유언장",
+          "ex": ""
+        },
+        "instructs": {
+          "pos": "v.",
+          "def": "지시하다",
+          "ex": "",
+          "head": "instruct"
+        },
+        "be used to": {
+          "pos": "phr.",
+          "def": "~에 익숙하다",
+          "ex": "",
+          "head": "be used to N"
+        },
+        "urban": {
+          "pos": "adj.",
+          "def": "도시의",
+          "ex": ""
+        },
+        "swallowed": {
+          "pos": "v.",
+          "def": "삼키다",
+          "ex": "",
+          "head": "swallow"
+        },
+        "chewy": {
+          "pos": "adj.",
+          "def": "질긴",
+          "ex": ""
+        },
+        "sighed": {
+          "pos": "v.",
+          "def": "한숨 쉬다",
+          "ex": "",
+          "head": "sigh"
+        },
+        "geographically": {
+          "pos": "adv.",
+          "def": "지리적으로",
+          "ex": ""
+        },
+        "That’s why": {
+          "pos": "phr.",
+          "def": "그래서",
+          "ex": ""
+        },
+        "by trade": {
+          "pos": "phr.",
+          "def": "직업으로",
+          "ex": ""
+        },
+        "companies": {
+          "pos": "n.",
+          "def": "극단",
+          "ex": "",
+          "head": "company"
+        },
+        "count": {
+          "pos": "n.",
+          "def": "백작",
+          "ex": ""
+        },
+        "cut short": {
+          "pos": "phr.",
+          "def": "도중에 끝내다",
+          "ex": ""
+        },
+        "guardian": {
+          "pos": "n.",
+          "def": "후견인",
+          "ex": ""
+        },
+        "creaked shut": {
+          "pos": "phr.",
+          "def": "삐걱거리며 닫히다",
+          "ex": "",
+          "head": "creak shut"
+        },
+        "glumly": {
+          "pos": "adv.",
+          "def": "우울하게",
+          "ex": ""
+        },
+        "few belongings": {
+          "pos": "n.",
+          "def": "몇 안 되는 소지품",
+          "ex": ""
+        },
+        "distastefully": {
+          "pos": "adv.",
+          "def": "못마땅하게",
+          "ex": ""
+        },
+        "cramped": {
+          "pos": "adj.",
+          "def": "비좁은",
+          "ex": ""
+        },
+        "crawled": {
+          "pos": "v.",
+          "def": "기어가다",
+          "ex": "",
+          "head": "crawl"
+        },
+        "solemnly": {
+          "pos": "adv.",
+          "def": "엄숙하게",
+          "ex": ""
+        },
+        "From time to time": {
+          "pos": "phr.",
+          "def": "때때로",
+          "ex": ""
+        },
+        "tossed and turned": {
+          "pos": "phr.",
+          "def": "잠을 설치다",
+          "ex": "",
+          "head": "toss and turn"
+        },
+        "snoring": {
+          "pos": "v.",
+          "def": "코를 골다",
+          "ex": "",
+          "head": "snore"
+        },
+        "stuck": {
+          "pos": "v.",
+          "def": "찌르다; 붙다",
+          "ex": "",
+          "head": "stick - stuck - stuck"
+        }
+      },
+      "coreSentences": [
+        {
+          "text": "It is useless for me to describe to you how terrible Violet, Klaus, and even Sunny felt in the time that followed.",
+          "subject": [
+            0,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "verb": [
+            1,
+            16,
+            21
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "And even Sunny, who of course was too young to really understand what was going on, bit things with less enthusiasm.",
+          "subject": [
+            2,
+            12
+          ],
+          "verb": [
+            6,
+            13,
+            15,
+            14,
+            16
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "As I am sure you know, to be in one’s own room, in one’s own bed, can often make a bleak situation a little better, but the beds of the Baudelaire orphans had been reduced to charred rubble.",
+          "subject": [
+            1,
+            5,
+            26,
+            4,
+            27
+          ],
+          "verb": [
+            2,
+            5,
+            16,
+            18,
+            32,
+            33,
+            34
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "“Good,” said Albert, who had a piece of potato stuck between his teeth.",
+          "subject": [
+            2
+          ],
+          "verb": [
+            1,
+            4
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "“I have made arrangements,” he said finally, “for you to be raised by a distant relative of yours who lives on the other side of town.",
+          "subject": [
+            0,
+            4
+          ],
+          "verb": [
+            1,
+            2,
+            5,
+            19
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "On the other hand, they had never heard of Count Olaf and didn’t know what he would be like.",
+          "subject": [
+            4,
+            15
+          ],
+          "verb": [
+            5,
+            6,
+            7,
+            12,
+            13,
+            16,
+            17
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "he had already stood up from the table, and with a slight wave of his hand departed from the room.",
+          "subject": [
+            0,
+            14,
+            15
+          ],
+          "verb": [
+            1,
+            2,
+            3,
+            16
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Sunny crawled around solemnly biting each of Edgar and Albert’s shoes, leaving small teeth marks in each one so she would not be forgotten.",
+          "subject": [
+            0,
+            19
+          ],
+          "verb": [
+            1,
+            20,
+            21,
+            22,
+            23
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "From time to time, the Baudelaire children looked at one another, but with their future such a mystery they could think of nothing to say.",
+          "subject": [
+            4,
+            5,
+            6,
+            18
+          ],
+          "verb": [
+            7,
+            19,
+            20
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        }
+      ],
       "quiz": {
         "preview": [],
         "vocab": [],
@@ -1244,5 +1747,11 @@
       "previewTo": "2026-07-26"
     }
   ],
-  "grammar": []
+  "grammar": [],
+  "quote": {
+    "en": "",
+    "ko": "",
+    "teacher": "",
+    "comment": ""
+  }
 }
