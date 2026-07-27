@@ -3162,48 +3162,90 @@
       "coreSentences": [
         {
           "text": "Having been deprived of reading, he was hungry for new information.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            5
+          ],
+          "verb": [
+            6
+          ],
           "bold": [],
           "italic": [],
           "ko": "독서를 하지 못하게 된 그는 새로운 정보를 몹시 갈망했다."
         },
         {
           "text": "“Now then, how are you children getting on?",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            4,
+            5
+          ],
+          "verb": [
+            3,
+            6,
+            7
+          ],
           "bold": [],
           "italic": [],
           "ko": "자, 얘들아. 잘 지내고 있니?"
         },
         {
           "text": "But what they desired most of all, of course, was not to be associated with Count Olaf in any way whatsoever.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            1,
+            2,
+            3
+          ],
+          "verb": [
+            9
+          ],
           "bold": [],
           "italic": [],
           "ko": "하지만 무엇보다도 아이들이 가장 바랐던 것은 어떤 식으로든 올라프 백작과 엮이지 않는 것이었다."
         },
         {
           "text": "“Cooking dinner for an entire troupe seems like a lot to ask of children.”",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "verb": [
+            6
+          ],
           "bold": [],
           "italic": [],
           "ko": "아이들에게 극단 전체의 저녁 식사를 맡기는 건 너무한 것 같구나."
         },
         {
           "text": "Although it was not as big as their parents’ library, it was as cozy, and the Baudelaire children were thrilled.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            1,
+            10,
+            15,
+            16,
+            17
+          ],
+          "verb": [
+            2,
+            11,
+            18
+          ],
           "bold": [],
           "italic": [],
           "ko": "부모님의 도서관만큼 크지는 않았지만, 그만큼 아늑했고 보들레어 아이들은 무척 기뻤다."
         },
         {
           "text": "Perhaps, with the kind Justice Strauss and her library right next door, the children could prepare pleasant lives for themselves as easily as making puttanesca sauce for Count Olaf.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            13,
+            12
+          ],
+          "verb": [
+            14,
+            15
+          ],
           "bold": [],
           "italic": [],
           "ko": "친절한 스트라우스 판사와 바로 옆 도서관 덕분에 아이들은 올라프 백작을 위한 푸타네스카 소스를 만들 듯 자신들의 삶도 잘 꾸려갈 수 있을지 모른다고 생각했다."
