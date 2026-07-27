@@ -816,7 +816,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v69 (교사 대시보드 UI 개선·체크박스로 여러 학생에게 알림 한 번에 전송)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v70 (학생목록 복습/예습 완료 분리 표시·전송 결과 토스트 항상 표시)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
