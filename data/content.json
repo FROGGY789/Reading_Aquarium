@@ -2882,7 +2882,7 @@
           {
             "type": "input",
             "prompt": "다음 문장에서 'find'의 의미는?",
-            "explain": "",
+            "explain": "find(생각하다) + O (목적어가) + O.C. (목적격 보어 하다고)",
             "sentence": "You can look at a painting for the first time, for example, and not like it at all, but after looking at it a little longer you may find it very pleasing.",
             "accept": [
               "생각하다",
