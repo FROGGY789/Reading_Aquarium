@@ -3327,7 +3327,21 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "scramble",
+            "prompt": "다음 해석과 일치하도록 요소를 배열하시오.",
+            "explain": "분사구문에 Having p.p.가 등장하면, 주절보다도 '먼저' 발생한 일을 의미해요.",
+            "chunks": [
+              "Having been",
+              "deprived of reading,",
+              "he was",
+              "hungry",
+              "for new information."
+            ],
+            "ko": "독서를 못했었기 때문에, 그는 새로운 지식에 목말라 있었다."
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
