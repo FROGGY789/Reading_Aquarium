@@ -2888,6 +2888,16 @@
               "생각하다",
               "느끼다"
             ]
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장을 읽고, 어법적으로 틀린 단어를 찾아 바르게 고치시오.",
+            "explain": "where + 완전한 문장 / which + 불완전한 문장",
+            "sentence": "Most of the day he spent out of the house, or up in the high tower, which the children were forbidden to go.",
+            "wrong": 16,
+            "accept": [
+              "where"
+            ]
           }
         ],
         "vocabPrep": [],
