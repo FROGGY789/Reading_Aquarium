@@ -15,7 +15,9 @@ const REPO_NAME = 'Reading_Aquarium';
 
 const PROFILE_KEY = 'er_profile_v1';
 const XP_NEED = 120;      // 레벨업에 필요한 XP
-const EGG_PRICE = 50;     // 알 구매 비용(XP)
+const EGG_PRICE = 100;    // 알 구매 비용(XP)
+const TASK_XP = 10;       // 복습/예습 할 일 한 개당 경험치
+const PREVIEW_ALL_BONUS = 10;   // 예습 3단계(살살·보통·버닝) 모두 완료 시 보너스
 const HATCH_MS = 5000;    // 부화 연출 길이
 
 const NORM = s => (s || '').toString().toLowerCase().replace(/[^a-z0-9가-힣]/g, '');
@@ -620,7 +622,7 @@ function composeSentences() { return dayCoreSentencesRich(activeDay()).filter(c 
 // 2단계 보통: 다음 문장으로(마지막이면 예습 완료)
 function pmAdvance() {
   const sents = dayCoreSentencesRich(activeDay());
-  if ((state.pmIndex || 0) >= sents.length - 1) { completeTask('preview'); return; }
+  if ((state.pmIndex || 0) >= sents.length - 1) { completePreviewLevel('medium'); return; }
   set({ pmIndex: (state.pmIndex || 0) + 1, pmPhaseIdx: 0, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false });
 }
 // '몰라요' 단어를 내 단어장에 담기(중복 제거) + 클라우드 저장
@@ -711,7 +713,8 @@ const DEFAULT_STATE = {
   chapterMode: 'review',    // 챕터 학습 모드: 'review'(복습) / 'preview'(예습)
   pickMode: 'review',       // 챕터 고르기 화면 모드
   reviewMode: 'review',     // 지문 읽기 화면 모드: 'review'(복습) / 'burning'(예습 버닝)
-  progress: {},             // 챕터별 진행도 { [key]: {tasks:{}, rewarded} } — 영구(리셋 안 함)
+  progress: {},             // 챕터별 진행도 { [key]: {tasks:{}, pv:{}, ...} } — 영구(리셋 안 함)
+  eggClaimed: {},           // 하루 단위 알 지급 여부 { 'review::YYYY-MM-DD': true, 'preview::...': true }
   eggs: 0,
   animals: [],
   xp: 0,
@@ -878,6 +881,29 @@ const level = () => Math.floor(state.xp / XP_NEED) + 1;
 const xpInto = () => state.xp % XP_NEED;
 // 챕터별 진행도(읽기전용 안전 버전) — 없으면 빈 기본값 반환
 function chapProg(key) { return (state.progress && state.progress[key]) || { tasks: {}, rewarded: false }; }
+// 한 챕터의 특정 모드(복습/예습) '할 일'을 모두 끝냈는가
+function chapterModeDone(ch, mode) {
+  const req = chapterRequiredKeys(ch, mode);
+  if (!req.length) return false;
+  const p = chapProg(progKey(ch, mode));
+  return req.every(k => p.tasks[k]);
+}
+// 오늘 공개된 그 모드의 모든 챕터를 다 끝냈는가
+function allModeChaptersDone(mode) {
+  const chs = (mode === 'preview' ? previewChapters() : reviewChapters()).filter(ch => chapterRequiredKeys(ch, mode).length > 0);
+  return chs.length > 0 && chs.every(ch => chapterModeDone(ch, mode));
+}
+// 그날 공개된 복습(또는 예습)을 전부 끝내면 하루 한 번 알 하나 지급
+function awardModeEggIfDone(mode) {
+  if (isTeacherUser()) return;   // 교사 미리보기는 알 지급 안 함
+  const claimKey = mode + '::' + todayKey();
+  const claimed = Object.assign({}, state.eggClaimed || {});
+  if (claimed[claimKey]) return;
+  if (!allModeChaptersDone(mode)) return;
+  claimed[claimKey] = true;
+  ui.grantMsg = (mode === 'preview' ? '오늘 예습을 모두 끝냈어요! 🎉 알 하나를 받았어요 🥚' : '오늘 복습을 모두 끝냈어요! 🎉 알 하나를 받았어요 🥚');
+  set({ eggs: (state.eggs || 0) + 1, eggClaimed: claimed });
+}
 const doneCount = () => { const p = chapProg(activeProgKey()); return requiredKeys().filter(k => p.tasks[k]).length; };
 const speciesCount = () => new Set(state.animals).size;
 // 레벨별 아쿠아리움 전시 가능 마리 수(4마리 시작, 레벨마다 +2, 최대=전체 종)
@@ -1212,7 +1238,10 @@ const actions = {
     const cards = flashcardCards(mode);
     const doneTask = mode === 'preview' ? 'preview' : mode === 'vocabPrep' ? 'vocabPrep' : 'vocab';
     if ((state.fcI || 0) >= cards.length - 1) {
-      if (mode === 'preview' && state.pvBonus) state.xp = (state.xp || 0) + 20;   // 살살 50개·전체 완료 보너스 경험치
+      if (mode === 'preview') {
+        if (state.pvBonus) state.xp = (state.xp || 0) + 20;   // 살살 50개·전체 선택 보너스 경험치
+        completePreviewLevel('easy'); return;
+      }
       completeTask(doneTask); return;
     }
     set({ fcI: (state.fcI || 0) + 1, fcFlipped: false, fcHint: false });
@@ -1269,12 +1298,12 @@ const actions = {
     if ((state.cwIndex || 0) >= total - 1) { set({ screen: 'home' }); return; }
     set({ cwIndex: (state.cwIndex || 0) + 1, cwOrder: [], cwChecked: false, cwOk: false });
   },
-  previewReadDone() { completeTask('preview'); },
+  previewReadDone() { completePreviewLevel('burning'); },
   goPreview() { set({ screen: 'preview' }); },
   // 버닝: 리더 끝까지 읽고 → comprehension check(quiz.preview) → 없으면 바로 완료
   burnToComprehension() {
     if (dayQuiz('preview').length) set({ screen: 'quiz', quizTask: 'preview', quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {}, readerBurning: false });
-    else completeTask('preview');
+    else completePreviewLevel('burning');
   },
   tapWord(w) { set({ pop: state.pop === w ? null : w }); },
   reviewDone() { completeTask('review'); },
@@ -1342,6 +1371,7 @@ const actions = {
   finishTask() {
     if (!state.result) return;
     if (state.result.task === 'grammar') { gramAdvance(); return; }   // 어법: 다음 개념으로(마지막이면 완료)
+    if (state.result.task === 'preview') { completePreviewLevel('burning'); return; }   // 예습 버닝 이해도 확인 후 완료
     completeTask(state.result.task);
   },
   gramStartQuiz() {   // 개념 설명 화면 → 이 개념의 문제 풀기(문제 없으면 다음 개념으로)
@@ -1530,17 +1560,37 @@ function completeTask(t) {
   const cur = chapProg(key);
   const wasDone = cur.tasks[t];
   const tasks = Object.assign({}, cur.tasks, { [t]: true });
-  let rewarded = cur.rewarded;
   // 심화(보너스) 항목이면 심화 화면으로, 그 외(챕터 할 일)는 챕터 허브로 복귀
   const isBonus = ['vocabPrep', 'sentPrep', 'grammar', 'wbStudy'].includes(t);
   const patch = { screen: isBonus ? 'advanced' : 'chapter', quizTask: null, result: null, pop: null };
-  if (!wasDone) patch.xp = state.xp + 15;
-  // 이 챕터의 '할 일'(MAIN)을 모두 끝내면 챕터당 한 번 알 지급
-  const req = requiredKeys();
-  const allDone = req.length > 0 && req.every(k => tasks[k]);
-  if (allDone && !rewarded) { patch.eggs = state.eggs + 1; rewarded = true; }
-  patch.progress = Object.assign({}, state.progress, { [key]: { tasks, rewarded } });
+  if (!wasDone) patch.xp = (state.xp || 0) + TASK_XP;   // 할 일 한 개당 경험치(첫 완료 시 1회)
+  patch.progress = Object.assign({}, state.progress, { [key]: Object.assign({}, cur, { tasks }) });
   set(patch);
+  // 알 지급은 챕터 단위가 아니라 '그날 공개된 복습/예습 전부' 완료 시 하루 한 번
+  awardModeEggIfDone(state.chapterMode);
+}
+
+// 예습 한 단계(살살/보통/버닝) 완료 — 단계마다 경험치 10, 3단계 모두 끝내면 보너스 10
+function completePreviewLevel(level) {
+  const r = state.result;
+  postRecord({ student: studentName(), date: todayKey(), task: 'preview:' + level, kind: r ? 'quiz' : 'review', score: r ? r.score : null, total: r ? r.total : null, correct: r ? r.correct : null });
+  const key = activeProgKey();
+  const cur = chapProg(key);
+  const pv = Object.assign({}, cur.pv || {});
+  const firstTime = !pv[level];
+  pv[level] = true;
+  const tasks = Object.assign({}, cur.tasks, { preview: true });   // 한 단계라도 완료하면 예습 완료로 체크
+  const allThree = ['easy', 'medium', 'burning'].every(l => pv[l]);
+  const bonusGiven = !!cur.pvBonusGiven;
+  let gain = firstTime ? TASK_XP : 0;
+  const giveBonus = allThree && !bonusGiven;
+  if (giveBonus) gain += PREVIEW_ALL_BONUS;
+  const patch = { screen: 'preview', quizTask: null, result: null, pop: null, readerBurning: false, reviewMode: 'review' };
+  if (gain) patch.xp = (state.xp || 0) + gain;
+  if (giveBonus) ui.grantMsg = '예습 3단계를 모두 끝냈어요! 보너스 경험치 +' + PREVIEW_ALL_BONUS + ' 🎁';
+  patch.progress = Object.assign({}, state.progress, { [key]: Object.assign({}, cur, { tasks, pv, pvBonusGiven: bonusGiven || allThree }) });
+  set(patch);
+  awardModeEggIfDone('preview');
 }
 
 function rollRarity() {
@@ -2031,7 +2081,7 @@ function tutorialActive() {
 // 코치마크 단계 — 홈의 실제 기능을 하나씩 스포트라이트 + 설명(게임 튜토리얼 방식)
 const TUT_COACH = [
   { title: '리딩 아쿠아리움에 온 걸 환영해요! 🐠', body: '앱을 <b>하나씩 눌러보며</b> 익혀볼게요. 다 하면 <b style="color:#2f74e6">첫 알 🥚</b>을 선물로 드려요!', note: '' },
-  { target: 'review', title: '📖 복습하기', body: '수업에서 배운 챕터를 다시 익혀요. 챕터를 고르면 <b>어휘 → 어법 → 지문</b> 복습이 나와요.', note: '셋을 모두 끝내면 알을 하나 받아요 🥚' },
+  { target: 'review', title: '📖 복습하기', body: '수업에서 배운 챕터를 다시 익혀요. 챕터를 고르면 <b>어휘 → 어법 → 지문</b> 복습이 나와요.', note: '할 일 하나당 경험치 +10, 오늘 복습을 전부 끝내면 알 하나! 🥚' },
   { target: 'preview', title: '👀 예습하기', body: '다음에 배울 챕터를 미리 봐요.', note: '살살🟢(어휘) · 보통🟡(주어·동사) · 버닝🔴(지문 전체) 중에 골라요.' },
   { target: 'wordbook', title: '📒 내 단어장', body: '복습하다 <b>몰라요</b> 한 단어가 여기에 모여요.', note: '망각곡선에 맞춰 딱 좋은 때 다시 복습돼요.' },
   { target: 'nav-advanced', title: '🚀 심화 학습', body: '어법 학습·오늘의 단어시험 같은 보너스 학습이 있어요.', note: '' },
@@ -2218,7 +2268,7 @@ function chapterHubHTML() {
       <div style="font-size:12px;font-weight:600;color:${accent}">${done}/${req.length} 완료</div>
     </div>
     <div style="height:8px;border-radius:4px;background:#dde6f1;overflow:hidden;margin-bottom:6px"><div style="height:100%;border-radius:4px;background:linear-gradient(90deg,${accent},#17b0c4);width:${req.length ? done / req.length * 100 : 0}%"></div></div>
-    <div style="font-size:11px;color:#7d8aa0;margin-bottom:14px">${isPrev ? '예습을 끝내면' : '이 챕터의 복습을 모두 끝내면'} 랜덤 알을 하나 받아요 🥚</div>
+    <div style="font-size:11px;color:#7d8aa0;margin-bottom:14px">할 일 하나당 경험치 +${TASK_XP} · 오늘 공개된 ${isPrev ? '예습' : '복습'}을 <b>전부</b> 끝내면 알 하나를 받아요 🥚</div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
       ${modeTasks(mode).map(taskRow).join('') || `<div style="background:#fff;border:1px dashed #cdd8e6;border-radius:16px;padding:24px 18px;text-align:center;color:#9aa8bd;font-size:12.5px">${isPrev ? '이 챕터엔 아직 예습 자료가 없어요.' : '이 챕터엔 아직 복습 자료가 없어요.'}</div>`}
@@ -2787,32 +2837,34 @@ function previewLevelsHTML() {
   const easyN = dayVocabCards(activeDay()).length;   // 살살 = 이 챕터 어휘(개수는 살살에서 학생이 선택)
   const coreN = dayCoreSentences(d).length;
   const compN = dayQuiz('preview').length;
-  const card = (act, stage, emoji, color, name, en, desc, disabled) => `
-    <div ${disabled ? '' : `data-act="${act}"`} style="display:flex;align-items:center;gap:14px;background:#fff;border:1.5px solid ${disabled ? '#eef2f7' : '#e2e9f2'};border-left:5px solid ${color};border-radius:16px;padding:15px 16px;cursor:${disabled ? 'default' : 'pointer'};opacity:${disabled ? '.5' : '1'};box-shadow:0 6px 16px -12px rgba(20,50,90,.5)">
+  const pv = (chapProg(activeProgKey()).pv) || {};
+  const card = (act, stage, emoji, color, name, en, desc, disabled, done) => `
+    <div ${disabled ? '' : `data-act="${act}"`} style="display:flex;align-items:center;gap:14px;background:#fff;border:1.5px solid ${done ? '#bfe6cf' : (disabled ? '#eef2f7' : '#e2e9f2')};border-left:5px solid ${color};border-radius:16px;padding:15px 16px;cursor:${disabled ? 'default' : 'pointer'};opacity:${disabled ? '.5' : '1'};box-shadow:0 6px 16px -12px rgba(20,50,90,.5)">
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:none;width:40px">
         <div style="font-size:26px;line-height:1">${emoji}</div>
         <span style="font-size:9.5px;font-weight:800;color:${color};background:${color}1a;padding:1px 6px;border-radius:6px">${stage}단계</span>
       </div>
       <div style="flex:1">
-        <div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:16px;font-weight:700;color:#14243f">${name}</span><span style="font-size:11px;font-weight:700;color:${color}">${en}</span></div>
+        <div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:16px;font-weight:700;color:#14243f">${name}</span><span style="font-size:11px;font-weight:700;color:${color}">${en}</span><span style="font-size:10.5px;font-weight:700;color:#8a6412">+${TASK_XP}XP</span></div>
         <div style="font-size:12px;color:#7d8aa0;margin-top:3px;line-height:1.5">${desc}</div>
       </div>
-      <div style="font-size:16px;color:${disabled ? '#c8d2e0' : color}">${disabled ? '—' : '→'}</div>
+      <div style="font-size:16px;color:${done ? '#2fa36b' : (disabled ? '#c8d2e0' : color)};font-weight:700">${done ? '✓' : (disabled ? '—' : '→')}</div>
     </div>`;
   const chName = (d.book && d.book.chapter) || d.label || '이 챕터';
+  const bonusDone = !!chapProg(activeProgKey()).pvBonusGiven;
   return `<div style="padding:${topPad()} 20px 40px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
       <div data-act="goPreviewList" style="width:30px;height:30px;border-radius:10px;background:#fbf0d8;color:#c98a12;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       <span style="font-size:15px;font-weight:700;color:#14243f">👀 ${esc(chName)} 예습</span>
     </div>
-    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 6px;line-height:1.6">1·2·3단계 중 골라 예습해요. <b>하나만 완료해도</b> 예습 완료로 체크돼요 🐠</div>
+    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 6px;line-height:1.6">1·2·3단계를 풀어요. 단계마다 <b>경험치 +${TASK_XP}</b>! 🐠</div>
     <div style="display:flex;align-items:center;gap:7px;background:#fff8e6;border:1px solid #f0d79a;border-radius:12px;padding:9px 12px;margin-bottom:14px">
-      <span style="font-size:16px">🎁</span><span style="font-size:11.5px;font-weight:600;color:#8a6412;line-height:1.5">3단계를 <b>모두</b> 완료하면 <b>보너스 경험치</b>를 받아요!</span>
+      <span style="font-size:16px">🎁</span><span style="font-size:11.5px;font-weight:600;color:#8a6412;line-height:1.5">3단계를 <b>모두</b> 완료하면 <b>보너스 경험치 +${PREVIEW_ALL_BONUS}</b>${bonusDone ? ' <b style="color:#2fa36b">받았어요 ✓</b>' : ''}</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      ${card('previewEasy', 1, '🟢', '#2fa36b', '살살', 'EASY', easyN ? `이 챕터 어휘 ${easyN}개 미리보기 (플래시카드)` : '이 챕터 어휘가 아직 없어요', easyN === 0)}
-      ${card('previewMedium', 2, '🟡', '#e0a41a', '보통', 'MEDIUM', coreN ? `핵심 문장 ${coreN}개 · 주어·동사 찾기` : '핵심 문장이 없어요', coreN === 0)}
-      ${card('previewHard', 3, '🔴', '#e2564d', '버닝', 'BURNING', `지문 전체 읽기${compN ? ` + 이해도 확인 ${compN}문항` : ''}`, dayPassage(d).trim() === '')}
+      ${card('previewEasy', 1, '🟢', '#2fa36b', '살살', 'EASY', easyN ? `이 챕터 어휘 ${easyN}개 미리보기 (플래시카드)` : '이 챕터 어휘가 아직 없어요', easyN === 0, pv.easy)}
+      ${card('previewMedium', 2, '🟡', '#e0a41a', '보통', 'MEDIUM', coreN ? `핵심 문장 ${coreN}개 · 주어·동사 찾기` : '핵심 문장이 없어요', coreN === 0, pv.medium)}
+      ${card('previewHard', 3, '🔴', '#e2564d', '버닝', 'BURNING', `지문 전체 읽기${compN ? ` + 이해도 확인 ${compN}문항` : ''}`, dayPassage(d).trim() === '', pv.burning)}
     </div>
   </div>`;
 }
