@@ -3252,7 +3252,20 @@
         }
       ],
       "quiz": {
-        "preview": [],
+        "preview": [
+          {
+            "type": "mc",
+            "prompt": "Baudelaire 아이들이 Justice Strauss에게 부탁한 것은?",
+            "explain": "",
+            "options": [
+              "요리책을 빌리는 것",
+              "자신들 대신 요리해주는 것",
+              "요리 레시피를 전수해주는 것",
+              "요리하는 일을 도와주는 것"
+            ],
+            "answer": 0
+          }
+        ],
         "vocab": [],
         "sentence": [],
         "vocabPrep": [],
