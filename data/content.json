@@ -3347,6 +3347,18 @@
             "explain": "'서로서로'를 쓰고자 할 때, 3명 이상이면 one another, 2명이면 each other을 사용합니다.",
             "sentence": "The children looked at [one another / each other].",
             "answer": 0
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 중, 'as'의 의미로 적절하지 않은 것은?",
+            "explain": "비교급의 '~보다' 는 'than'이에요.",
+            "options": [
+              "~ 할 때",
+              "~ 한 대로",
+              "~ 만큼",
+              "~ 보다 (더 ...한)"
+            ],
+            "answer": 3
           }
         ],
         "vocabPrep": [],
