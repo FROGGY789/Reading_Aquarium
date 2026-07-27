@@ -3363,7 +3363,7 @@
           {
             "type": "ab",
             "prompt": "다음 중, 어법적으로 알맞은 것을 고르시오.",
-            "explain": "'~에게 부탁하다' 라는 동사는 'ask of' 에요.",
+            "explain": "ask of + 사람 / ask 사람 for 부탁할 일 (구분해서 알아둘 것!)",
             "sentence": "“Cooking dinner for an entire troupe seems like a lot to ask [for / of] children.”",
             "answer": 1
           }
