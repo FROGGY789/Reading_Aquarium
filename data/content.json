@@ -2898,6 +2898,13 @@
             "accept": [
               "where"
             ]
+          },
+          {
+            "type": "ab",
+            "prompt": "",
+            "explain": "hate + V-ing (hate는 동명사만 목적어로 받는 동사에요)",
+            "sentence": "I hate [to have / having] to do all these chores, and I hate Count Olaf!”",
+            "answer": 1
           }
         ],
         "vocabPrep": [],
