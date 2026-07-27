@@ -2706,7 +2706,44 @@
         }
       ],
       "quiz": {
-        "preview": [],
+        "preview": [
+          {
+            "type": "ox",
+            "prompt": "작은 방에서 지내면서, Violet과 Sunny는 서로 번갈아가며 침대를 사용했다.",
+            "explain": "Violet과 Klaus 입니다. Sunny는 바이올렛이 만들어 준 작은 침대에서 잤어요.",
+            "answer": 1
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 중, Olaf의 집에서 아이들이 옷을 보관한 장소는?",
+            "explain": "Instead of a closet, there was a large cardboard box that had once held a refrigerator and would now hold the three children’s clothes, all piled in a heap.",
+            "options": [
+              "나무로 된 옷장",
+              "바닥",
+              "냉장고를 담았던 박스",
+              "바구니"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 중, Count Olaf의 특징으로 알맞지 않은 것은?",
+            "explain": "he was demanding, short-tempered, and bad-smelling.",
+            "options": [
+              "까다롭고 요구가 많다",
+              "화를 잘 내지 않는다",
+              "악취를 풍긴다",
+              "집에 잘 있지 않는다"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "ox",
+            "prompt": "Count Olaf는 아이들에게 극단 전체를 먹일 저녁을 준비하라고 명령했다.",
+            "explain": "“My theater troupe will be coming for dinner before tonight’s performance. Have dinner ready for all ten of them by the time they arrive at seven o’clock.",
+            "answer": 0
+          }
+        ],
         "vocab": [],
         "sentence": [],
         "vocabPrep": [],
