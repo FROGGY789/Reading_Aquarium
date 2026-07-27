@@ -2772,9 +2772,310 @@
         "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
         "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
       },
-      "passage": "",
-      "vocab": {},
-      "coreSentences": [],
+      "passage": "A Series of Unfortunate Events By Lemony Snicket\n\nThe Bad Beginning Chapter 3-2.\n\n“Please <forgive me for not stopping by> sooner,” Justice Strauss said, %%as%% the Baudelaires stood <awkwardly> in the <doorway>. “I wanted to see how you children were <settling in>, but I had a very difficult case in the High Court and it was <taking up> much of my time.”\n\n“What sort of case was it?” Klaus asked. ==%%Having been%% <deprived of reading>, he was hungry for new information.==\n\n“I can’t really discuss it,” Justice Strauss said, “because it’s official business. But I can tell you it <concerns> a <poisonous> plant and illegal use of someone’s credit card.”\n\n“Yeeka!” Sunny <shrieked>%%, which%% appeared to mean “How interesting!” although of course there is no way that Sunny could understand %%what was being said%%.\n\nJustice Strauss looked down at Sunny and laughed. “Yeeka indeed,” she said, and reached down to <pat the child on the head.> Sunny took Justice Strauss’s hand and bit it, gently.\n\n“That means she likes you,” Violet explained. “She bites very, very hard if she doesn’t like you, or if you want to <give her a bath>.”\n\n“I see,” Justice Strauss said. ==“<Now then>, <how are you children getting on>?== Is there anything you <desire>?”\n\nThe children looked at %%one another%%, thinking of all the things they desired. Another bed, for example. A proper <crib> for Sunny. Curtains for the window in their room. A closet instead of a cardboard box. ==But what they desired most of all, of course, was not to <be associated with> Count Olaf in any way <whatsoever>.== What they desired most was to be with their parents again, in their true home, but that, of course, was impossible. Violet, Klaus, and Sunny all looked down at the floor unhappily %%as%% they considered the question. Finally, Klaus spoke.\n\n“Could we perhaps borrow a <cookbook>?” he said. “Count Olaf has <instructed> us to make dinner for his <theater troupe> tonight, and we can’t find a cookbook in the house.”\n\n“Goodness,” Justice Strauss said. ==“Cooking dinner for an entire <troupe> seems like a lot to %%ask of%% children.”==\n\n“Count Olaf gives us a lot of <responsibility>,” Violet said. What she wanted to say was； “Count Olaf is an <evil> man,” but she was <well mannered>.\n\n“Well, why don’t you come next door to my house,” Justice Strauss said, “and find a cookbook %%that%% <pleases> you?”\n\nThe youngsters agreed, and followed Justice Strauss out the door and over to her <well-kept> house. She led them through an elegant <hallway> smelling of flowers into an enormous room, and when they saw what was inside, they nearly <fainted> from <delight>, Klaus especially.\n\nThe room was a library. Not a public library, but a private library; <that is,> a large <collection> of books <belonging to> Justice Strauss. There were <shelves> and shelves of them, on every wall from the floor to the <ceiling>, and separate shelves and shelves of them in the middle of the room. The only place %%( )%% there weren’t books was in one corner%%, where%% there were some large, comfortable-looking chairs and a wooden table with lamps hanging over them, perfect for reading. ==Although it was not %%as big as%% their parents’ library, it was as cozy, and the Baudelaire children were <thrilled>.==\n\n“<My word>!” Violet said. “This is a wonderful library!”\n\n“Thank you very much,” Justice Strauss said. “I’ve been collecting books for years, and I’m very proud of my <collection>. <As long as> you %%keep%% them in good condition, you are welcome to use any of my books, at any time. Now, the cookbooks are over here on the eastern wall. Shall we have a look at them?”\n\n“Yes, Violet said, “and then, if you don’t <mind>, I <should love to look> at any of your books <concerning mechanical engineering>. Inventing things is a great interest of mine.”\n\n“And I would like to look at books on wolves,” Klaus said. “Recently I have been <fascinated by> the subject of wild animals of North America.”\n\n“Book!” Sunny shrieked%%, which%% meant “Please don’t forget to pick out a picture book for me.”\n\nJustice Strauss smiled. “%%It%% is a pleasure %%to see%% young people interested in books,” she said. “But first I think we’<d better find> a good recipe, don’t you?”\n\nThe children agreed, and <for thirty minutes or so> they <perused> several cookbooks %%that%% Justice Strauss recommended. To tell you the truth, the three orphans were %%so%% excited to be out of Count Olaf’s house, and in this pleasant library, %%that%% they were a little <distracted> and unable to <concentrate on> cooking. But finally Klaus found a dish %%that%% sounded delicious, and easy to make.\n\n“Listen to this,” he said. “‘Puttanesca.’ It’s an Italian sauce for pasta. All we need to do is saute olives, capers, anchovies, garlic, chopped parsley, and tomatoes together in a pot, and prepare spaghetti to go with it.”\n\n“That sounds easy,” Violet agreed, and the Baudelaire orphans looked at one another. ==Perhaps, with the kind Justice Strauss and her library right next door, the children could prepare pleasant lives for themselves %%as easily as%% making puttanesca sauce for Count Olaf.==",
+      "vocab": {
+        "forgive me for not stopping by": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "forgive A for B"
+        },
+        "awkwardly": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "doorway": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "settling in": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "settle in"
+        },
+        "taking up": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "take up"
+        },
+        "deprived of reading": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "be deprived of ~"
+        },
+        "concerns": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "concern"
+        },
+        "poisonous": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "shrieked": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "shriek"
+        },
+        "pat the child on the head.": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "pat A on B"
+        },
+        "give her a bath": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "give A a bath"
+        },
+        "Now then": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "how are you children getting on": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "how are you getting on?"
+        },
+        "desire": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "crib": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "be associated with": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "be associated with ~"
+        },
+        "whatsoever": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "cookbook": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "instructed": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "instruct A to V"
+        },
+        "theater troupe": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "troupe": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "responsibility": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "evil": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "well mannered": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "pleases": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "please"
+        },
+        "well-kept": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "hallway": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "fainted": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "faint"
+        },
+        "delight": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "that is,": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "collection": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "belonging to": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "belong to"
+        },
+        "shelves": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "shelf"
+        },
+        "ceiling": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "thrilled": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "My word": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "My word!"
+        },
+        "As long as": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "mind": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "should love to look": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "should love to V"
+        },
+        "concerning mechanical engineering": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "fascinated by": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "fascinated by ~"
+        },
+        "d better find": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "had better V"
+        },
+        "for thirty minutes or so": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "perused": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "peruse"
+        },
+        "distracted": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "distract"
+        },
+        "concentrate on": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        }
+      },
+      "coreSentences": [
+        {
+          "text": "Having been deprived of reading, he was hungry for new information.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "“Now then, how are you children getting on?",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "But what they desired most of all, of course, was not to be associated with Count Olaf in any way whatsoever.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "“Cooking dinner for an entire troupe seems like a lot to ask of children.”",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Although it was not as big as their parents’ library, it was as cozy, and the Baudelaire children were thrilled.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Perhaps, with the kind Justice Strauss and her library right next door, the children could prepare pleasant lives for themselves as easily as making puttanesca sauce for Count Olaf.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        }
+      ],
       "quiz": {
         "preview": [],
         "vocab": [],
