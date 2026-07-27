@@ -2906,7 +2906,7 @@
         },
         "pleases": {
           "pos": "v",
-          "def": "기쁘게 하다",
+          "def": "~를 기쁘게 하다",
           "ex": "please",
           "head": "please"
         },
@@ -2943,7 +2943,7 @@
         },
         "belonging to": {
           "pos": "phr",
-          "def": "~의 것이다, ~에 속해 있다",
+          "def": "~의 것이다, ~에 속하다",
           "ex": "belong to",
           "head": "belong to"
         },
@@ -2960,7 +2960,7 @@
         },
         "thrilled": {
           "pos": "adj",
-          "def": "매우 기뻐하는",
+          "def": "매우 기뻐한",
           "ex": "thrilled"
         },
         "My word": {
@@ -2970,59 +2970,59 @@
           "head": "My word!"
         },
         "As long as": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "conj",
+          "def": "~하는 한, ~하기만 하면",
+          "ex": "As long as"
         },
         "mind": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "v",
+          "def": "꺼려하다, 신경 쓰다",
+          "ex": "mind"
         },
         "should love to look": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr",
+          "def": "정말 ~하고 싶다",
+          "ex": "should love to V",
           "head": "should love to V"
         },
         "concerning mechanical engineering": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "phr",
+          "def": "기계 공학에 관한",
+          "ex": "concerning mechanical engineering"
         },
         "fascinated by": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr",
+          "def": "~에 매료된, 빠져 있는",
+          "ex": "fascinated by ~",
           "head": "fascinated by ~"
         },
         "d better find": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr",
+          "def": "~하는 것이 낫다",
+          "ex": "had better V",
           "head": "had better V"
         },
         "for thirty minutes or so": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "phr",
+          "def": "약 30분 동안",
+          "ex": "for thirty minutes or so"
         },
         "perused": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "v",
+          "def": "정독하다, 꼼꼼히 읽다",
+          "ex": "peruse",
           "head": "peruse"
         },
         "distracted": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "v",
+          "def": "(주의를) 산만하게 하다",
+          "ex": "distract",
           "head": "distract"
         },
         "concentrate on": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "phr",
+          "def": "~에 집중하다",
+          "ex": "concentrate on"
         }
       },
       "coreSentences": [
