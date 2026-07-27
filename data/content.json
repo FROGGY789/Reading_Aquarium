@@ -2295,7 +2295,7 @@
         },
         "thick as thieves": {
           "pos": "숙어",
-          "def": "매우 친밀한 사이, 사이가 좋은 관계",
+          "def": "매우 친밀한 사이, 단짝인 사이",
           "ex": "The two of them were thick as thieves."
         },
         "initial": {
@@ -2352,20 +2352,20 @@
           "ex": "She took dusty curtains from the curtain rod that hung over the window."
         },
         "bunched": {
-          "pos": "동사/명사",
+          "pos": "동사",
           "def": "모으다, 뭉치다",
           "ex": "She bunched them together to form a sort of cushion.",
           "head": "bunch"
         },
         "cracked": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "명사/동사",
+          "def": "금이 간, 균열이 생긴",
+          "ex": "Without curtains over the cracked glass, the sun streamed through."
         },
         "streamed": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "동사",
+          "def": "(빛·물 등이) 흘러 들다",
+          "ex": "The sun streamed through the window every morning.",
           "head": "stream"
         },
         "sore": {
@@ -2379,9 +2379,9 @@
           "ex": "There was a large cardboard box that had once held a refrigerator."
         },
         "piled in a heap": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "숙어",
+          "def": "수북이 쌓인",
+          "ex": "All the three children's clothes were piled in a heap."
         },
         "amuse": {
           "pos": "동사",
@@ -2394,14 +2394,14 @@
           "ex": "The only decoration on the peeling walls was a large and ugly painting."
         },
         "surroundings": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "명사",
+          "def": "환경, 주변",
+          "ex": "The worst surroundings in the world can be tolerated."
         },
         "tolerated": {
           "pos": "동사",
           "def": "견디다, 참다",
-          "ex": "The worst surroundings in the world can be tolerated.",
+          "ex": "The worst surroundings in the world can be tolerated if the people are kind.",
           "head": "tolerate"
         },
         "demanding": {
@@ -2415,25 +2415,25 @@
           "ex": "Count Olaf was demanding, short-tempered, and bad-smelling."
         },
         "instructions": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "명사",
+          "def": "지시 사항, 설명",
+          "ex": "They would find a list of instructions left for them by Count Olaf.",
           "head": "instruction"
         },
         "were forbidden to go": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "숙어",
+          "def": "~하는 것이 금지되다",
+          "ex": "Where the children were forbidden to go.",
           "head": "be forbidden to V"
         },
         "chores": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "명사",
+          "def": "집안일, 허드렛일",
+          "ex": "The instructions he left for them were usually difficult chores."
         },
         "porch": {
           "pos": "명사",
-          "def": "현관",
+          "def": "현관, 포치",
           "ex": "Repainting the back porch or repairing the windows."
         },
         "signature": {
@@ -2442,25 +2442,25 @@
           "ex": "Instead of a signature Count Olaf would draw an eye."
         },
         "read": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "동사",
+          "def": "(글·쪽지 등에) ~라고 적혀 있다",
+          "ex": "One morning his note read, \"My theater troupe will be coming for dinner.\""
         },
         "troupe": {
           "pos": "명사",
           "def": "공연단, 극단",
-          "ex": "My theater troupe will be coming for dinner."
+          "ex": "My theater troupe will be coming for dinner before tonight’s performance."
         },
         "stay out of our way": {
           "pos": "숙어",
           "def": "~의 길을 비키다, 방해하지 않다",
-          "ex": "Stay out of our way.",
+          "ex": "Clean up afterward, and stay out of our way.",
           "head": "stay out of one's way"
         },
         "underneath": {
           "pos": "전치사/부사",
           "def": "~의 아래에",
-          "ex": "Underneath the note was a small sum of money."
+          "ex": "Underneath the note was a small sum of money for the groceries."
         },
         "groceries": {
           "pos": "명사",
@@ -2470,23 +2470,23 @@
         },
         "lumpy": {
           "pos": "형용사",
-          "def": "덩어리진, 혹투성이의",
-          "ex": "A gray and lumpy oatmeal."
+          "def": "덩어리진, 울퉁불퉁한",
+          "ex": "A gray and lumpy oatmeal Count Olaf left for them each morning."
         },
         "dismay": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "명사",
+          "def": "당황, 낭패감, 실망감",
+          "ex": "Then they looked at each other in dismay."
         },
         "chimney": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "명사",
+          "def": "굴뚝",
+          "ex": "I knew how to clean the chimney, because those sorts of things interest me."
         },
         "sorts": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "명사",
+          "def": "종류, 부류",
+          "ex": "Those sorts of things interest me.",
           "head": "sort"
         },
         "forlornly": {
@@ -2495,9 +2495,9 @@
           "ex": "Looking forlornly at pieces of pitch-black toast."
         },
         "pitch-black": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "형용사",
+          "def": "칠흑 같이 어두운, 아주 검게 탄",
+          "ex": "Looking forlornly at pieces of pitch-black toast."
         },
         "dreadful": {
           "pos": "형용사",
@@ -2515,37 +2515,37 @@
           "ex": "Klaus looked at his older sister with relief."
         },
         "keep our chin up": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "숙어",
+          "def": "용기를 잃지 않다, 당당하다",
+          "ex": "Keep our chin up, which meant \"try to stay cheerful.\""
         },
         "cheerful": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "형용사",
+          "def": "쾌활한, 명랑한",
+          "ex": "It meant \"try to stay cheerful.\""
         },
         "shoving it down": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "숙어",
+          "def": "A를 아래로 억지로 떠밀다",
+          "ex": "When Count Olaf keeps shoving it down.",
           "head": "shove A down"
         },
         "shrieked": {
           "pos": "동사",
           "def": "비명을 지르다, 날카롭게 소리치다",
-          "ex": "“Jook!” Sunny shrieked.",
+          "ex": "“Jook!” Sunny shrieked, banging on the table.",
           "head": "shriek"
         },
         "banging on": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "동사/숙어",
+          "def": "~을 쾅 치다, 두드리다",
+          "ex": "Banging on the table with her oatmeal spoon.",
           "head": "bang on"
         },
         "jerked": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "동사",
+          "def": "갑자기 움직이다, 세게 당기다",
+          "ex": "Violet and Klaus were jerked out of their conversation.",
           "head": "jerk"
         },
         "cupboards": {
@@ -2556,70 +2556,70 @@
         },
         "miserably": {
           "pos": "부사",
-          "def": "비참하게, 비통하게",
-          "ex": "“I know,” Klaus said miserably."
+          "def": "비참하게, 슬프게",
+          "ex": "“I know,” Klaus said miserably. “I miss reading very much.”"
         },
         "fallen by the wayside": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "숙어",
+          "def": "(소원해져서) 떨어져 나가다, 도중에 중단되다",
+          "ex": "Most of the Baudelaire orphans' friends had fallen by the wayside.",
           "head": "be fallen by the wayside"
         },
         "stopping by": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "동사/숙어",
+          "def": "잠시 들르다",
+          "ex": "They stopped calling, writing, and stopping by to see any of the Baudelaires.",
           "head": "stop by"
         },
         "grieving acquaintances": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "명사/숙어",
+          "def": "슬픔에 잠긴 지인들",
+          "ex": "We would never do this to any of our grieving acquaintances.",
           "head": "grieve acquaintances"
         },
         "loved one": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "명사",
+          "def": "사랑하는 사람",
+          "ex": "When someone has lost a loved one, friends sometimes avoid the person."
         },
         "peered": {
           "pos": "동사",
           "def": "응시하다, 자세히 보다",
-          "ex": "Peered through the peephole.",
+          "ex": "They peered through the peephole, which was in the shape of an eye.",
           "head": "peer"
         },
         "peephole": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "명사",
+          "def": "(문을 열지 않고 밖을 보는) 엿보기 구멍",
+          "ex": "They peered through the peephole."
         },
         "delighted to see": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "숙어",
+          "def": "~하게 되어 매우 기쁘다",
+          "ex": "They were delighted to see Justice Strauss peering back at them.",
           "head": "be delighted to V"
         },
         "cried": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "동사",
+          "def": "외치다, 소리치다; 울다",
+          "ex": "“Justice Strauss!” Violet cried. “How lovely to see you.”",
           "head": "cry"
         },
         "was about to add": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan",
+          "pos": "숙어",
+          "def": "막 ~하려던 참이었다",
+          "ex": "She was about to add, \"Do come in.\"",
           "head": "was about to V"
         },
         "venture into": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "숙어",
+          "def": "위험을 무릅쓰고 ~ 안으로 들어가다",
+          "ex": "Justice Strauss would probably not want to venture into the dim and dirty room."
         },
         "dim": {
-          "pos": "nan",
-          "def": "nan",
-          "ex": "nan"
+          "pos": "형용사",
+          "def": "어둑한, 흐릿한",
+          "ex": "Venture into the dim and dirty room."
         }
       },
       "coreSentences": [
