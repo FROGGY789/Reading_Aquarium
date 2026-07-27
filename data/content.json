@@ -2625,80 +2625,214 @@
       "coreSentences": [
         {
           "text": "You can look at a painting for the first time, for example, and not like it at all, but after looking at it a little longer you may find it very pleasing.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            26
+          ],
+          "verb": [
+            1,
+            2,
+            13,
+            14,
+            27,
+            28
+          ],
           "bold": [],
           "italic": [],
           "ko": "예를 들어, 그림을 처음 보았을 때는 전혀 마음에 들지 않을 수 있지만, 조금 더 오래 들여다보면 그것이 매우 마음에 든다는 것을 알게 될 수도 있다."
         },
         {
           "text": "I wish I could tell you that the Baudelaires’ first impressions of Count Olaf and his house were incorrect； as first impressions so often are.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            2,
+            7,
+            8,
+            9,
+            10,
+            20,
+            21
+          ],
+          "verb": [
+            17,
+            24,
+            1,
+            3,
+            4
+          ],
           "bold": [],
           "italic": [],
           "ko": "보통의 첫인상이 흔히 그렇듯, 올래프 백작과 그의 집에 대한 보들레르가 아이들의 첫인상이 틀렸다고 여러분에게 말할 수 있다면 좋으련만."
         },
         {
-          "text": "Violet and Klaus took turns sleeping in it, so that every other night one of them was in the bed and the other was sleeping on the hard wooden floor, and the bed’s mattress was so lumpy ( ) it was difficult to say who was more uncomfortable.",
-          "subject": [],
-          "verb": [],
+          "text": "Violet and Klaus took turns sleeping in it, so that every other night one of them was in the bed and the other was sleeping on the hard wooden floor, and the bed’s mattress was so lumpy it was difficult to say who was more uncomfortable.",
+          "subject": [
+            0,
+            1,
+            2,
+            13,
+            14,
+            15,
+            21,
+            22,
+            23,
+            31,
+            32,
+            33,
+            37
+          ],
+          "verb": [
+            3,
+            4,
+            16,
+            23,
+            24,
+            34,
+            38,
+            43
+          ],
           "bold": [],
           "italic": [],
           "ko": "바이올렛과 클라우스는 번갈아 가며 그 침대에서 잤고, 그래서 이틀에 한번 꼴로 한 명은 침대에서 자고 다른 한 명은 딱딱한 나무 바닥에서 잤는데, 침대의 매트리스가 너무 퉁퉁 불룩불룩(울퉁불퉁)해서 누구의 잠자리가 더 불편한지 말하기 어려울 지경이었다."
         },
         {
           "text": "The only good thing to be said for Count Olaf is that he wasn't around very often.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            1,
+            3,
+            2,
+            12
+          ],
+          "verb": [
+            10,
+            13
+          ],
           "bold": [],
           "italic": [],
           "ko": "올래프 백작에 대해 말할 수 있는 유일하게 좋은 점은 그가 자주 주변에 나타나지 않았다는 것이다."
         },
         {
           "text": "When the children woke up and chose their clothing out of the refrigerator box, they would walk into the kitchen and find a list of instructions left for them by Count Olaf, who would often not appear until nighttime.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            1,
+            2,
+            14
+          ],
+          "verb": [
+            3,
+            6,
+            15,
+            16,
+            21,
+            33,
+            35,
+            36
+          ],
           "bold": [],
           "italic": [],
           "ko": "아이들이 일어나 냉장고 상자에서 옷을 꺼내 입고 주방으로 들어가면, 밤이 되어서야 나타나곤 했던 올래프 백작이 남겨놓은 지시 사항 목록을 발견하곤 했다."
         },
         {
           "text": "One morning his note read, “My theater troupe will be coming for dinner before tonight’s performance.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            2,
+            3,
+            6,
+            5,
+            7
+          ],
+          "verb": [
+            4,
+            9,
+            8,
+            10
+          ],
           "bold": [],
           "italic": [],
           "ko": "어느 날 아침 그의 쪽지에는 이렇게 적혀 있었다. \"오늘 밤 공연 전에 나의 연극 단원들이 저녁을 먹으러 올 것이다."
         },
         {
-          "text": "“If they were here,” Klaus said, his voice rising as he got more and more upset, “we would not be with Count Olaf in the first place",
-          "subject": [],
-          "verb": [],
+          "text": "“If they were here,” Klaus said, his voice rising as he got more and more upset, “we would not be with Count Olaf in the first place.",
+          "subject": [
+            1,
+            4,
+            10,
+            16
+          ],
+          "verb": [
+            2,
+            5,
+            11,
+            17,
+            18,
+            19
+          ],
           "bold": [],
           "italic": [],
           "ko": "\"부모님이 여기 계셨다면,\" 클라우스가 점점 더 화가 나서 목소리를 높이며 말했다. \"애초에 우리가 올래프 백작과 함께 있지 않았을 텐데."
         },
         {
-          "text": "Sometimes, just saying that you hate something, and having someone agree with you, can make you [ feel / feeling ] better about a terrible situation.",
-          "subject": [],
-          "verb": [],
+          "text": "Sometimes, just saying that you hate something, and having someone agree with you, can make you feel better about a terrible situation.",
+          "subject": [
+            2,
+            4,
+            8
+          ],
+          "verb": [
+            5,
+            13,
+            14
+          ],
           "bold": [],
           "italic": [],
           "ko": "때로는 어떤 것이 싫다고 말하고 누군가가 당신의 말에 동의하게 하는 것만으로도, 끔찍한 상황에 대해 기분이 한결 나아지게 만들 수 있다."
         },
         {
           "text": "In the time since the Baudelaire parents’ death, most of the Baudelaire orphans' friends had fallen by the wayside, an expression which here means “they stopped calling, writing, and stopping by to see any of the Baudelaires, making them very lonely.”",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            8,
+            9,
+            10,
+            11,
+            13,
+            12,
+            24
+          ],
+          "verb": [
+            14,
+            15,
+            23,
+            25
+          ],
           "bold": [],
           "italic": [],
           "ko": "보들레르 부모님이 돌아가신 이후로 보들레르 고아들의 친구들 대부분은 떨어져 나갔는데, 여기서 이 표현은 \"그들이 전화하거나 편지를 쓰거나 보들레르 아이들을 만나러 들르는 것을 그만두어, 아이들을 매우 외롭게 만들었다\"는 것을 의미한다."
         },
         {
           "text": "You and I, of course, would never do this to any of our grieving acquaintances, but it is a sad truth in life that when someone has lost a loved one, friends sometimes avoid the person, just when the presence of friends is most needed.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            1,
+            2,
+            16,
+            25,
+            31,
+            38,
+            39,
+            40,
+            41
+          ],
+          "verb": [
+            5,
+            6,
+            7,
+            17,
+            27,
+            26,
+            33,
+            42
+          ],
           "bold": [],
           "italic": [],
           "ko": "물론 여러분과 나는 슬픔에 잠긴 지인들에게 절대 이렇게 하지 않겠지만, 사랑하는 사람을 잃었을 때 친구의 존재가 가장 필요한 바로 그 순간에 친구들이 때때로 그 사람을 피한다는 것은 인생의 슬픈 진실이다."
