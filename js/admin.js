@@ -197,6 +197,18 @@ const actions = {
   },
   importVocabClick() { const i = document.getElementById('vocab-import'); if (i) { i.value = ''; i.click(); } },
   importHwpxClick() { const i = document.getElementById('hwpx-import'); if (i) { i.value = ''; i.click(); } },
+  // 핵심 문장 해석: 엑셀(CSV) 내려받기 / 올리기
+  exportCore() {
+    const csv = coreToCSV(ed.day.core || []);
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const base = ((ed.day.book && ed.day.book.chapter) || ed.day.label || 'core').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'core';
+    a.href = url; a.download = base + '-핵심문장해석.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
+  },
+  importCoreClick() { const i = document.getElementById('core-import'); if (i) { i.value = ''; i.click(); } },
   selectDay(i) { commit(); openDay(Number(i)); toast(''); render(); },
   addDay() {
     commit();
@@ -573,6 +585,50 @@ function vocabToCSV(words) {
   const rows = [['단어', '품사', '뜻', '예문']].concat((words || []).map(w => [w.head || w.word, w.pos || '', w.def || '', w.ex || '']));
   return rows.map(r => r.map(csvCell).join(',')).join('\r\n');
 }
+// 핵심 문장 → CSV(영어 문장 + 우리말 해석). 예습 '보통' 해석 보기에 사용.
+function coreToCSV(core) {
+  const rows = [['문장', '해석']].concat((core || []).map(c => [c.text || '', c.ko || '']));
+  return rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+}
+// 업로드한 CSV로 핵심 문장 해석(ko) 채우기
+function importCoreFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const rows = parseCSV(String(reader.result || ''));
+      if (!rows.length) { toast('빈 파일이에요.', 'err'); render(); return; }
+      const hdr = rows[0].map(h => (h || '').trim().toLowerCase());
+      const idx = (...names) => { for (const n of names) { const i = hdr.indexOf(n); if (i >= 0) return i; } return -1; };
+      const cSent = idx('문장', 'sentence', 'en', '영어'), cKo = idx('해석', 'ko', '뜻', '우리말', 'meaning');
+      const hasHeader = cSent >= 0 || cKo >= 0;
+      const kSent = hasHeader ? cSent : 0, kKo = hasHeader ? (cKo >= 0 ? cKo : 1) : 1;
+      const cell = (r, c) => (c >= 0 && r[c] != null ? String(r[c]).trim() : '');
+      const recs = [];
+      for (let i = hasHeader ? 1 : 0; i < rows.length; i++) {
+        const r = rows[i]; const sent = cell(r, kSent); const ko = cell(r, kKo);
+        if (!sent && !ko) continue;
+        recs.push({ sent, ko, key: sent.toLowerCase().replace(/\s+/g, ' ') });
+      }
+      const list = ed.day.core || [];
+      let filled = 0;
+      if (recs.length === list.length && list.length) {
+        // 행 수가 같으면 순서대로 매칭(영어 문장을 바꿔도 안전)
+        list.forEach((c, i) => { c.ko = recs[i].ko; filled++; });
+      } else {
+        // 행 수가 다르면 영어 문장으로 매칭
+        const map = {};
+        recs.forEach(rec => { if (rec.key && !(rec.key in map)) map[rec.key] = rec; });
+        list.forEach(c => {
+          const rec = map[String(c.text || '').toLowerCase().replace(/\s+/g, ' ')];
+          if (rec) { c.ko = rec.ko; filled++; }
+        });
+      }
+      toast(`엑셀에서 해석 ${filled}개를 불러왔어요.`, filled ? 'ok' : 'err');
+      render();
+    } catch (e) { toast('파일을 읽지 못했어요: ' + e.message, 'err'); render(); }
+  };
+  reader.readAsText(file, 'utf-8');
+}
 // 아주 단순한 CSV 파서(따옴표·쉼표·줄바꿈 처리)
 function parseCSV(text) {
   text = String(text || '').replace(/^﻿/, '');
@@ -760,7 +816,7 @@ function passageEditorOverlay(d) {
 function topbar(loaded) {
   const hasToken = loaded && !!localStorage.getItem(TOKEN_KEY);
   return `<div class="topbar">
-    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v66 (어휘 복습 10/30/50/전체 선택·50/전체 +10·복습 중 뒤로가기 → 챕터 허브)</b></small></div>
+    <div class="brand">Reading Aquarium <small>교사 콘텐츠 관리 · 데스크톱 · <b style="color:#2f74e6">v67 (예습 보통 💬해석 보기 토글·핵심문장 해석 엑셀 다운로드/업로드)</b></small></div>
     <div class="spacer"></div>
     <input id="gh-token" type="password" class="inp" style="max-width:260px" placeholder="${hasToken ? 'GitHub 토큰 저장됨 (변경 시 입력)' : 'GitHub 토큰 (github_pat_...)'}">
     <button class="btn light sm" data-act="saveToken">토큰 저장</button>
@@ -960,8 +1016,15 @@ function coreEditor(d) {
       </div>`).join('') : '<div class="hint" style="margin:0">지문이 비어 있어요. 지문 탭에서 먼저 입력하세요.</div>'}
     </div>` : '';
   return `<div class="card">
-    <h2>🟡 보통 · 핵심 문장 <span style="font-size:12px;color:#7d8aa0;font-weight:600">${core.length}문장</span></h2>
-    <div class="hint"><b>왼쪽에 떠 있는 툴바</b>에서 모드를 고르고 <b>단어를 클릭</b>해 표시하세요. 🔵주어 · 🟢동사(예습 '보통' 채점에 사용) · 볼드·이탤릭(강조). 해석은 '문장 작문'에 쓰여요. 비워두면 지문 앞 문장 6개가 자동으로 쓰여요.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <h2 style="margin:0">🟡 보통 · 핵심 문장 <span style="font-size:12px;color:#7d8aa0;font-weight:600">${core.length}문장</span></h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn ghost sm" data-act="exportCore" title="문장+해석을 엑셀(CSV)로 내려받기">⬇ 엑셀</button>
+        <button class="btn ghost sm" data-act="importCoreClick" title="엑셀(CSV) 올려서 해석 채우기">⬆ 올리기</button>
+      </div>
+    </div>
+    <input type="file" id="core-import" accept=".csv,text/csv" style="display:none">
+    <div class="hint"><b>왼쪽에 떠 있는 툴바</b>에서 모드를 고르고 <b>단어를 클릭</b>해 표시하세요. 🔵주어 · 🟢동사(예습 '보통' 채점에 사용) · 볼드·이탤릭(강조). 해석은 예습 '보통'의 <b>💬 해석 보기</b>와 '문장 작문'에 쓰여요. <b>⬇엑셀</b>로 문장을 받아 해석을 채운 뒤 <b>⬆올리기</b> 하면 한 번에 들어가요(문장 순서·내용 기준 자동 매칭). 비워두면 지문 앞 문장 6개가 자동으로 쓰여요.</div>
     ${floatBar}
     ${cards}
     <div style="display:flex;gap:8px;margin-top:10px">
@@ -1210,6 +1273,7 @@ rootEl.addEventListener('paste', e => {
 rootEl.addEventListener('change', e => {
   const el = e.target;
   if (el.id === 'vocab-import') { if (el.files && el.files[0]) importVocabFile(el.files[0]); return; }   // 엑셀(CSV) 업로드
+  if (el.id === 'core-import') { if (el.files && el.files[0]) importCoreFile(el.files[0]); return; }     // 핵심 문장 해석 엑셀 업로드
   if (el.id === 'hwpx-import') { if (el.files && el.files[0]) applyHwpx(el.files[0]); return; }   // 한글(HWPX) 업로드
   if (el.dataset.sched != null) { applySchedField(el); resortKeepSel(); render(); return; }   // 일정 탭: 확정 시 재정렬+렌더
   const bind = el.dataset.bind;

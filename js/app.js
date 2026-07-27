@@ -623,7 +623,7 @@ function composeSentences() { return dayCoreSentencesRich(activeDay()).filter(c 
 function pmAdvance() {
   const sents = dayCoreSentencesRich(activeDay());
   if ((state.pmIndex || 0) >= sents.length - 1) { completePreviewLevel('medium'); return; }
-  set({ pmIndex: (state.pmIndex || 0) + 1, pmPhaseIdx: 0, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false });
+  set({ pmIndex: (state.pmIndex || 0) + 1, pmPhaseIdx: 0, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false, pmShowKo: false });
 }
 // '몰라요' 단어를 내 단어장에 담기(중복 제거) + 클라우드 저장
 function addToWordbook(card) {
@@ -724,6 +724,7 @@ const DEFAULT_STATE = {
   pvCount: null, pvBonus: false,   // 예습 살살: 선택 개수 / 보너스 여부
   vrCount: null, vrBonus: false,   // 어휘 복습: 선택 개수 / 보너스 여부
   pmWrong: 0, pmReveal: false,     // 예습 보통: 틀린 횟수 / 정답 공개
+  pmShowKo: false,                 // 예습 보통: 해석 보기 토글
   vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 최대 30개로 고정)
   result: null,
   hatchStage: 'idle', hatchSpecies: null,
@@ -1189,7 +1190,7 @@ const actions = {
   },
   previewMedium() {
     if (!dayCoreSentencesRich(activeDay()).length) return;
-    set({ screen: 'previewMedium', pmIndex: 0, pmPhaseIdx: 0, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false });
+    set({ screen: 'previewMedium', pmIndex: 0, pmPhaseIdx: 0, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false, pmShowKo: false });
   },
   previewHard() { armReviewGate(); set({ screen: 'review', reviewMode: 'burning', revIndex: 0, pop: null }); },   // 버닝: 지문 복습처럼 한 문장씩 읽기
   // 2단계 보통: 주어/동사 클릭 채점
@@ -1224,6 +1225,7 @@ const actions = {
     pmAdvance();
   },
   pmNext() { pmAdvance(); },   // 표시 마크가 없는 문장: 읽고 다음
+  pmToggleKo() { set({ pmShowKo: !state.pmShowKo }); },   // 예습 보통: 해석 보기/숨기기
   // 어휘 복습: 개수 선택(50개·전체는 보너스 경험치)
   vrPick(n) {
     const total = dayVocabCards(activeDay()).length;
@@ -3183,6 +3185,7 @@ function previewMediumHTML() {
   const prompt = !grading ? '문장을 소리 내어 읽어보세요'
     : phase === 'subject' ? '👆 주어(주부)를 모두 클릭하세요'
       : '👆 동사를 클릭하세요';
+  const showKo = !!state.pmShowKo || !!state.pmReveal;   // 해석 보기 토글(3번 틀려 정답 공개 시 자동 표시)
   const lastPhase = state.pmPhaseIdx >= phases.length - 1;
   const proceedLabel = !lastPhase ? '다음 단계 →' : (i >= total - 1 ? '예습 완료 ✓' : '다음 문장 →');
   const btn = grading
@@ -3209,7 +3212,10 @@ function previewMediumHTML() {
     ${subPassed ? `<div style="text-align:center;font-size:10.5px;color:#9aa8bd;margin-bottom:2px">🔵 주어 완료 — 이제 동사예요</div>` : ''}
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
       <div style="text-align:center;line-height:2.2">${toks.map(chip).join('')}</div>
-      ${c.ko ? `<div style="text-align:center;font-size:13px;color:#9aa8bd;margin-top:14px;font-family:'IBM Plex Sans KR',sans-serif">${esc(c.ko)}</div>` : ''}
+      ${c.ko ? `<div style="text-align:center;margin-top:16px">
+        <button data-act="pmToggleKo" style="border:1.5px solid ${showKo ? '#2f74e6' : '#dbe4ef'};background:${showKo ? '#e7f0fd' : '#fff'};color:${showKo ? '#2f74e6' : '#5f7794'};font-size:12.5px;font-weight:700;padding:8px 16px;border-radius:12px;cursor:pointer">${showKo ? '🙈 해석 숨기기' : '💬 해석 보기'}</button>
+        ${showKo ? `<div style="font-size:14px;color:#3a5578;margin-top:12px;font-family:'IBM Plex Sans KR',sans-serif;line-height:1.65;background:#f4f8fd;border:1px solid #dbeafe;border-radius:12px;padding:11px 13px">${esc(c.ko)}</div>` : ''}
+      </div>` : ''}
       ${feedback}
     </div>
     <div style="margin-top:12px">${btn}</div>
