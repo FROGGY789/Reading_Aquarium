@@ -722,6 +722,7 @@ const DEFAULT_STATE = {
   quizTask: null, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {},
   gramCI: 0,                // 어법 커리큘럼: 현재 개념 인덱스
   pvCount: null, pvBonus: false,   // 예습 살살: 선택 개수 / 보너스 여부
+  vrCount: null, vrBonus: false,   // 어휘 복습: 선택 개수 / 보너스 여부
   pmWrong: 0, pmReveal: false,     // 예습 보통: 틀린 횟수 / 정답 공개
   vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 최대 30개로 고정)
   result: null,
@@ -1077,6 +1078,7 @@ const actions = {
   goPreviewList() { set({ screen: 'pickChapter', pickMode: 'preview', pop: null, dexOpen: false, readCtl: false }); },  // 예습하기 → 챕터 고르기
   openReview(key) { set({ screen: 'chapter', chapterKey: key, chapterMode: 'review', pop: null, dexOpen: false, readCtl: false }); },   // 복습 챕터 → 할 일 허브
   openPreview(key) { set({ screen: 'preview', chapterKey: key, chapterMode: 'preview', pop: null, dexOpen: false, readCtl: false }); },  // 예습 챕터 → 바로 살살/보통/버닝
+  goChapter() { set({ screen: 'chapter', chapterMode: 'review', pop: null, dexOpen: false, readCtl: false, quizTask: null, result: null }); },   // 복습 할 일 화면에서 뒤로 → 챕터 할 일 허브
   goAqua() {
     if (!Array.isArray(state.displayed)) { const uniq = [...new Set(state.animals)]; state.displayed = uniq.slice(0, displayLimit()); }
     set({ screen: 'aquarium', pop: null, dexOpen: false });
@@ -1149,7 +1151,7 @@ const actions = {
     if (!taskAvailable(t)) return;
     if (t === 'review') { armReviewGate(); set({ screen: 'review', reviewMode: 'review', pop: null, revIndex: 0 }); }
     else if (t === 'preview') set({ screen: 'preview', pop: null });   // 3단계 난이도 선택
-    else if (t === 'vocab') set({ screen: 'vocabReview', vrCount: null, fcI: 0, fcFlipped: false, fcHint: false });   // 어휘 복습(플래시카드)
+    else if (t === 'vocab') set({ screen: 'vocabReview', vrCount: null, vrBonus: false, fcI: 0, fcFlipped: false, fcHint: false });   // 어휘 복습(플래시카드)
     else if (t === 'vocabPrep') {   // 어휘 예습(플래시카드) — 다음 수업 지문 단어 랜덤 최대 30개
       const deck = shuffleArr(nextDayPopoverCards()).slice(0, 30);
       if (!deck.length) return;
@@ -1222,10 +1224,12 @@ const actions = {
     pmAdvance();
   },
   pmNext() { pmAdvance(); },   // 표시 마크가 없는 문장: 읽고 다음
-  // 어휘 복습: 개수 선택
+  // 어휘 복습: 개수 선택(50개·전체는 보너스 경험치)
   vrPick(n) {
     const total = dayVocabCards(activeDay()).length;
-    set({ vrCount: n === 'all' ? total : Math.min(Number(n), total), fcI: 0, fcFlipped: false, fcHint: false });
+    const count = n === 'all' ? total : Math.min(Number(n), total);
+    const bonus = n === 'all' || Number(n) >= 50;
+    set({ vrCount: count, vrBonus: bonus, fcI: 0, fcFlipped: false, fcHint: false });
   },
   // 플래시카드 공용: 알아요/몰라요(뒤집기+발음) → 다음
   fcKnow() { const c = fcCurrentCard(); if (!c) return; speak(c.head || c.word); set({ fcFlipped: true }); },
@@ -1242,6 +1246,8 @@ const actions = {
         if (state.pvBonus) state.xp = (state.xp || 0) + 20;   // 살살 50개·전체 선택 보너스 경험치
         completePreviewLevel('easy'); return;
       }
+      // 어휘 복습 50개·전체 선택 보너스(+10) — 첫 완료 시 1회만
+      if (mode === 'vocab' && state.vrBonus && !chapProg(activeProgKey()).tasks.vocab) state.xp = (state.xp || 0) + 10;
       completeTask(doneTask); return;
     }
     set({ fcI: (state.fcI || 0) + 1, fcFlipped: false, fcHint: false });
@@ -2527,7 +2533,7 @@ function reviewHTML() {
 
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:${topPad()} 20px 24px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div data-act="${burning ? 'goPreview' : 'goHome'}" style="display:flex;align-items:center;gap:8px;cursor:pointer"><div style="width:30px;height:30px;border-radius:10px;background:${burning ? '#fbe4e2' : '#e7f0fd'};color:${accent};display:flex;align-items:center;justify-content:center">←</div><span style="font-size:13px;font-weight:600;color:#14243f">${burning ? '🔴 버닝 · 지문 읽기' : '지문 복습'}</span></div>
+      <div data-act="${burning ? 'goPreview' : 'goChapter'}" style="display:flex;align-items:center;gap:8px;cursor:pointer"><div style="width:30px;height:30px;border-radius:10px;background:${burning ? '#fbe4e2' : '#e7f0fd'};color:${accent};display:flex;align-items:center;justify-content:center">←</div><span style="font-size:13px;font-weight:600;color:#14243f">${burning ? '🔴 버닝 · 지문 읽기' : '지문 복습'}</span></div>
       <div style="display:flex;align-items:center;gap:10px">
         <div style="font-size:12px;font-weight:700;color:#7d8aa0">${i + 1} / ${total}</div>
         ${readCtlBtn({ btnBg: burning ? '#fbe4e2' : '#e7f0fd', btnFg: accent })}
@@ -2683,9 +2689,10 @@ function quizHTML() {
     ? `<button data-act="quizNext" style="width:100%;border:none;background:#14243f;color:#fff;font-size:14px;font-weight:600;padding:14px;border-radius:15px;box-shadow:0 5px 0 #0a1526;cursor:pointer">${qi >= qs.length - 1 ? '결과 보기' : '다음 →'}</button>`
     : `<button id="check-btn" data-act="quizCheck" class="btn-check ${canCheck() ? 'on' : ''}">확인</button>`;
 
+  const quizBack = state.quizTask === 'grammar' ? 'goAdvanced' : state.quizTask === 'preview' ? 'goPreview' : 'goChapter';
   return `<div style="padding:${topPad()} 20px 40px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <div data-act="${quizBack}" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       <div style="flex:1;margin:0 12px"><div style="height:8px;border-radius:4px;background:#dde6f1;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:4px;width:${pct}%"></div></div></div>
       <div style="font-size:12px;font-weight:700;color:#14243f">${qi + 1}/${qs.length}</div>
     </div>
@@ -2916,7 +2923,7 @@ function flashcardScreenHTML(mode) {
 
   return `<div style="padding:${topPad()} 20px 30px;min-height:100%;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div data-act="${isPreview ? 'goPreview' : 'goHome'}" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <div data-act="${isPreview ? 'goPreview' : mode === 'vocabPrep' ? 'goAdvanced' : 'goChapter'}" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       ${badge}
       <span style="font-size:12px;font-weight:700;color:#14243f">${i + 1}/${total}</span>
     </div>
@@ -3136,17 +3143,17 @@ function wordTestHTML() {
 function vocabReviewHTML() {
   if (state.vrCount != null) return flashcardScreenHTML('vocab');
   const total = dayVocabCards(activeDay()).length;
-  const opts = [30, 50].filter(n => total > n);
-  const btn = (label, val) => `<button data-act="vrPick" data-arg="${val}" style="border:1.5px solid #e2e9f2;background:#fff;color:#14243f;font-size:16px;font-weight:700;padding:16px;border-radius:15px;cursor:pointer;box-shadow:0 5px 14px -10px rgba(20,50,90,.5)">${label}</button>`;
+  const opts = [10, 30, 50].filter(n => n < total);
+  const btn = (label, val, bonus) => `<button data-act="vrPick" data-arg="${val}" style="position:relative;border:1.5px solid ${bonus ? '#f0c65a' : '#e2e9f2'};background:${bonus ? '#fff8e6' : '#fff'};color:#14243f;font-size:16px;font-weight:700;padding:16px;border-radius:15px;cursor:pointer;box-shadow:0 5px 14px -10px rgba(20,50,90,.5)">${label}${bonus ? ` <span style="font-size:11px;color:#b0851f;font-weight:700">🎁 +10</span>` : ''}</button>`;
   return `<div style="padding:${topPad()} 20px 40px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-      <div data-act="goHome" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
+      <div data-act="goChapter" style="width:30px;height:30px;border-radius:10px;background:#e7f0fd;color:#2f74e6;display:flex;align-items:center;justify-content:center;cursor:pointer">←</div>
       <span style="font-size:15px;font-weight:700;color:#14243f">어휘 복습</span>
     </div>
-    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 16px;line-height:1.6">오늘 지문의 단어를 플래시카드로 복습해요. 몇 개를 볼까요? (총 ${total}개)</div>
+    <div style="font-size:12.5px;color:#7d8aa0;margin:8px 2px 16px;line-height:1.6">오늘 지문의 단어를 플래시카드로 복습해요. 몇 개를 볼까요? (총 ${total}개)<br><b style="color:#b0851f">50개·전체</b>를 고르면 <b>보너스 경험치 +10</b>을 받아요 🎁</div>
     <div style="display:flex;flex-direction:column;gap:11px">
-      ${opts.map(n => btn(n + '개', n)).join('')}
-      ${btn('전체 ' + total + '개', 'all')}
+      ${opts.map(n => btn(n + '개', n, n >= 50)).join('')}
+      ${btn('전체 ' + total + '개', 'all', true)}
     </div>
   </div>`;
 }
