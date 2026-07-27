@@ -374,29 +374,40 @@ function passageToReview(passage) {
     .replace(/\n\s*-{3,}\s*\n/g, '\n\n')
     .split(/\n\s*\n/).map(p => p.trim().replace(/\s*\n\s*/g, ' ')).filter(Boolean);
 }
-// 지문 → 문장 배열 ([단어] 토큰 유지 — 지문 복습 팝오버용). 문단 순서 유지.
+// 문장 끝처럼 보이지만 실제로는 문장 끝이 아닌 약어(Mr. Mrs. Dr. …)
+const _ABBR = new Set(['mr', 'mrs', 'ms', 'dr', 'prof', 'st', 'sr', 'jr', 'vs', 'mt', 'no', 'etc', 'inc', 'ltd', 'co', 'vol', 'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec', 'gov', 'sen', 'rep', 'gen', 'capt', 'lt', 'col', 'rev', 'hon', 'messrs', 'esp', 'approx', 'dept', 'univ']);
+// 조각이 약어/이니셜(J.)로 끝나면 다음 조각과 이어져야 함(문장 끝 아님)
+function _endsWithAbbr(s) {
+  const m = String(s || '').trim().match(/([A-Za-z.]+)\.["'”’)\]]*$/);
+  if (!m) return false;
+  const w = m[1].replace(/\.$/, '');
+  if (/^[A-Za-z]$/.test(w)) return true;            // 이니셜 한 글자 (J. K.)
+  return _ABBR.has(w.toLowerCase());
+}
+// 종결부호로 나눈 조각들을 받아, 약어 뒤에서 잘린 것들을 다시 합침
+function _mergeAbbrParts(parts) {
+  const out = [];
+  for (let i = 0; i < parts.length; i++) {
+    let cur = parts[i];
+    while (i + 1 < parts.length && _endsWithAbbr(cur)) { cur += parts[i + 1]; i++; }
+    out.push(cur);
+  }
+  return out;
+}
+function _splitSentencesKeep(p) {
+  const raw = p.match(/[^.!?…]+(?:[.!?…]+["'”’)\]]*|$)/g);
+  return raw ? _mergeAbbrParts(raw).map(s => s.trim()).filter(Boolean) : (p.trim() ? [p.trim()] : []);
+}
+// 지문 → 문장 배열 (<단어> 토큰 유지 — 지문 복습 팝오버용). 문단 순서 유지.
 function passageToReviewSentences(passage) {
   const out = [];
-  passageToReview(passage).forEach(para => {
-    const p = (para || '').trim();
-    if (!p) return;
-    const parts = p.match(/[^.!?…]+(?:[.!?…]+["'”’)\]]*|$)/g);
-    if (parts) parts.forEach(s => { const t = s.trim(); if (t) out.push(t); });
-    else out.push(p);
-  });
+  passageToReview(passage).forEach(para => { _splitSentencesKeep((para || '').trim()).forEach(s => out.push(s)); });
   return out;
 }
 // 지문 → 문장 배열 (수업용 전체화면 발표: 한 화면에 한 문장). 대괄호 제거, 문단 순서 유지.
 function passageToSentences(passage) {
   const out = [];
-  passageToReview(passage).forEach(para => {
-    const p = stripBrackets(para).trim();
-    if (!p) return;
-    // 종결부호(. ! ? …)로 문장 분리 + 뒤따르는 따옴표/괄호 포함, 마지막 미종결 조각도 포함
-    const parts = p.match(/[^.!?…]+(?:[.!?…]+["'”’)\]]*|$)/g);
-    if (parts) parts.forEach(s => { const t = s.trim(); if (t) out.push(t); });
-    else out.push(p);
-  });
+  passageToReview(passage).forEach(para => { _splitSentencesKeep(stripBrackets(para).trim()).forEach(s => out.push(s)); });
   return out;
 }
 

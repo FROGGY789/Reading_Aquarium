@@ -500,7 +500,15 @@ function wordHintSentence(word) {
   const sents = passageToReviewSentences(dayPassage(activeDay()));
   const hit = sents.find(s => s.includes('<' + word + '>'))
     || sents.find(s => new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(stripBrackets(s)));
-  return hit ? stripMarks(stripBrackets(hit)) : '';
+  // 짝 맞는 마크 제거 후, 문장 경계에서 잘려 남은 홀짝 ==·%%·** 잔여물까지 싹 제거
+  return hit ? stripMarks(stripBrackets(hit)).replace(/==|%%|\*\*/g, '').trim() : '';
+}
+// 예문에서 대상 단어를 노란 형광펜으로 강조(HTML 반환 — 이미 esc 처리)
+function highlightWordInSentence(sentence, word) {
+  const e = esc(sentence || '');
+  if (!word) return e;
+  const re = new RegExp('(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+  return e.replace(re, '<mark style="background:#ffe35c;color:#1a1a1a;border-radius:3px;padding:0 2px">$1</mark>');
 }
 // 문단 → 문장 배열(<단어>·==·%% 마커 유지, 글자 절대 안 잃음).
 // 문장 끝(. ! ?) 뒤에 닫는 마크(= % * " ' ) ] ” ’)를 건너뛴 다음이 공백/끝이면 문장 경계로 봄.
@@ -514,7 +522,8 @@ function splitSentences(text) {
     if (ch === '.' || ch === '!' || ch === '?') {
       let j = i + 1;
       while (j < text.length && closers.indexOf(text[j]) >= 0) { buf += text[j]; j++; }
-      if (j >= text.length || /\s/.test(text[j])) { const t = buf.trim(); if (t) out.push(t); buf = ''; i = j - 1; }
+      // 약어(Mr. Dr. …)·이니셜(J.) 뒤에서는 문장을 나누지 않음
+      if ((j >= text.length || /\s/.test(text[j])) && !_endsWithAbbr(buf)) { const t = buf.trim(); if (t) out.push(t); buf = ''; i = j - 1; }
     }
   }
   if (buf.trim()) out.push(buf.trim());
@@ -2841,7 +2850,7 @@ function flashcardScreenHTML(mode) {
       </div>
     ` : `
       <div style="font-size:12px;color:#b8c2d2;margin-top:14px">뜻을 아는지 아래에서 골라보세요</div>
-      ${hintSent ? `<div style="margin-top:14px;background:#f4f8fd;border:1px solid #dbeafe;border-radius:12px;padding:11px 13px;font-family:'Lora',serif;font-size:14px;color:#3a5578;line-height:1.6">${esc(hintSent)}</div>` : ''}
+      ${hintSent ? `<div style="margin-top:14px;background:#f4f8fd;border:1px solid #dbeafe;border-radius:12px;padding:11px 13px;font-family:'Lora',serif;font-size:14px;color:#3a5578;line-height:1.6">${highlightWordInSentence(hintSent, c.word)}</div>` : ''}
     `}
   </div>`;
 
