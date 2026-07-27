@@ -173,6 +173,37 @@ create policy "wordbook own update" on public.er_wordbook for update to authenti
 create policy "wordbook own delete" on public.er_wordbook for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
 
 -- =========================================================
+-- v6: 알림 메시지 (교사 → 학생, 학생 앱에서 팝업)
+-- 교사가 학생에게 짧은 알림/응원 메시지를 보내면, 학생이 앱을 열 때(또는
+-- 열려 있으면 곧) 팝업으로 떠요. 이미 실행했어도 안전하게 재실행됩니다.
+-- =========================================================
+create table if not exists public.er_messages (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  user_id uuid not null,          -- 받는 학생
+  text text not null,             -- 메시지 내용
+  applied boolean not null default false   -- 학생이 확인(팝업 표시)했는지
+);
+create index if not exists er_messages_user_idx on public.er_messages (user_id, applied);
+alter table public.er_messages enable row level security;
+drop policy if exists "messages teacher insert" on public.er_messages;
+drop policy if exists "messages read own or teacher" on public.er_messages;
+drop policy if exists "messages student apply" on public.er_messages;
+drop policy if exists "messages delete own or teacher" on public.er_messages;
+-- 교사만 메시지 생성
+create policy "messages teacher insert" on public.er_messages
+  for insert to authenticated with check (public.is_teacher());
+-- 본인 것 조회 + 교사 전체 조회
+create policy "messages read own or teacher" on public.er_messages
+  for select to authenticated using (user_id = auth.uid() or public.is_teacher());
+-- 학생은 본인 메시지를 '확인됨(applied)'으로만 갱신
+create policy "messages student apply" on public.er_messages
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+-- 본인 또는 교사가 삭제 가능(계정 정리용)
+create policy "messages delete own or teacher" on public.er_messages
+  for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
+
+-- =========================================================
 -- 교사 계정 지정 (최초 1회):
 -- 앱에서 선생님도 학생처럼 가입한 뒤, 아래에서 아이디만 바꿔 실행하세요.
 -- (교사 계정은 승인 대기 없이 바로 사용됩니다)

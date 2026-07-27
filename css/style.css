@@ -56,6 +56,7 @@ button{font-family:inherit}
 @keyframes eggShake{0%,12%{transform:translateX(0) rotate(0)}26%{transform:translateX(-1px) rotate(-1deg)}40%{transform:translateX(1px) rotate(1.2deg)}54%{transform:translateX(-1.5px) rotate(-1.6deg)}64%{transform:translateX(1.5px) rotate(2deg)}72%{transform:translateX(-2px) rotate(-2.4deg)}80%{transform:translateX(2px) rotate(2.6deg)}83%{transform:translateX(0) rotate(0)}100%{transform:translateX(0) rotate(0)}}
 @keyframes lidOpen{0%,83%{transform:translate(0,0) rotate(0)}100%{transform:translate(7px,-54px) rotate(15deg)}}
 @keyframes fishPop{0%,82%{transform:translate(-50%,18px) scale(0);opacity:0}100%{transform:translate(-50%,-60%) scale(1);opacity:1}}
+@keyframes bellRing{0%,100%{transform:rotate(0)}10%,30%,50%{transform:rotate(12deg)}20%,40%,60%{transform:rotate(-12deg)}70%{transform:rotate(0)}}
 @keyframes popFlash{0%,83%{opacity:0}86%{opacity:.8}100%{opacity:0}}
 @keyframes labelFade{0%,78%{opacity:.9}100%{opacity:0}}
 

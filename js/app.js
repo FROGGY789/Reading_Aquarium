@@ -193,6 +193,31 @@ async function pullGrants() {
     if (eggs || xp) { ui.grantMsg = `선생님이 ${xp ? 'XP ' + xp : ''}${xp && eggs ? ' · ' : ''}${eggs ? '알 ' + eggs + '개' : ''}를 주셨어요! 🎁`; }
   } catch (e) { /* 무시 */ }
 }
+// 선생님이 보낸 알림 메시지 가져오기(안 읽은 것 → 팝업 표시 후 읽음 처리)
+async function pullMessages() {
+  if (!auth || isTeacherUser()) return;
+  try {
+    const res = await sbFetch('/rest/v1/er_messages?user_id=eq.' + auth.user.id + '&applied=eq.false&select=id,text&order=created_at.asc');
+    if (!res.ok) return;   // 테이블이 아직 없으면 조용히 넘어감
+    const rows = await res.json();
+    if (!rows.length) return;
+    ui.teacherMsgs = (ui.teacherMsgs || []).concat(rows.map(r => r.text).filter(Boolean));
+    const ids = rows.map(r => r.id);
+    await sbFetch('/rest/v1/er_messages?id=in.(' + ids.join(',') + ')', {
+      method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ applied: true })
+    });
+  } catch (e) { /* 무시 */ }
+}
+// 승인된 학생: 앱이 열려 있는 동안 30초마다 새 알림 메시지 확인(핸드폰 알림처럼 뜨게)
+let msgTimer = null;
+function startStudentPoll() {
+  clearInterval(msgTimer);
+  if (!auth || isTeacherUser() || !sbConf() || !(auth.user && auth.user.approved)) return;
+  msgTimer = setInterval(() => {
+    const before = (ui.teacherMsgs || []).length;
+    pullMessages().then(() => { if ((ui.teacherMsgs || []).length !== before) render(); });
+  }, 30000);
+}
 // 클라우드에 저장된 진행 상황 내려받기(있으면 이 기기 상태를 덮어씀)
 async function pullProgress() {
   try {
@@ -257,7 +282,7 @@ async function runAuth(isSignup) {
     state = loadState();
     state.role = role;
     state.intro = false; // 로그인 직후에는 스플래시 없이 바로 홈
-    if (!isTeacherUser() && auth.user.approved) { await pullGrants(); loadWordbook(); }  // 승인된 학생: 부여·단어장
+    if (!isTeacherUser() && auth.user.approved) { await pullGrants(); await pullMessages(); loadWordbook(); startStudentPoll(); }  // 승인된 학생: 부여·메시지·단어장
     ui.authMsg = '';
     ui.li.pw = '';
     ui.signupMode = false;
@@ -349,6 +374,20 @@ async function grantReward(id, eggs, xp) {
   } catch (e) { ui.grantBusy = ''; ui.recError = e.message; }
   render();
 }
+// 교사 → 학생 알림 메시지 전송(er_messages 테이블에 저장 → 학생 앱에서 팝업)
+async function sendStudentMessage(id) {
+  const text = (ui.msgDraft || '').trim();
+  if (!id || !text) return;
+  ui.msgBusy = id; ui.dashMsg = ''; render();
+  try {
+    const res = await sbFetch('/rest/v1/er_messages', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ user_id: id, text }) });
+    if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 404 || res.status === 400 ? ' — er_messages 테이블을 먼저 만들어 주세요' : ''));
+    ui.msgBusy = ''; ui.msgOpenId = null; ui.msgDraft = ''; ui.recError = '';
+    ui.dashMsg = '📨 메시지를 보냈어요! 학생 앱이 열려 있으면 곧, 아니면 다음에 열 때 떠요.';
+    setTimeout(() => { ui.dashMsg = ''; render(); }, 4000);
+  } catch (e) { ui.msgBusy = ''; ui.recError = '메시지 전송 실패: ' + e.message; }
+  render();
+}
 
 /* ---- 계정 관리(비밀번호 변경 · 탈퇴 · 교사의 학생 삭제) ---- */
 // 본인 비밀번호 변경(Supabase Auth: 세션이 유효하면 이전 비번 없이 변경)
@@ -367,6 +406,7 @@ async function changePassword() {
 // user_id의 학습 데이터 일괄 삭제(프로필은 마지막). 로그인 계정(auth.users)은 관리자만 완전 삭제.
 async function purgeUserData(id) {
   await sbFetch('/rest/v1/er_grants?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+  await sbFetch('/rest/v1/er_messages?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }).catch(() => {});
   await sbFetch('/rest/v1/er_records?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
   await sbFetch('/rest/v1/er_progress?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
   const res = await sbFetch('/rest/v1/er_profiles?id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
@@ -823,6 +863,9 @@ const ui = {
   records: null, recLoading: false, recError: '', profiles: [], progById: {},
   signupMode: false, authMsg: '', authBusy: false, asStudent: false, grantMsg: '',
   pending: [], grantBusy: '',   // 교사: 가입 대기 목록 / 부여 진행중 표시
+  dashOpen: null,               // 교사 대시보드: 펼쳐 본 학생 키(null이면 모두 접힘)
+  msgOpenId: null, msgDraft: '', msgBusy: '', dashMsg: '',   // 교사→학생 알림 메시지 작성/전송
+  teacherMsgs: [],              // 학생: 선생님이 보낸 알림 메시지(뜨면 팝업)
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
   dashClass: '',   // 교사 대시보드: 반별 보기 필터('' = 전체)
   viewClass: '',   // 교사가 학생 미리보기 시 볼 반('' = 공통만)
@@ -1432,14 +1475,18 @@ const actions = {
   async doSignup() { await runAuth(true); },
   async recheckApproval() {
     await ensureProfile();
-    if (auth && auth.user.approved) { await pullProgress(); await pullGrants(); state = loadState(); state.intro = false; }
+    if (auth && auth.user.approved) { await pullProgress(); await pullGrants(); await pullMessages(); state = loadState(); state.intro = false; startStudentPoll(); }
     render();
   },
   dismissGrant() { ui.grantMsg = ''; render(); },
+  dismissTeacherMsg() { ui.teacherMsgs = []; render(); },
 
   /* ---- 교사 ---- */
   pickClass(arg) { ui.li.classId = (ui.li.classId === arg) ? '' : arg; ui.authMsg = ''; render(); },  // 가입: 반 칩 선택/해제
   setDashClass(arg) { ui.dashClass = arg || ''; render(); },  // 대시보드: 반별 필터
+  dashToggle(arg) { ui.dashOpen = ui.dashOpen === arg ? null : arg; ui.msgOpenId = null; ui.msgDraft = ''; render(); },  // 학생 카드 펼치기/접기
+  msgToggle(id) { ui.msgOpenId = ui.msgOpenId === id ? null : id; ui.msgDraft = ''; ui.recError = ''; render(); },  // 🔔 알림 메시지 작성창 열기/닫기
+  sendMsg(id) { sendStudentMessage(id); },  // 학생에게 알림 메시지 전송
 
   /* 내 계정(비밀번호 변경 · 탈퇴) */
   openAccount() { ui.acct = { open: true, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false }; render(); },
@@ -2041,6 +2088,20 @@ function xpPopHTML() {
       <div style="height:13px;border-radius:8px;background:#eef2f8;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:8px;transition:width .5s"></div></div>
       <div style="font-size:11px;color:#9aa8bd;margin-top:12px">할 일·문제를 풀면 경험치가 올라가요 ✨</div>
       <button data-act="toggleXpPop" style="margin-top:18px;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:13px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">닫기</button>
+    </div>
+  </div>`;
+}
+// 선생님이 보낸 알림 메시지 팝업(학생 화면 위에 떠서 확인해야 사라짐)
+function teacherMsgHTML() {
+  const msgs = ui.teacherMsgs || [];
+  return `<div style="position:absolute;inset:0;z-index:130;background:rgba(10,25,45,.5);display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="width:100%;max-width:340px;background:#fff;border-radius:22px;padding:24px 22px;box-shadow:0 30px 70px -20px rgba(0,0,0,.55);text-align:center">
+      <div style="font-size:40px;animation:bellRing 1.2s ease-in-out">🔔</div>
+      <div style="font-size:16px;font-weight:800;color:#14243f;margin-top:6px">선생님의 알림</div>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:16px;text-align:left">
+        ${msgs.map(m => `<div style="background:#f0f6ff;border:1px solid #cfe0f5;border-radius:14px;padding:13px 15px;font-size:14px;line-height:1.6;color:#26303f;white-space:pre-wrap">${esc(m)}</div>`).join('')}
+      </div>
+      <button data-act="dismissTeacherMsg" style="margin-top:18px;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:13px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">확인했어요</button>
     </div>
   </div>`;
 }
@@ -3427,16 +3488,30 @@ function liveDashHTML(day) {
       <span style="font-size:10px;font-weight:700;color:#7d8aa0;width:20px;margin-left:6px">알</span>
       ${[1, 3, 5].map(e => `<button data-act="grant" data-arg="${id}:${e}:0" style="border:1px solid #f0d79a;background:#fff7e6;color:#b0851f;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">🥚+${e}</button>`).join('')}
       <div style="flex:1"></div>
-      <button data-act="delStudent" data-arg="${id}" title="학생 계정 삭제" style="border:1px solid #f3c7c2;background:#fff;color:#c0392b;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">${ui.grantBusy === 'del:' + id ? '삭제 중…' : '🗑 삭제'}</button>
+      <button data-act="msgToggle" data-arg="${id}" title="알림 메시지 보내기" style="border:1px solid ${ui.msgOpenId === id ? '#2f74e6' : '#cfe0f5'};background:${ui.msgOpenId === id ? '#2f74e6' : '#eef5ff'};color:${ui.msgOpenId === id ? '#fff' : '#2f74e6'};font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer">🔔</button>
+      <button data-act="delStudent" data-arg="${id}" title="학생 계정 삭제" style="border:1px solid #f3c7c2;background:#fff;color:#c0392b;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">${ui.grantBusy === 'del:' + id ? '삭제 중…' : '🗑'}</button>
+    </div>` : '';
+
+  const msgBox = (id) => (id && ui.msgOpenId === id) ? `
+    <div style="margin-top:9px;background:#f0f6ff;border:1px solid #cfe0f5;border-radius:12px;padding:10px 11px">
+      <div style="font-size:11px;font-weight:700;color:#2f74e6;margin-bottom:6px">🔔 알림 메시지 보내기 <span style="color:#9aa8bd;font-weight:500">— 학생 핸드폰(앱)에 떠요</span></div>
+      <textarea id="dash-msg" placeholder="예: 오늘 복습 꼭 끝내자! 화이팅 💪" style="width:100%;min-height:54px;border:1px solid #cfe0f5;border-radius:9px;padding:8px 10px;font-size:12.5px;font-family:inherit;line-height:1.5;resize:vertical;box-sizing:border-box">${esc(ui.msgDraft || '')}</textarea>
+      <div style="display:flex;gap:6px;margin-top:7px">
+        <button data-act="msgToggle" data-arg="${id}" style="border:1px solid #dbe2ec;background:#fff;color:#7d8aa0;font-size:12px;font-weight:700;padding:8px 12px;border-radius:9px;cursor:pointer">취소</button>
+        <button data-act="sendMsg" data-arg="${id}" style="flex:1;border:none;background:#2f74e6;color:#fff;font-size:12.5px;font-weight:700;padding:8px;border-radius:9px;cursor:pointer">${ui.msgBusy === id ? '보내는 중…' : '전송 📨'}</button>
+      </div>
     </div>` : '';
 
   const rows = shown.map(s => {
+    const key = s.id || ('n:' + s.name);
+    const open = ui.dashOpen === key;
     const rs = byStu[s.name] || [];
     const doneSet = new Set(rs.map(r => r.task));
     const doneReq = req.filter(k => doneSet.has(k)).length;
     const scores = rs.filter(r => r.score != null);
     const avg = scores.length ? Math.round(scores.reduce((a, r) => a + r.score, 0) / scores.length) : null;
     const allDone = req.length > 0 && doneReq >= req.length;
+    const dot = allDone ? '#2fa36b' : (rs.length ? '#2f74e6' : '#c3ceda');
     const badge = allDone
       ? `<span style="font-size:10.5px;font-weight:600;color:#2fa36b;background:#e0f3ea;padding:3px 8px;border-radius:7px">완료 ${doneReq}/${req.length}</span>`
       : rs.length
@@ -3445,23 +3520,31 @@ function liveDashHTML(day) {
     const stt = s.id ? studentStats((ui.progById || {})[s.id]) : null;
     const statPill = (emoji, label, val) => `<span style="display:inline-flex;align-items:center;gap:4px;background:#f4f7fb;border-radius:8px;padding:3px 8px;font-size:10.5px;color:#5f7794"><span>${emoji}</span><span style="font-weight:700;color:#14243f">${val}</span><span style="color:#9aa8bd">${label}</span></span>`;
     const statsRow = stt ? `
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">
         ${statPill('⏱', '오늘', stt.todaySecs ? fmtDuration(stt.todaySecs) : '–')}
         ${statPill('📚', '누적', stt.totalSecs ? fmtDuration(stt.totalSecs) : '–')}
         ${statPill('🥚', '오늘 부화', stt.eggsToday)}
         ${statPill('🐠', '모은 물고기', stt.hatchedTotal)}
-      </div>` : (s.id ? `<div style="font-size:10.5px;color:#c3ceda;margin-top:7px">아직 학습 기록이 없어요</div>` : '');
-    return `<div style="padding:12px 14px;border-bottom:1px solid #f4f7fb">
-      <div style="display:flex;align-items:center;gap:9px">
-        <div style="width:28px;height:28px;border-radius:50%;background:${allDone ? '#2fa36b' : (rs.length ? '#2f74e6' : '#c3ceda')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc(s.name.slice(0, 2))}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#14243f">${esc(s.name)}${s.cls || s.no ? ` <span style="font-size:10.5px;color:#9aa8bd;font-weight:500">${esc(s.cls || '')}${s.cls && s.no ? ' · ' : ''}${s.no ? s.no + '번' : ''}</span>` : ''}</div>
+      </div>` : (s.id ? `<div style="font-size:10.5px;color:#c3ceda;margin-top:8px">아직 학습 기록이 없어요</div>` : '');
+    // 펼쳤을 때 보이는 상세: 진행/평균 → 학습 통계 → 경험치·알·알림·삭제 → 메시지 작성창
+    const detail = open ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e6edf5">
+        <div style="display:flex;align-items:center;gap:8px">
+          ${badge}
+          <span style="font-size:11px;color:#7d8aa0">평균 점수 <b style="color:${avg == null ? '#c3ceda' : '#14243f'}">${avg == null ? '–' : avg}</b></span>
         </div>
-        ${badge}
-        <div style="font-size:12px;font-weight:700;color:${avg == null ? '#c3ceda' : '#14243f'};width:34px;text-align:right">${avg == null ? '–' : avg}</div>
+        ${statsRow}
+        ${grantBtns(s.id)}
+        ${msgBox(s.id)}
+        ${s.id ? '' : '<div style="font-size:10.5px;color:#c3ceda;margin-top:8px">계정이 없는 기록이라 경험치·메시지를 줄 수 없어요.</div>'}
+      </div>` : '';
+    return `<div style="border-bottom:1px solid #f4f7fb">
+      <div data-act="dashToggle" data-arg="${esc(key)}" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer">
+        <div style="width:9px;height:9px;border-radius:50%;background:${dot};flex:none"></div>
+        <div style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:#14243f">${esc(s.name)}${s.no ? ` <span style="font-size:11.5px;color:#9aa8bd;font-weight:600">${esc(String(s.no))}번</span>` : ''}${s.cls && !filt ? ` <span style="font-size:10.5px;color:#c3ceda;font-weight:500">${esc(s.cls)}</span>` : ''}</div>
+        <span style="font-size:13px;color:#b8c2d2;transition:transform .15s;transform:rotate(${open ? '90' : '0'}deg)">›</span>
       </div>
-      ${statsRow}
-      ${grantBtns(s.id)}
+      ${detail}
     </div>`;
   }).join('');
 
@@ -3503,6 +3586,7 @@ function liveDashHTML(day) {
     </div>
     ${ui.recError ? `<div style="font-size:11.5px;color:#b23a32;background:#fbe4e2;border-radius:10px;padding:9px 12px;margin-top:10px">불러오지 못했어요: ${esc(ui.recError)}</div>` : ''}
     ${ui.grantToast ? `<div style="font-size:11.5px;color:#1f7a4d;background:#e0f3ea;border-radius:10px;padding:9px 12px;margin-top:10px">${esc(ui.grantToast)}</div>` : ''}
+    ${ui.dashMsg ? `<div style="font-size:11.5px;color:#2f74e6;background:#e7f0fd;border-radius:10px;padding:9px 12px;margin-top:10px">${esc(ui.dashMsg)}</div>` : ''}
 
     ${pendingSection}
 
@@ -3519,11 +3603,11 @@ function liveDashHTML(day) {
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">🥚 오늘 부화</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${sumEggsToday}<span style="font-size:12px;color:#7d8aa0">개</span></div></div>
     </div>
 
-    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 10px">학생별 현황 · 보상 주기${filt ? ' · ' + esc(filt) : ''}</div>
+    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 6px">학생 목록${filt ? ' · ' + esc(filt) : ''} <span style="font-size:11px;color:#9aa8bd;font-weight:500">· 이름을 누르면 현황·보상·알림이 열려요</span></div>
     <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;overflow:hidden">
       ${rows || '<div style="padding:18px;text-align:center;font-size:12px;color:#b8c2d2">아직 학생이 없어요</div>'}
     </div>
-    <div style="font-size:10.5px;color:#b8c2d2;margin-top:8px">경험치·알 버튼을 누르면 학생이 다음에 접속할 때 자동으로 반영돼요.</div>`;
+    <div style="font-size:10.5px;color:#b8c2d2;margin-top:8px">🔔로 알림 메시지를, 경험치·알 버튼으로 보상을 줄 수 있어요. 학생이 다음에 접속할 때(또는 앱이 열려 있으면 곧) 반영돼요.</div>`;
 }
 
 /* ---- 콘텐츠 관리(핸드폰): 편집은 컴퓨터에서, 여기선 배포본 발표만 ---- */
@@ -3807,6 +3891,7 @@ function render() {
   else if (state.intro && state.role === 'student') html += introHTML();
 
   if (ui.xpPop && state.role === 'student') html += xpPopHTML();   // 경험치 팝오버
+  if ((ui.teacherMsgs || []).length && state.role === 'student') html += teacherMsgHTML();   // 선생님 알림 메시지 팝업
   if (auth && ui.acct.open) html += accountHTML();  // 내 계정(비번 변경/탈퇴)
   if (ui.present.on) html += presentHTML();  // 수업용 전체화면 발표(최상단)
 
@@ -3889,6 +3974,7 @@ appEl.addEventListener('input', e => {
   if (el.id === 'li-pw') { ui.li.pw = el.value; return; }
   if (el.id === 'li-name') { ui.li.name = el.value; return; }
   if (el.id === 'li-studentno') { ui.li.studentNo = el.value; return; }
+  if (el.id === 'dash-msg') { ui.msgDraft = el.value; return; }   // 교사→학생 알림 메시지 입력
   if (el.dataset.gbind && gEd) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
   if (bind && ed && el.type !== 'radio' && el.tagName !== 'SELECT') {
@@ -3922,7 +4008,9 @@ render();
   // 승인된 학생: 접속 시 교사가 준 알/경험치 부여를 적용 + 단어장 동기화
   if (auth && !isTeacherUser() && auth.user && auth.user.approved) {
     await pullGrants();
+    await pullMessages();
     loadWordbook();
+    startStudentPoll();
     render();
   }
 })();
