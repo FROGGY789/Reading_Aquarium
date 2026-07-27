@@ -3366,6 +3366,19 @@
             "explain": "ask of + 사람 / ask 사람 for 부탁할 일 (구분해서 알아둘 것!)",
             "sentence": "“Cooking dinner for an entire troupe seems like a lot to ask [for / of] children.”",
             "answer": 1
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장을 읽고, 어법적으로 오류가 있는 한 단어를 '두 단어'로 고치시오.",
+            "explain": "이미 문장에는 'found'라는 동사가 있어요. 또 다른 동사 sounded가 그냥 올수는 없습니다. 또 의미적으로, '맛있어 보이는 dish' 이기 때문에, 관계대명사 that / which로 수식해주는 게 좋겠죠.",
+            "sentence": "But finally Klaus found a dish sounded delicious, and easy to make.",
+            "wrong": 6,
+            "accept": [
+              "That sounded",
+              "that sounded",
+              "which sounded",
+              "Which sounded"
+            ]
           }
         ],
         "vocabPrep": [],
