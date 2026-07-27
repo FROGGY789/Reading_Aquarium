@@ -2905,6 +2905,22 @@
             "explain": "hate + V-ing (hate는 동명사만 목적어로 받는 동사에요)",
             "sentence": "I hate [to have / having] to do all these chores, and I hate Count Olaf!”",
             "answer": 1
+          },
+          {
+            "type": "scramble",
+            "prompt": "다음 해석과 일치하도록 단어를 배열해 주세요.",
+            "explain": "\"여기 있었다면\" = 여기 없다는 뜻이죠? 현재 상황과 반대되는 상황을 쓸 때는 '가정법 과거'를 사용해요. If절에 과거형 동사(were)을 사용하면 됩니다.",
+            "chunks": [
+              "If",
+              "they",
+              "were here,",
+              "we",
+              "would not be",
+              "with",
+              "Count Olaf",
+              "in the first place."
+            ],
+            "ko": "\"만약 그들이 여기 있었다면, 우리는 애당초 Count Olaf와 함께 있지도 않을 텐데.\""
           }
         ],
         "vocabPrep": [],
