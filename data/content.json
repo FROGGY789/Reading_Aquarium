@@ -2185,7 +2185,61 @@
         }
       ],
       "quiz": {
-        "preview": [],
+        "preview": [
+          {
+            "type": "mc",
+            "prompt": "다음 중, Baudelaire 아이들이 악수를 건넨 여성의 이름은?",
+            "explain": "“Yes, I heard about the accident,” the woman said, as everyone said how do you do. “I am Justice Strauss.”",
+            "options": [
+              "Count Olaf",
+              "Justess Strauss",
+              "Mr. Poe",
+              "Mr. Baudelaire"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 중, Count Olaf의 집에 대한 설명으로 옳지 않은 것은?",
+            "explain": "",
+            "options": [
+              "벽돌에는 숯검댕과 때가 껴 있다.",
+              "낮 동안에도 창문에는 그늘이 드리워 있다.",
+              "살짝 왼쪽으로 기울어진 큰 탑이 있다.",
+              "문 만큼은 깨끗하고 페인트칠이 잘 되어있다."
+            ],
+            "answer": 3
+          },
+          {
+            "type": "input",
+            "prompt": "Count Olaf의 정문과 발목에는 무엇의 문양이 그려져 있나요? (영/한 둘다 OK)",
+            "explain": "carved in the middle of it was an image of an eye. The entire building sagged to the side, like a crooked tooth.",
+            "accept": [
+              "눈",
+              "eye",
+              "Eye",
+              "Eyes",
+              "eyes"
+            ]
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 중, Count Olaf의 외양으로 알맞은 것은?",
+            "explain": "이런 눈썹 할 사람?",
+            "options": [
+              "깨끗하고 밝은 흰색 정장을 입고 있다.",
+              "면도를 깨끗이 한 상태이다.",
+              "눈썹은 양쪽이 이어져 길게 이어진 하나의 형태이다.",
+              "키가 작고 통통하다."
+            ],
+            "answer": 2
+          },
+          {
+            "type": "free",
+            "prompt": "Count Olaf는 왜 세 아이들의 보호자로 나선 걸까? (답 없음, 편하게 작성)",
+            "explain": ""
+          }
+        ],
         "vocab": [],
         "sentence": [],
         "vocabPrep": [],
