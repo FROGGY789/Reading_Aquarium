@@ -58,6 +58,7 @@ create table if not exists public.er_records (
   score int, total int, correct int
 );
 alter table public.er_records add column if not exists user_id uuid default auth.uid();
+alter table public.er_records add column if not exists chapter text;   -- v7: 어떤 챕터를 완료했는지(교사 현황 상세)
 create index if not exists er_records_date_idx on public.er_records (date);
 
 alter table public.er_records enable row level security;
