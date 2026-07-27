@@ -374,18 +374,21 @@ async function grantReward(id, eggs, xp) {
   } catch (e) { ui.grantBusy = ''; ui.recError = e.message; }
   render();
 }
-// 교사 → 학생 알림 메시지 전송(er_messages 테이블에 저장 → 학생 앱에서 팝업)
-async function sendStudentMessage(id) {
-  const text = (ui.msgDraft || '').trim();
-  if (!id || !text) return;
-  ui.msgBusy = id; ui.dashMsg = ''; render();
+// 교사 → 선택한 여러 학생에게 알림 메시지 한 번에 전송(er_messages에 여러 행 INSERT)
+async function sendBulkMessage() {
+  const ids = (ui.selected || []).filter(Boolean);
+  const text = (ui.bulkDraft || '').trim();
+  if (!ids.length || !text) return;
+  ui.bulkBusy = true; ui.dashMsg = ''; ui.recError = ''; render();
   try {
-    const res = await sbFetch('/rest/v1/er_messages', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ user_id: id, text }) });
+    const body = JSON.stringify(ids.map(id => ({ user_id: id, text })));   // PostgREST 배열 삽입(한 번에)
+    const res = await sbFetch('/rest/v1/er_messages', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body });
     if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 404 || res.status === 400 ? ' — er_messages 테이블을 먼저 만들어 주세요' : ''));
-    ui.msgBusy = ''; ui.msgOpenId = null; ui.msgDraft = ''; ui.recError = '';
-    ui.dashMsg = '📨 메시지를 보냈어요! 학생 앱이 열려 있으면 곧, 아니면 다음에 열 때 떠요.';
+    const n = ids.length;
+    ui.bulkBusy = false; ui.bulkMsgOpen = false; ui.bulkDraft = ''; ui.selected = [];
+    ui.dashMsg = `📨 ${n}명에게 알림을 보냈어요! 학생 앱이 열려 있으면 곧, 아니면 다음에 열 때 떠요.`;
     setTimeout(() => { ui.dashMsg = ''; render(); }, 4000);
-  } catch (e) { ui.msgBusy = ''; ui.recError = '메시지 전송 실패: ' + e.message; }
+  } catch (e) { ui.bulkBusy = false; ui.recError = '메시지 전송 실패: ' + e.message; }
   render();
 }
 
@@ -864,7 +867,9 @@ const ui = {
   signupMode: false, authMsg: '', authBusy: false, asStudent: false, grantMsg: '',
   pending: [], grantBusy: '',   // 교사: 가입 대기 목록 / 부여 진행중 표시
   dashOpen: null,               // 교사 대시보드: 펼쳐 본 학생 키(null이면 모두 접힘)
-  msgOpenId: null, msgDraft: '', msgBusy: '', dashMsg: '',   // 교사→학생 알림 메시지 작성/전송
+  dashMsg: '',                  // 교사 대시보드: 전송 완료 안내 문구
+  selected: [],                 // 교사: 체크된 학생 id들(알림 일괄 전송용)
+  bulkMsgOpen: false, bulkDraft: '', bulkBusy: false,   // 교사→여러 학생 알림 작성/전송
   teacherMsgs: [],              // 학생: 선생님이 보낸 알림 메시지(뜨면 팝업)
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
   dashClass: '',   // 교사 대시보드: 반별 보기 필터('' = 전체)
@@ -1484,9 +1489,18 @@ const actions = {
   /* ---- 교사 ---- */
   pickClass(arg) { ui.li.classId = (ui.li.classId === arg) ? '' : arg; ui.authMsg = ''; render(); },  // 가입: 반 칩 선택/해제
   setDashClass(arg) { ui.dashClass = arg || ''; render(); },  // 대시보드: 반별 필터
-  dashToggle(arg) { ui.dashOpen = ui.dashOpen === arg ? null : arg; ui.msgOpenId = null; ui.msgDraft = ''; render(); },  // 학생 카드 펼치기/접기
-  msgToggle(id) { ui.msgOpenId = ui.msgOpenId === id ? null : id; ui.msgDraft = ''; ui.recError = ''; render(); },  // 🔔 알림 메시지 작성창 열기/닫기
-  sendMsg(id) { sendStudentMessage(id); },  // 학생에게 알림 메시지 전송
+  dashToggle(arg) { ui.dashOpen = ui.dashOpen === arg ? null : arg; render(); },  // 학생 카드 펼치기/접기
+  dashSelToggle(id) {   // 체크박스: 학생 선택/해제(알림 일괄 전송용)
+    const cur = (ui.selected || []).slice();
+    const i = cur.indexOf(id);
+    if (i >= 0) cur.splice(i, 1); else cur.push(id);
+    ui.selected = cur; render();
+  },
+  dashSelAll(arg) { ui.selected = (arg || '').split(',').filter(Boolean); render(); },   // 전체 선택
+  dashSelClear() { ui.selected = []; render(); },                                        // 선택 해제
+  bulkMsgOpen() { if (!(ui.selected || []).length) return; ui.bulkMsgOpen = true; ui.bulkDraft = ''; ui.recError = ''; render(); },
+  bulkMsgClose() { ui.bulkMsgOpen = false; render(); },
+  bulkMsgSend() { sendBulkMessage(); },
 
   /* 내 계정(비밀번호 변경 · 탈퇴) */
   openAccount() { ui.acct = { open: true, busy: false, msg: '', pw1: '', pw2: '', confirmDel: false }; render(); },
@@ -2102,6 +2116,22 @@ function teacherMsgHTML() {
         ${msgs.map(m => `<div style="background:#f0f6ff;border:1px solid #cfe0f5;border-radius:14px;padding:13px 15px;font-size:14px;line-height:1.6;color:#26303f;white-space:pre-wrap">${esc(m)}</div>`).join('')}
       </div>
       <button data-act="dismissTeacherMsg" style="margin-top:18px;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:13px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">확인했어요</button>
+    </div>
+  </div>`;
+}
+// 교사: 체크한 학생들에게 알림 메시지 한 번에 작성/전송하는 모달
+function bulkMsgHTML() {
+  const n = (ui.selected || []).length;
+  return `<div style="position:absolute;inset:0;z-index:130;background:rgba(10,25,45,.5);display:flex;align-items:flex-end;justify-content:center;padding:0">
+    <div style="width:100%;max-width:520px;background:#fff;border-radius:22px 22px 0 0;padding:20px 20px 24px;box-shadow:0 -20px 60px -20px rgba(0,0,0,.5)">
+      <div style="width:38px;height:4px;border-radius:3px;background:#dbe2ec;margin:0 auto 14px"></div>
+      <div style="font-size:16px;font-weight:800;color:#14243f">🔔 알림 보내기 <span style="font-size:13px;font-weight:700;color:#2f74e6">· ${n}명</span></div>
+      <div style="font-size:11.5px;color:#9aa8bd;margin-top:3px">선택한 학생들의 핸드폰(앱)에 팝업으로 떠요.</div>
+      <textarea id="bulk-msg" placeholder="예: 오늘 복습 꼭 끝내자! 화이팅 💪" style="width:100%;min-height:96px;border:1.5px solid #cfe0f5;border-radius:13px;padding:12px 13px;font-size:14px;font-family:inherit;line-height:1.6;resize:vertical;box-sizing:border-box;margin-top:14px">${esc(ui.bulkDraft || '')}</textarea>
+      <div style="display:flex;gap:9px;margin-top:12px">
+        <button data-act="bulkMsgClose" style="flex:none;border:1.5px solid #dbe2ec;background:#fff;color:#7d8aa0;font-size:14px;font-weight:700;padding:13px 20px;border-radius:14px;cursor:pointer">취소</button>
+        <button data-act="bulkMsgSend" style="flex:1;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:800;padding:13px;border-radius:14px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">${ui.bulkBusy ? '보내는 중…' : `전송 📨 (${n}명)`}</button>
+      </div>
     </div>
   </div>`;
 }
@@ -3482,71 +3512,80 @@ function liveDashHTML(day) {
     </div>` : '';
 
   const grantBtns = (id) => id ? `
-    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;align-items:center">
-      <span style="font-size:10px;font-weight:700;color:#7d8aa0;width:34px">경험치</span>
-      ${[10, 30, 50].map(x => `<button data-act="grant" data-arg="${id}:0:${x}" style="border:1px solid #cfe0f5;background:#eef5ff;color:#2f74e6;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">+${x}</button>`).join('')}
-      <span style="font-size:10px;font-weight:700;color:#7d8aa0;width:20px;margin-left:6px">알</span>
-      ${[1, 3, 5].map(e => `<button data-act="grant" data-arg="${id}:${e}:0" style="border:1px solid #f0d79a;background:#fff7e6;color:#b0851f;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">🥚+${e}</button>`).join('')}
-      <div style="flex:1"></div>
-      <button data-act="msgToggle" data-arg="${id}" title="알림 메시지 보내기" style="border:1px solid ${ui.msgOpenId === id ? '#2f74e6' : '#cfe0f5'};background:${ui.msgOpenId === id ? '#2f74e6' : '#eef5ff'};color:${ui.msgOpenId === id ? '#fff' : '#2f74e6'};font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer">🔔</button>
-      <button data-act="delStudent" data-arg="${id}" title="학생 계정 삭제" style="border:1px solid #f3c7c2;background:#fff;color:#c0392b;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer">${ui.grantBusy === 'del:' + id ? '삭제 중…' : '🗑'}</button>
-    </div>` : '';
-
-  const msgBox = (id) => (id && ui.msgOpenId === id) ? `
-    <div style="margin-top:9px;background:#f0f6ff;border:1px solid #cfe0f5;border-radius:12px;padding:10px 11px">
-      <div style="font-size:11px;font-weight:700;color:#2f74e6;margin-bottom:6px">🔔 알림 메시지 보내기 <span style="color:#9aa8bd;font-weight:500">— 학생 핸드폰(앱)에 떠요</span></div>
-      <textarea id="dash-msg" placeholder="예: 오늘 복습 꼭 끝내자! 화이팅 💪" style="width:100%;min-height:54px;border:1px solid #cfe0f5;border-radius:9px;padding:8px 10px;font-size:12.5px;font-family:inherit;line-height:1.5;resize:vertical;box-sizing:border-box">${esc(ui.msgDraft || '')}</textarea>
-      <div style="display:flex;gap:6px;margin-top:7px">
-        <button data-act="msgToggle" data-arg="${id}" style="border:1px solid #dbe2ec;background:#fff;color:#7d8aa0;font-size:12px;font-weight:700;padding:8px 12px;border-radius:9px;cursor:pointer">취소</button>
-        <button data-act="sendMsg" data-arg="${id}" style="flex:1;border:none;background:#2f74e6;color:#fff;font-size:12.5px;font-weight:700;padding:8px;border-radius:9px;cursor:pointer">${ui.msgBusy === id ? '보내는 중…' : '전송 📨'}</button>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="flex:none;display:inline-flex;justify-content:center;min-width:44px;font-size:10.5px;font-weight:800;color:#2f74e6;background:#eaf2ff;border-radius:8px;padding:5px 6px">경험치</span>
+        ${[10, 30, 50].map(x => `<button data-act="grant" data-arg="${id}:0:${x}" style="flex:1;border:1.5px solid #d5e4f7;background:#fff;color:#2f74e6;font-size:13px;font-weight:800;padding:9px 0;border-radius:11px;cursor:pointer">+${x}</button>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="flex:none;display:inline-flex;justify-content:center;min-width:44px;font-size:10.5px;font-weight:800;color:#b0851f;background:#fff4d9;border-radius:8px;padding:5px 6px">알</span>
+        ${[1, 3, 5].map(e => `<button data-act="grant" data-arg="${id}:${e}:0" style="flex:1;border:1.5px solid #f0dba6;background:#fff;color:#b0851f;font-size:13px;font-weight:800;padding:9px 0;border-radius:11px;cursor:pointer">🥚 +${e}</button>`).join('')}
+      </div>
+      <div style="text-align:right;margin-top:2px">
+        <button data-act="delStudent" data-arg="${id}" style="border:none;background:transparent;color:#c6a9a5;font-size:11px;font-weight:700;padding:4px 4px;cursor:pointer">${ui.grantBusy === 'del:' + id ? '삭제 중…' : '🗑 학생 삭제'}</button>
       </div>
     </div>` : '';
 
   const rows = shown.map(s => {
     const key = s.id || ('n:' + s.name);
     const open = ui.dashOpen === key;
+    const sel = s.id && (ui.selected || []).includes(s.id);
     const rs = byStu[s.name] || [];
     const doneSet = new Set(rs.map(r => r.task));
     const doneReq = req.filter(k => doneSet.has(k)).length;
     const scores = rs.filter(r => r.score != null);
     const avg = scores.length ? Math.round(scores.reduce((a, r) => a + r.score, 0) / scores.length) : null;
     const allDone = req.length > 0 && doneReq >= req.length;
-    const dot = allDone ? '#2fa36b' : (rs.length ? '#2f74e6' : '#c3ceda');
-    const badge = allDone
-      ? `<span style="font-size:10.5px;font-weight:600;color:#2fa36b;background:#e0f3ea;padding:3px 8px;border-radius:7px">완료 ${doneReq}/${req.length}</span>`
-      : rs.length
-        ? `<span style="font-size:10.5px;font-weight:600;color:#2f74e6;background:#e7f0fd;padding:3px 8px;border-radius:7px">진행 ${doneReq}/${req.length}</span>`
-        : `<span style="font-size:10.5px;font-weight:600;color:#e2564d;background:#fbe4e2;padding:3px 8px;border-radius:7px">시작 전</span>`;
+    const stColor = allDone ? '#2fa36b' : (rs.length ? '#2f74e6' : '#c3ceda');
+    const stBg = allDone ? '#e4f5ec' : (rs.length ? '#e9f1fe' : '#f1f4f8');
+    const miniBadge = req.length ? `<span style="flex:none;font-size:10.5px;font-weight:800;color:${stColor};background:${stBg};padding:3px 9px;border-radius:20px">${allDone ? '완료' : rs.length ? '진행' : '시작 전'} ${doneReq}/${req.length}</span>` : '';
     const stt = s.id ? studentStats((ui.progById || {})[s.id]) : null;
-    const statPill = (emoji, label, val) => `<span style="display:inline-flex;align-items:center;gap:4px;background:#f4f7fb;border-radius:8px;padding:3px 8px;font-size:10.5px;color:#5f7794"><span>${emoji}</span><span style="font-weight:700;color:#14243f">${val}</span><span style="color:#9aa8bd">${label}</span></span>`;
-    const statsRow = stt ? `
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">
-        ${statPill('⏱', '오늘', stt.todaySecs ? fmtDuration(stt.todaySecs) : '–')}
-        ${statPill('📚', '누적', stt.totalSecs ? fmtDuration(stt.totalSecs) : '–')}
-        ${statPill('🥚', '오늘 부화', stt.eggsToday)}
-        ${statPill('🐠', '모은 물고기', stt.hatchedTotal)}
-      </div>` : (s.id ? `<div style="font-size:10.5px;color:#c3ceda;margin-top:8px">아직 학습 기록이 없어요</div>` : '');
-    // 펼쳤을 때 보이는 상세: 진행/평균 → 학습 통계 → 경험치·알·알림·삭제 → 메시지 작성창
+    const tile = (emoji, label, val) => `<div style="background:#fff;border:1px solid #eaf0f7;border-radius:13px;padding:10px 12px"><div style="font-size:10px;color:#9aa8bd;font-weight:700">${emoji} ${label}</div><div style="font-size:16px;font-weight:800;color:#14243f;margin-top:3px">${val}</div></div>`;
+    const statsGrid = stt ? `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px">
+        ${tile('⏱', '오늘 학습', stt.todaySecs ? fmtDuration(stt.todaySecs) : '–')}
+        ${tile('📚', '누적 학습', stt.totalSecs ? fmtDuration(stt.totalSecs) : '–')}
+        ${tile('🥚', '오늘 부화', stt.eggsToday + '개')}
+        ${tile('🐠', '모은 물고기', stt.hatchedTotal + '마리')}
+      </div>` : (s.id ? `<div style="font-size:11px;color:#b8c2d2;margin-top:11px;text-align:center;padding:8px;background:#fff;border-radius:12px;border:1px dashed #e6edf5">아직 학습 기록이 없어요</div>` : '');
     const detail = open ? `
-      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e6edf5">
-        <div style="display:flex;align-items:center;gap:8px">
-          ${badge}
-          <span style="font-size:11px;color:#7d8aa0">평균 점수 <b style="color:${avg == null ? '#c3ceda' : '#14243f'}">${avg == null ? '–' : avg}</b></span>
+      <div style="padding:0 15px 15px 51px;background:#f7fafd">
+        <div style="display:flex;align-items:center;gap:10px;padding-top:12px">
+          ${miniBadge}
+          <span style="font-size:11.5px;color:#7d8aa0">평균 <b style="color:${avg == null ? '#c3ceda' : '#14243f'};font-size:13px">${avg == null ? '–' : avg}</b></span>
         </div>
-        ${statsRow}
+        ${statsGrid}
         ${grantBtns(s.id)}
-        ${msgBox(s.id)}
-        ${s.id ? '' : '<div style="font-size:10.5px;color:#c3ceda;margin-top:8px">계정이 없는 기록이라 경험치·메시지를 줄 수 없어요.</div>'}
+        ${s.id ? '' : '<div style="font-size:10.5px;color:#c3ceda;margin-top:10px">계정이 없는 기록이라 보상·알림을 줄 수 없어요.</div>'}
       </div>` : '';
-    return `<div style="border-bottom:1px solid #f4f7fb">
-      <div data-act="dashToggle" data-arg="${esc(key)}" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer">
-        <div style="width:9px;height:9px;border-radius:50%;background:${dot};flex:none"></div>
-        <div style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:#14243f">${esc(s.name)}${s.no ? ` <span style="font-size:11.5px;color:#9aa8bd;font-weight:600">${esc(String(s.no))}번</span>` : ''}${s.cls && !filt ? ` <span style="font-size:10.5px;color:#c3ceda;font-weight:500">${esc(s.cls)}</span>` : ''}</div>
-        <span style="font-size:13px;color:#b8c2d2;transition:transform .15s;transform:rotate(${open ? '90' : '0'}deg)">›</span>
+    const check = s.id
+      ? `<div data-act="dashSelToggle" data-arg="${s.id}" style="flex:none;width:22px;height:22px;border-radius:7px;border:2px solid ${sel ? '#2f74e6' : '#cdd8e6'};background:${sel ? '#2f74e6' : '#fff'};display:flex;align-items:center;justify-content:center;cursor:pointer">${sel ? '<span style="color:#fff;font-size:13px;font-weight:900;line-height:1">✓</span>' : ''}</div>`
+      : `<div style="flex:none;width:22px"></div>`;
+    return `<div style="border-bottom:1px solid #eef2f7;background:${sel ? '#f2f8ff' : '#fff'}">
+      <div style="display:flex;align-items:center;gap:11px;padding:13px 15px">
+        ${check}
+        <div data-act="dashToggle" data-arg="${esc(key)}" style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;cursor:pointer">
+          <div style="flex:1;min-width:0;font-size:14px;font-weight:700;color:#14243f">${esc(s.name)}${s.no ? ` <span style="font-size:12px;color:#9aa8bd;font-weight:600">${esc(String(s.no))}번</span>` : ''}${s.cls && !filt ? ` <span style="font-size:10.5px;color:#c3ceda;font-weight:500">· ${esc(s.cls)}</span>` : ''}</div>
+          ${!open ? miniBadge : ''}
+          <span style="flex:none;font-size:15px;color:#c2cddb;transition:transform .15s;transform:rotate(${open ? '90' : '0'}deg)">›</span>
+        </div>
       </div>
       ${detail}
     </div>`;
   }).join('');
+
+  const shownIds = shown.filter(s => s.id).map(s => s.id);
+  const selN = (ui.selected || []).filter(id => shownIds.includes(id)).length;
+  const allSel = shownIds.length > 0 && selN === shownIds.length;
+  const selectBar = shownIds.length ? `
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:10px 13px;margin-bottom:9px">
+      <div data-act="${allSel ? 'dashSelClear' : 'dashSelAll'}" data-arg="${esc(shownIds.join(','))}" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1">
+        <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${allSel ? '#2f74e6' : '#cdd8e6'};background:${allSel ? '#2f74e6' : '#fff'};display:flex;align-items:center;justify-content:center">${allSel ? '<span style="color:#fff;font-size:12px;font-weight:900">✓</span>' : ''}</div>
+        <span style="font-size:12.5px;font-weight:700;color:#4a5a72">${selN ? `${selN}명 선택됨` : '전체 선택'}</span>
+      </div>
+      ${selN ? `<button data-act="dashSelClear" style="border:1px solid #dbe2ec;background:#fff;color:#7d8aa0;font-size:11.5px;font-weight:700;padding:7px 12px;border-radius:10px;cursor:pointer">해제</button>
+      <button data-act="bulkMsgOpen" style="border:none;background:#2f74e6;color:#fff;font-size:12.5px;font-weight:800;padding:8px 15px;border-radius:10px;cursor:pointer;box-shadow:0 3px 0 #1f57c4">🔔 알림 보내기</button>` : ''}
+    </div>` : '';
 
   const totalDone = shown.filter(s => {
     const doneSet = new Set((byStu[s.name] || []).map(r => r.task));
@@ -3603,11 +3642,12 @@ function liveDashHTML(day) {
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">🥚 오늘 부화</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${sumEggsToday}<span style="font-size:12px;color:#7d8aa0">개</span></div></div>
     </div>
 
-    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 6px">학생 목록${filt ? ' · ' + esc(filt) : ''} <span style="font-size:11px;color:#9aa8bd;font-weight:500">· 이름을 누르면 현황·보상·알림이 열려요</span></div>
-    <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;overflow:hidden">
+    <div style="font-size:14px;font-weight:700;color:#14243f;margin:20px 0 8px">학생 목록${filt ? ' · ' + esc(filt) : ''} <span style="font-size:11px;color:#9aa8bd;font-weight:500">· 체크해서 알림, 이름 눌러 현황·보상</span></div>
+    ${selectBar}
+    <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;overflow:hidden;box-shadow:0 8px 22px -18px rgba(20,50,90,.5)">
       ${rows || '<div style="padding:18px;text-align:center;font-size:12px;color:#b8c2d2">아직 학생이 없어요</div>'}
     </div>
-    <div style="font-size:10.5px;color:#b8c2d2;margin-top:8px">🔔로 알림 메시지를, 경험치·알 버튼으로 보상을 줄 수 있어요. 학생이 다음에 접속할 때(또는 앱이 열려 있으면 곧) 반영돼요.</div>`;
+    <div style="font-size:10.5px;color:#b8c2d2;margin-top:8px">체크박스로 여러 명을 골라 🔔 알림을 한 번에 보내고, 경험치·알 버튼으로 보상을 줘요. 학생이 다음에 접속할 때(또는 앱이 열려 있으면 곧) 반영돼요.</div>`;
 }
 
 /* ---- 콘텐츠 관리(핸드폰): 편집은 컴퓨터에서, 여기선 배포본 발표만 ---- */
@@ -3892,6 +3932,7 @@ function render() {
 
   if (ui.xpPop && state.role === 'student') html += xpPopHTML();   // 경험치 팝오버
   if ((ui.teacherMsgs || []).length && state.role === 'student') html += teacherMsgHTML();   // 선생님 알림 메시지 팝업
+  if (ui.bulkMsgOpen && isTeacherUser()) html += bulkMsgHTML();   // 교사: 선택 학생에게 알림 작성
   if (auth && ui.acct.open) html += accountHTML();  // 내 계정(비번 변경/탈퇴)
   if (ui.present.on) html += presentHTML();  // 수업용 전체화면 발표(최상단)
 
@@ -3974,7 +4015,7 @@ appEl.addEventListener('input', e => {
   if (el.id === 'li-pw') { ui.li.pw = el.value; return; }
   if (el.id === 'li-name') { ui.li.name = el.value; return; }
   if (el.id === 'li-studentno') { ui.li.studentNo = el.value; return; }
-  if (el.id === 'dash-msg') { ui.msgDraft = el.value; return; }   // 교사→학생 알림 메시지 입력
+  if (el.id === 'bulk-msg') { ui.bulkDraft = el.value; return; }   // 교사→학생 알림 메시지 입력
   if (el.dataset.gbind && gEd) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
   if (bind && ed && el.type !== 'radio' && el.tagName !== 'SELECT') {
