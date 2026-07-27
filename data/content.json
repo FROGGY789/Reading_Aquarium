@@ -3264,6 +3264,16 @@
               "요리하는 일을 도와주는 것"
             ],
             "answer": 0
+          },
+          {
+            "type": "input",
+            "prompt": "Baudelaire 아이들은 Justice Strauss 집 내의 어떤 시설을 이용했나요?",
+            "explain": "",
+            "accept": [
+              "library",
+              "Library",
+              "도서관"
+            ]
           }
         ],
         "vocab": [],
