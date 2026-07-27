@@ -3340,6 +3340,13 @@
               "for new information."
             ],
             "ko": "독서를 못했었기 때문에, 그는 새로운 지식에 목말라 있었다."
+          },
+          {
+            "type": "ab",
+            "prompt": "둘 중 어법적으로 알맞은 것을 고르시오. (단, 주어의 'The children'은 3명 이상이다.)",
+            "explain": "'서로서로'를 쓰고자 할 때, 3명 이상이면 one another, 2명이면 each other을 사용합니다.",
+            "sentence": "The children looked at [one another / each other].",
+            "answer": 0
           }
         ],
         "vocabPrep": [],
