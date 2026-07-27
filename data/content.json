@@ -942,8 +942,7 @@
       "reviewFrom": "2026-07-27",
       "reviewTo": "2026-07-27",
       "previewFrom": "2026-07-26",
-      "previewTo": "2026-07-27",
-      "shelfHidden": false
+      "previewTo": "2026-07-26"
     },
     {
       "date": "2026-07-26",
@@ -1209,7 +1208,7 @@
       "reviewFrom": "2026-07-27",
       "reviewTo": "2026-07-27",
       "previewFrom": "2026-07-26",
-      "previewTo": "2026-07-27"
+      "previewTo": "2026-07-26"
     },
     {
       "date": "2026-07-26",
@@ -1773,8 +1772,8 @@
         "grammar": []
       },
       "class": "2026 여름방학 영방반",
-      "reviewFrom": "2026-07-27",
-      "reviewTo": "2026-07-27",
+      "reviewFrom": "2026-07-28",
+      "reviewTo": "2026-07-28",
       "previewFrom": "2026-07-26",
       "previewTo": "2026-07-27"
     },
@@ -2194,8 +2193,8 @@
         "grammar": []
       },
       "class": "2026 여름방학 영방반",
-      "reviewFrom": "2026-07-27",
-      "reviewTo": "2026-07-27",
+      "reviewFrom": "2026-07-28",
+      "reviewTo": "2026-07-28",
       "previewFrom": "2026-07-26",
       "previewTo": "2026-07-27"
     }
