@@ -5622,7 +5622,50 @@
         }
       ],
       "quiz": {
-        "preview": [],
+        "preview": [
+          {
+            "type": "mc",
+            "prompt": "보들레르 남매가 포 씨(Mr. Poe)를 찾아간 가장 큰 이유는 무엇인가요?",
+            "explain": "\"We have been there long enough to know Count Olaf is a bad man,\" Klaus said.",
+            "options": [
+              "스트라우스 판사에게 가는 길을 묻기 위해",
+              "유산을 받기 위해",
+              "올라프 백작에 대해 이야기하고 도움을 요청하기 위해",
+              "새로운 유산 집행인을 소개받기 위해"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "mc",
+            "prompt": "포 씨가 설명한 'in loco parentis'의 의미로 가장 알맞은 것은?",
+            "explain": "\"'In loco parentis' means 'acting in the role of parent.'\"",
+            "options": [
+              "친척과 함께 살아가는 것",
+              "부모의 역할을 대신하는 것",
+              "아이들의 재산을 관리하는 것",
+              "부모를 대신해 돈을 보관하는 것"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "ox",
+            "prompt": "포 씨는 올라프 백작이 아이들을 학대했다는 말을 그대로 믿고 적극적으로 도와주었다.",
+            "explain": "\"Whatever Count Olaf has done... there is nothing I can do about it.\"",
+            "answer": 1
+          },
+          {
+            "type": "input",
+            "prompt": "아이들이 Strauss 판사의 집에서 책을 고를 때, Klaus는 무엇에 관한 책을 골랐나요?",
+            "explain": "\"Klaus chose several about wolves.\"",
+            "accept": [
+              "Wolves",
+              "늑대",
+              "wolves",
+              "wolf",
+              "Wolf"
+            ]
+          }
+        ],
         "vocab": [],
         "sentence": [],
         "vocabPrep": [],
