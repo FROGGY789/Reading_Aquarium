@@ -3828,83 +3828,174 @@
       "coreSentences": [
         {
           "text": "At a pasta store they selected interestingly shaped noodles and asked the woman running the store the proper amount for thirteen people—the ten people Count Olaf mentioned, and the three of them.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            4,
+            24,
+            25
+          ],
+          "verb": [
+            5,
+            10,
+            26
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "파스타 가게에서 그들은 흥미로운 모양의 면을 골랐고, 가게를 운영하는 여자에게 13명—올라프 백작이 언급한 10명과 세 아이들—을 위한 적당한 양을 물었다."
         },
         {
           "text": "“I don't know what we would have done without you.”",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            4
+          ],
+          "verb": [
+            1,
+            2,
+            5,
+            6,
+            7
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "“당신이 없었더라면 우리가 어떻게 했을지 모르겠어요.”"
         },
         {
           "text": "“I don’t see why not,” Justice Strauss said, smiling.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            5,
+            6
+          ],
+          "verb": [
+            1,
+            2,
+            7
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "“안 될 이유가 없지(오렴),” 스트로스 판사가 미소를 지으며 말했다."
         },
         {
-          "text": "With their kind parents dead and Count Olaf [treating / treated] them so abominably, the three children were not used to kindness from adults, and weren't sure if they were expected to do anything back.",
-          "subject": [],
-          "verb": [],
+          "text": "With their kind parents dead and Count Olaf treating them so abominably, the three children were not used to kindness from adults, and weren't sure if they were expected to do anything back.",
+          "subject": [
+            13,
+            12,
+            14,
+            26
+          ],
+          "verb": [
+            15,
+            23,
+            27,
+            28
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "친절했던 부모님들은 돌아가시고 올라프 백작이 자신들을 너무나 지독하게 대했기 때문에, 세 아이들은 어른들의 친절에 익숙하지 않았고 뭔가 보답을 해야 하는지 확신하지 못했다."
         },
         {
           "text": "She reached out a hand and put it on Violet’s hair, and Violet felt more comforted than she had in some time.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            12,
+            17
+          ],
+          "verb": [
+            1,
+            6,
+            13,
+            18
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "그녀는 손을 뻗어 바이올렛의 머리 위에 얹었고, 바이올렛은 한동안 느껴보지 못한 큰 위안을 느꼈다."
         },
         {
           "text": "The three orphans spoke of pleasant memories of their parents and about Justice Strauss, who they agreed was a wonderful neighbor and in whose library they planned to spend a great deal of time.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            1,
+            2,
+            15,
+            25
+          ],
+          "verb": [
+            3,
+            16,
+            26
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "세 고아들은 부모님에 대한 즐거운 추억과 스트로스 판사에 대해 이야기했는데, 그들은 스트로스 판사가 훌륭한 이웃이며 그녀의 서재에서 많은 시간을 보내려 계획하고 있다고 입을 모았다."
         },
         {
           "text": "“In agreeing to adopt you,” he said, “I have become your father, and as your father I am not someone to be trifled with.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            5,
+            7,
+            16
+          ],
+          "verb": [
+            6,
+            8,
+            9,
+            17
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "“너희들을 입양하는 데 동의함으로써, 나는 너희들의 아버지가 되었고, 너희들의 아버지로서 나는 만만하게 여겨질 사람이 아니다.”"
         },
         {
           "text": "He jumped up, trying to rescue Sunny from the grasp of the Count, but he was holding her too high to reach.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            14
+          ],
+          "verb": [
+            1,
+            15,
+            16
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "그는 백작의 손아귀에서 써니를 구하려고 뛰어올랐으나, 백작이 너무 높이 들고 있어서 손이 닿지 않았다."
         },
         {
-          "text": "Behind the women [was / were] a man with very long and skinny arms, at the end of which [was / were] two hooks instead of hands.",
-          "subject": [],
-          "verb": [],
+          "text": "Behind the women was a man with very long and skinny arms, at the end of which were two hooks instead of hands.",
+          "subject": [
+            4,
+            5,
+            18,
+            19
+          ],
+          "verb": [
+            3,
+            17
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "여인들 뒤에는 아주 길고 마른 팔을 가진 남자가 있었는데, 그의 팔 끝에는 손 대신 두 개의 갈고리가 있었다."
         },
         {
           "text": "And behind this person, standing in the doorway, were an assortment of people the children could not see but who promised to be just as frightening.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            9,
+            10,
+            11,
+            12,
+            13,
+            14
+          ],
+          "verb": [
+            8,
+            15,
+            16,
+            17,
+            20
+          ],
           "bold": [],
           "italic": [],
-          "ko": ""
+          "ko": "그리고 이 사람 뒤로, 출입구에 서서 아이들은 볼 수 없지만 똑같이 몹시 위협적일 것으로 예상되는 여러 정체불명의 사람들이 있었다."
         }
       ],
       "quiz": {
