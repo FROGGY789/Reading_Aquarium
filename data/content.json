@@ -4685,7 +4685,40 @@
     },
     {
       "date": "2026-07-28",
-      "label": "",
+      "label": "Ch 05-1",
+      "quote": {
+        "en": "",
+        "ko": "",
+        "teacher": "",
+        "comment": ""
+      },
+      "book": {
+        "title": "The Bad Beginning",
+        "author": "Lemony Snicket",
+        "chapter": "Chapter 05-1",
+        "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
+        "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
+      },
+      "passage": "",
+      "vocab": {},
+      "coreSentences": [],
+      "quiz": {
+        "preview": [],
+        "vocab": [],
+        "sentence": [],
+        "vocabPrep": [],
+        "sentPrep": [],
+        "grammar": []
+      },
+      "class": "2026 여름방학 영방반",
+      "reviewFrom": "2026-07-31",
+      "reviewTo": "2026-07-31",
+      "previewFrom": "2026-07-30",
+      "previewTo": "2026-07-30"
+    },
+    {
+      "date": "2026-07-28",
+      "label": "Ch 05-2",
       "quote": {
         "en": "",
         "ko": "",
@@ -4715,40 +4748,6 @@
       "reviewTo": "2026-07-31",
       "previewFrom": "2026-07-30",
       "previewTo": "2026-07-30"
-    },
-    {
-      "date": "2026-07-28",
-      "label": "",
-      "quote": {
-        "en": "",
-        "ko": "",
-        "teacher": "",
-        "comment": ""
-      },
-      "book": {
-        "title": "The Bad Beginning",
-        "author": "Lemony Snicket",
-        "chapter": "Chapter 05-2",
-        "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
-        "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
-      },
-      "passage": "",
-      "vocab": {},
-      "coreSentences": [],
-      "quiz": {
-        "preview": [],
-        "vocab": [],
-        "sentence": [],
-        "vocabPrep": [],
-        "sentPrep": [],
-        "grammar": []
-      },
-      "class": "2026 여름방학 영방반",
-      "reviewFrom": "2026-07-31",
-      "reviewTo": "2026-07-31",
-      "previewFrom": "2026-07-30",
-      "previewTo": "2026-07-30",
-      "shelfHidden": false
     }
   ],
   "grammar": [],
