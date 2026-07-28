@@ -4542,7 +4542,53 @@
         }
       ],
       "quiz": {
-        "preview": [],
+        "preview": [
+          {
+            "type": "mc",
+            "prompt": "대머리 남자가 바이올렛의 얼굴을 손으로 잡으며 화나게 만들지 말라고 경고한 대상은 누구인가요?",
+            "explain": "“If I were you I would try not to anger Count Olaf, or he might wreck that pretty little face of yours.”",
+            "options": [
+              "Count Olaf",
+              "The Bald man",
+              "Mr. Poe",
+              "Mrs. Poe"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "ox",
+            "prompt": "바이올렛은 무거운 국자를 들어 오른손이 아팠기 때문에, 소스를 쏟을 위험을 무릅쓰고 왼손으로 바꾸어 음식을 서빙했다.",
+            "explain": "Violet’s right hand ached from holding the heavy ladle.  She thought of switching to her left hand, but because she was right- handed she was afraid she might spill the sauce with her left hand, which could enrage Count Olaf again.",
+            "answer": 1
+          },
+          {
+            "type": "mc",
+            "prompt": "Count Olaf가 침대를 하나 더 사라고 했을 때, Klaus가 그럴 수 없다고 반박한 이유는 무엇인가요?",
+            "explain": "",
+            "options": [
+              "가구점이 너무 멀리 떨어져 있어서",
+              "올라프 백작이 집안일 수당을 주지 않아서",
+              "바이올렛이 성년이 될 때까지 유산을 사용할 수 없어서",
+              "포 남매의 계좌가 동결되어 있어서"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "input",
+            "prompt": "올라프 백작에게 뺨을 맞고 바닥에 쓰러진 클라우스의 얼굴 몇 인치 옆에 있던, 백작의 발목에 문신으로 새겨져 있던 모양은 무엇인가요? (한 단어)",
+            "explain": "Klaus fell to the floor,  his face inches from the eye tattooed on Olaf’s ankle.",
+            "accept": [
+              "Eye",
+              "eye"
+            ]
+          },
+          {
+            "type": "ox",
+            "prompt": "잠자리에 들 때 클라우스는 침대에서, 바이올렛은 바닥에서, 써니는 커튼으로 만든 쿠션 위에서 잤다. (O / X)",
+            "explain": "... and lay down  to go to sleep, Klaus in the bed, Violet on the floor, Sunny on her little cushion of curtains.",
+            "answer": 0
+          }
+        ],
         "vocab": [],
         "sentence": [],
         "vocabPrep": [],
