@@ -3999,7 +3999,44 @@
         }
       ],
       "quiz": {
-        "preview": [],
+        "preview": [
+          {
+            "type": "mc",
+            "prompt": "아이들이 저녁 식사로 준비한 파스타 소스의 정확한 명칭은 무엇인가요?",
+            "explain": "Violet, Klaus, and Sunny cooked the puttanesca sauce according to the recipe.",
+            "options": [
+              "Alfredo Pasta",
+              "Puttanesca Pasta",
+              "Alio Olio",
+              "Gorgonzola Cheese Pasta"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "ox",
+            "prompt": "아이들은 어른들의 친절에 익숙하지 않았기 때문에, Strauss 판사의 호의에 보답하고자 내일 그녀를 위해 집안일을 기꺼이 하겠다고 제안했다.",
+            "explain": "\"Klaus and I would be more than happy to do household chores for you.\"",
+            "answer": 0
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 중 아이들이 주방에서 요리할 때의 모습으로 틀린 것은 무엇인가요?",
+            "explain": "",
+            "options": [
+              "바이올렛은 마늘을 굽고 엔초비를 씻어서 다졌다.",
+              "클라우스는 토마토 껍질을 벗기고 올리브의 씨를 빼냈다.",
+              "써니는 나무 숟가락으로 냄비를 두드리며 스스로 만든 노래를 불렀다.",
+              "아이들은 올라프 백작이 요구할 것에 대비해 로스트 비프(roast beef)도 함께 요리했다."
+            ],
+            "answer": 3
+          },
+          {
+            "type": "ox",
+            "prompt": "올라프 백작은 써니(Sunny)를 높이 들어 올렸다가 극단 사람들이 들어오자 깜짝 놀라 바닥으로 떨어뜨렸다.",
+            "explain": "He seemed about to drop her to the floor when there was a large burst of laughter in the next room. 떨어뜨릴 듯 보였지만 내려놓았습니다.",
+            "answer": 1
+          }
+        ],
         "vocab": [],
         "sentence": [],
         "vocabPrep": [],
