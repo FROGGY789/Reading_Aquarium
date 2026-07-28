@@ -5297,7 +5297,7 @@
     },
     {
       "date": "2026-07-28",
-      "label": "",
+      "label": "Ch 05-2",
       "quote": {
         "en": "",
         "ko": "",
@@ -5311,9 +5311,228 @@
         "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
         "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
       },
-      "passage": "",
-      "vocab": {},
-      "coreSentences": [],
+      "passage": "A Series of Unfortunate Events By Lemony Snicket\n\nThe Bad Beginning Chapter 5-2.\n\n“He calls us orphans?\n\n“He has terrible friends.”\n\n“He is always asking about our money.”\n\n“Poko!” (This was from Sunny.)\n\nMr. Poe put up his hands to <indicate> he had heard enough. “Children, children,” he said. “You must %%give%% yourselves time to <adjust to> your new home. You’ve only been there a few days.”\n\n“We have been there long enough to know Count Olaf is a bad man,” Klaus said.\n\nMr. Poe <sighed>, and looked at each of the three children. ==His face was kind, but it didn’t look like he really believed what the Baudelaire orphans were saying.== “Are you familiar with the Latin term ‘in loco parentis’?” he asked.\n\nViolet and Sunny looked at Klaus. The biggest reader %%of%% the three, he was the most <likely to know> vocabulary words and foreign phrases. “Something about trains?” he asked. Maybe Mr. Poe was going to take them by train to another relative.\n\nMr. Poe shook his head. “‘In loco parentis’ means 'acting in the role of parent,” he said. “It is a legal <term> and it <applies to> Count Olaf. ==<Now that> you are in his care, the Count may raise you using any methods he sees <fit>. I’m sorry if your parents did not %%make%% you do any household chores, or if you never %%saw%% them drink any wine, or if you like their friends better than Count Olaf’s friends, but these are things %%that%% you must <get used to>, as Count Olaf is acting in loco parentis.== Understand?”\n\n“But he struck my brother!” Violet said. “Look at his face!”\n\nAs Violet spoke, Mr. Poe reached into his pocket for his handkerchief and, covering his mouth, coughed many, many times into it. He coughed %%so%% loudly %%that%% Violet could not be certain he had heard her.\n\n“Whatever Count Olaf has done,” Mr. Poe said, <glancing> down at one of his papers and circling a number, “he has acted in loco parentis, and there’s nothing I can do about it. Your money will be well protected by myself and by the bank, but Count Olaf’s parenting techniques are his own business. Now, I hate to <usher> you out <posthaste>, but I have very much work to do.”\n\nThe children just sat there, <stunned>. Mr. Poe looked up, and <cleared his throat>. “‘Posthaste,’” he said, “means—”\n\n“—means you’ll do nothing to help us,” Violet finished for him. She was shaking with anger and <frustration>. ==%%As%% one of the phones began ringing, she stood up and walked out of the room, followed by Klaus%%, who%% was carrying Sunny.== They <stalked> out of the bank and stood on the street, not knowing what to do next.\n\n“What shall we do next?” Klaus asked sadly.\n\nViolet stared up at the sky. She %%wished%% she %%could%% invent something %%that%% could take them out of there. “It’s getting a bit late,” she said. “We <might as well> just go back and think of something else tomorrow. Perhaps we can stop and see Justice Strauss.”\n\n“But you said she wouldn't help us,” Klaus said.\n\n“Not for help,” Violet said, “for books.”\n\n%%It%% is very useful, when %%one%% is young, %%to learn%% the difference %%between%% “<literally>” %%and%% “<figuratively>.” If something happens literally, it actually happens; if something happens figuratively； it feels like it’s happening. If you are literally jumping for joy, for instance, it means you are <leaping> in the air because you are very happy. If you are figuratively jumping for joy, it means you are %%so%% happy %%that%% you could jump for joy, but are saving your energy for other <matters>. The Baudelaire orphans walked back to Count Olaf’s neighborhood and stopped at the home of Justice Strauss%%, who%% welcomed them inside and %%let%% them choose books from the library. Violet chose several about <mechanical> inventions, Klaus chose several about wolves； and Sunny found a book with many pictures of teeth inside. They then went to their room and <crowded together> on the one bed, reading <intently> and happily. Figuratively, they escaped from Count Olaf and their miserable <existence>. They did not literally escape, because they were still in his house and <vulnerable to> Olaf’s evil in loco parentis ways. ==But by <immersing themselves in> their favorite reading topics, they felt far away from their <predicament>, as if they had escaped. In the situation of the orphans, figuratively escaping was not enough, of course, but at the end of a tiring and hopeless day, %%it%% would have to %%do%%. Violet, Klaus； and Sunny read their books and, in the back of their minds, hoped that soon their figurative escape would eventually <turn into> a literal one.==",
+      "vocab": {
+        "indicate": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "adjust to": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "adjust to ~"
+        },
+        "sighed": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "sigh"
+        },
+        "likely to know": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "likely to V"
+        },
+        "term": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "applies to": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "apply to ~"
+        },
+        "Now that": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "Now that S V"
+        },
+        "fit": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "get used to": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "get/be used to"
+        },
+        "glancing": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "glance"
+        },
+        "usher": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "posthaste": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "stunned": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "cleared his throat": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "clear one's throat"
+        },
+        "frustration": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "stalked": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "stalk"
+        },
+        "might as well": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "might as well V"
+        },
+        "literally": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "figuratively": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "leaping": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "leap"
+        },
+        "matters": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "matter"
+        },
+        "mechanical": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "crowded together": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "crowd together"
+        },
+        "intently": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "existence": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "vulnerable to": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "vulnerable to ~"
+        },
+        "immersing themselves in": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "immerse oneselves in"
+        },
+        "predicament": {
+          "pos": "",
+          "def": "",
+          "ex": ""
+        },
+        "turn into": {
+          "pos": "",
+          "def": "",
+          "ex": "",
+          "head": "turn into ~"
+        }
+      },
+      "coreSentences": [
+        {
+          "text": "His face was kind, but it didn’t look like he really believed what the Baudelaire orphans were saying.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Now that you are in his care, the Count may raise you using any methods he sees fit.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "I’m sorry if your parents did not make you do any household chores, or if you never saw them drink any wine, or if you like their friends better than Count Olaf’s friends, but these are things that you must get used to, as Count Olaf is acting in loco parentis.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "As one of the phones began ringing, she stood up and walked out of the room, followed by Klaus, who was carrying Sunny.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "But by immersing themselves in their favorite reading topics, they felt far away from their predicament, as if they had escaped.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "In the situation of the orphans, figuratively escaping was not enough, of course, but at the end of a tiring and hopeless day, it would have to do.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "Violet, Klaus； and Sunny read their books and, in the back of their minds, hoped that soon their figurative escape would eventually turn into a literal one.",
+          "subject": [],
+          "verb": [],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        }
+      ],
       "quiz": {
         "preview": [],
         "vocab": [],
