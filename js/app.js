@@ -396,6 +396,38 @@ async function sendBulkMessage() {
   } catch (e) { ui.bulkBusy = false; ui.recError = '메시지 전송 실패: ' + e.message; }
   render();
 }
+// 예습 버닝: 이 문장 '어려워요' 체크/해제(교사 PPT에서 문장별 횟수로 집계)
+async function toggleHard(idx, sentence) {
+  const chapter = recChapter();
+  const key = chapter + '::' + idx;
+  const marks = Object.assign({}, state.hardMarks || {});
+  const now = !marks[key];
+  if (now) marks[key] = true; else delete marks[key];
+  set({ hardMarks: marks });   // 화면 체크 상태는 즉시 반영(로컬 저장)
+  if (!auth || isTeacherUser() || !sbConf()) return;   // 로그인+학생일 때만 서버 집계
+  try {
+    if (now) {
+      await sbFetch('/rest/v1/er_hard?on_conflict=user_id,chapter,idx', {
+        method: 'POST', headers: { 'Prefer': 'return=minimal,resolution=merge-duplicates' },
+        body: JSON.stringify({ chapter, idx, sent: sentence })
+      });
+    } else {
+      await sbFetch('/rest/v1/er_hard?user_id=eq.' + auth.user.id + '&chapter=eq.' + encodeURIComponent(chapter) + '&idx=eq.' + idx, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+    }
+  } catch (e) { /* 테이블 없거나 오프라인이면 조용히 건너뜀(체크 상태는 로컬 유지) */ }
+}
+// 교사: 발표(PPT)할 챕터의 '어려워요' 횟수를 문장 인덱스별로 집계
+async function loadHardCounts(chapter) {
+  ui.present.hard = {};
+  if (!sbConf() || !isTeacherUser() || !chapter) { return; }
+  try {
+    const res = await sbFetch('/rest/v1/er_hard?chapter=eq.' + encodeURIComponent(chapter) + '&select=idx');
+    if (!res.ok) return;
+    const rows = await res.json();
+    const h = {}; rows.forEach(r => { h[r.idx] = (h[r.idx] || 0) + 1; });
+    ui.present.hard = h; render();
+  } catch (e) { /* 무시 */ }
+}
 
 /* ---- 계정 관리(비밀번호 변경 · 탈퇴 · 교사의 학생 삭제) ---- */
 // 본인 비밀번호 변경(Supabase Auth: 세션이 유효하면 이전 비번 없이 변경)
@@ -415,6 +447,7 @@ async function changePassword() {
 async function purgeUserData(id) {
   await sbFetch('/rest/v1/er_grants?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
   await sbFetch('/rest/v1/er_messages?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }).catch(() => {});
+  await sbFetch('/rest/v1/er_hard?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }).catch(() => {});
   await sbFetch('/rest/v1/er_records?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
   await sbFetch('/rest/v1/er_progress?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
   const res = await sbFetch('/rest/v1/er_profiles?id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
@@ -768,11 +801,13 @@ const DEFAULT_STATE = {
   xp: 0,
   pullCount: 0,
   quizTask: null, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {},
+  qWrong: {}, qBad: {},     // 퀴즈: 문항별 틀린 횟수 / 틀렸던 보기 인덱스(2번 틀리면 정답 공개)
   gramCI: 0,                // 어법 커리큘럼: 현재 개념 인덱스
   pvCount: null, pvBonus: false,   // 예습 살살: 선택 개수 / 보너스 여부
   vrCount: null, vrBonus: false,   // 어휘 복습: 선택 개수 / 보너스 여부
   pmWrong: 0, pmReveal: false,     // 예습 보통: 틀린 횟수 / 정답 공개
-  pmShowKo: false,                 // 예습 보통: 해석 보기 토글
+  pmShowKo: false, pmShowVocab: false,   // 예습 보통: 해석 보기 / 단어 뜻 보기 토글
+  hardMarks: {},            // 예습 버닝: '어려워요' 체크한 문장 { 'chapter::idx': true }
   vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 최대 30개로 고정)
   result: null,
   hatchStage: 'idle', hatchSpecies: null,
@@ -1097,6 +1132,16 @@ function isRight(q, i) {
   const v = NORM(state.inputs[i]);
   return !!v && (q.accept || []).some(a => NORM(a) === v || v.includes(NORM(a)));
 }
+// 문항의 정답을 사람이 읽을 수 있는 텍스트로(정답 공개용)
+function quizAnswerText(q) {
+  if (!q) return '';
+  if (q.type === 'mc') return (q.options || [])[q.answer] || '';
+  if (q.type === 'ox') return q.answer === 0 ? 'O (맞아요)' : 'X (틀려요)';
+  if (q.type === 'ab') { const p = abParse(q.sentence); return q.answer === 0 ? p.a : p.b; }
+  if (q.type === 'fix') { const toks = (q.sentence || '').split(/\s+/).filter(Boolean); return '[' + (toks[q.wrong] || '?') + '] → ' + ((q.accept || [])[0] || ''); }
+  if (q.type === 'scramble') return (q.chunks || []).join(' ');
+  return (q.accept || [])[0] || '';
+}
 function canCheck() {
   const cq = currentQ(); const qi = state.quizQi;
   if (!cq) return false;
@@ -1214,7 +1259,7 @@ const actions = {
     }
     else if (t === 'wbStudy') set({ screen: 'wbStudy', wbsCount: null, wbsDeck: [], wbsI: 0, wbsFlipped: false });   // 단어장 학습(SRS 카드)
     else if (t === 'grammar') { if (!grammarConcepts().length) return; set({ screen: 'grammar', quizTask: 'grammar', gramCI: 0, pop: null }); }   // 어법 커리큘럼(개념 순서대로)
-    else set({ screen: 'quiz', quizTask: t, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {} });
+    else set({ screen: 'quiz', quizTask: t, quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {}, qWrong: {}, qBad: {} });
   },
   // 단어장 학습(심화): 복습 개수 선택 → 망각곡선 순서로 덱 구성
   wbsPick(n) {
@@ -1266,8 +1311,14 @@ const actions = {
     const ok = target.length === sel.length && target.every((v, i) => v === sel[i]);
     if (!ok) {
       const w = (state.pmWrong || 0) + 1;
-      if (w >= 3) { set({ pmWrong: w, pmReveal: true, pmSel: target, pmMsg: 'reveal' }); return; }   // 3번 이상 틀리면 정답 공개+넘어가기
-      set({ pmWrong: w, pmMsg: 'wrong' }); return;
+      if (w >= 3) { set({ pmWrong: w, pmReveal: true, pmSel: target, pmMsg: 'reveal', pmHint: '' }); return; }   // 3번 이상 틀리면 정답 공개+넘어가기
+      // 방향 힌트: 몇 칸을 더/덜 골라야 하는지
+      const diff = sel.length - target.length;
+      let hint;
+      if (diff < 0) hint = (diff === -1 ? '한 칸을 더 색칠해 주세요 🖍️' : `${-diff}칸을 더 색칠해 주세요 🖍️`);
+      else if (diff > 0) hint = (diff === 1 ? '한 칸을 더 많게 체크했어요 — 하나만 빼 주세요 ✂️' : `${diff}칸을 더 많게 체크했어요 — ${diff}개 빼 주세요 ✂️`);
+      else hint = '칸 수는 맞아요! 위치를 다시 살펴보세요 👀';
+      set({ pmWrong: w, pmMsg: 'wrong', pmHint: hint }); return;
     }
     if (state.pmPhaseIdx < phases.length - 1) { set({ pmPhaseIdx: state.pmPhaseIdx + 1, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false }); return; }
     pmAdvance();
@@ -1280,6 +1331,7 @@ const actions = {
   },
   pmNext() { pmAdvance(); },   // 표시 마크가 없는 문장: 읽고 다음
   pmToggleKo() { set({ pmShowKo: !state.pmShowKo }); },   // 예습 보통: 해석 보기/숨기기
+  pmToggleVocab() { set({ pmShowVocab: !state.pmShowVocab }); },   // 예습 보통: 단어 뜻 보기/숨기기
   // 어휘 복습: 개수 선택(50개·전체는 보너스 경험치)
   vrPick(n) {
     const total = dayVocabCards(activeDay()).length;
@@ -1364,10 +1416,15 @@ const actions = {
   goPreview() { set({ screen: 'preview' }); },
   // 버닝: 리더 끝까지 읽고 → comprehension check(quiz.preview) → 없으면 바로 완료
   burnToComprehension() {
-    if (dayQuiz('preview').length) set({ screen: 'quiz', quizTask: 'preview', quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {}, readerBurning: false });
+    if (dayQuiz('preview').length) set({ screen: 'quiz', quizTask: 'preview', quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {}, readerBurning: false, qWrong: {}, qBad: {} });
     else completePreviewLevel('burning');
   },
   tapWord(w) { set({ pop: state.pop === w ? null : w }); },
+  hardToggle(arg) {   // 예습 버닝: 현재 문장 '어려워요' 체크(arg = 문장 인덱스)
+    const idx = Number(arg);
+    const sents = balanceMarks(passageToReviewSentences(dayPassage(activeDay())));
+    toggleHard(idx, stripBrackets(stripMarks(sents[idx] || '')).trim());
+  },
   reviewDone() { completeTask('review'); },
   reviewNext() {
     if (!ui.revReady) return;   // 2초 전에는 무시
@@ -1397,9 +1454,22 @@ const actions = {
   },
   quizCheck() {
     if (!canCheck() || state.checked[state.quizQi]) return;
-    const checked = Object.assign({}, state.checked);
-    checked[state.quizQi] = true;
-    set({ checked });
+    const qi = state.quizQi, cq = currentQ();
+    const right = isRight(cq, qi);
+    // 정답이거나 자유형이면 바로 확정
+    if (right || (cq && cq.type === 'free')) { set({ checked: Object.assign({}, state.checked, { [qi]: true }) }); return; }
+    // 틀림: 기회 주기(힌트) → 2번째 틀리면 정답 공개
+    const qWrong = Object.assign({}, state.qWrong); qWrong[qi] = (qWrong[qi] || 0) + 1;
+    const qBad = Object.assign({}, state.qBad);
+    const optType = ['mc', 'ox', 'ab'].includes(cq && cq.type);
+    if (optType && state.picks[qi] != null) qBad[qi] = (qBad[qi] || []).concat(state.picks[qi]);
+    if (qWrong[qi] >= 2) {   // 정답 공개(확정)
+      set({ qWrong, qBad, checked: Object.assign({}, state.checked, { [qi]: true }) });
+    } else {                 // 한 번 더 기회 — 보기형은 방금 고른 오답을 지워 다시 고르게
+      const picks = Object.assign({}, state.picks);
+      if (optType) delete picks[qi];
+      set({ qWrong, qBad, picks });
+    }
   },
   quizNext() {
     const qs = currentQs();
@@ -1439,7 +1509,7 @@ const actions = {
   gramStartQuiz() {   // 개념 설명 화면 → 이 개념의 문제 풀기(문제 없으면 다음 개념으로)
     const c = currentGramConcept();
     if (!c || !(c.quiz && c.quiz.length)) { gramAdvance(); return; }
-    set({ screen: 'quiz', quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {}, pop: null });
+    set({ screen: 'quiz', quizQi: 0, picks: {}, inputs: {}, checked: {}, scr: {}, pop: null, qWrong: {}, qBad: {} });
   },
   gramNextConcept() { gramAdvance(); },
 
@@ -1535,7 +1605,9 @@ const actions = {
     if (!sents.length) return;   // 지문이 없으면 버튼이 이미 비활성 안내 상태
     const vdict = dayVocab(d); const vmap = {};
     dayVocabCards(d).forEach(v => { vmap[v.word] = v; });
-    ui.present = { on: true, i: 0, sents, title: d.label || '', vmap, showVocab: false };
+    const chapter = (d.book && d.book.chapter) || d.label || '';
+    ui.present = { on: true, i: 0, sents, title: d.label || '', vmap, showVocab: false, hard: {}, chapter };
+    loadHardCounts(chapter);   // 학생들이 '어려워요' 체크한 횟수를 문장별로 집계(비동기)
     requestFS();
     render();
   },
@@ -2646,6 +2718,11 @@ function reviewHTML() {
   const btn = ui.revReady
     ? `<button data-act="reviewNext" style="width:100%;border:none;background:${last ? lastBg : (burning ? '#e2564d' : '#2f74e6')};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? lastShadow : (burning ? '#b23a32' : '#1f57c4')};cursor:pointer">${last ? lastLabel : '다음 문장 →'}</button>`
     : `<button disabled style="width:100%;border:none;background:#c3d2e6;color:#fff;font-size:13.5px;font-weight:600;padding:14px;border-radius:15px;cursor:default">잠깐 읽어볼까요… ⏳</button>`;
+  // 버닝 예습: 문장마다 '어려워요' 체크(교사 발표에서 문장별 횟수로 집계)
+  const hardOn = burning && !!(state.hardMarks || {})[recChapter() + '::' + i];
+  const hardBtn = burning
+    ? `<button data-act="hardToggle" data-arg="${i}" style="width:100%;border:1.5px solid ${hardOn ? '#e2564d' : '#f0c9c4'};background:${hardOn ? '#fbe4e2' : '#fff'};color:${hardOn ? '#b23a32' : '#c97a72'};font-size:12.5px;font-weight:700;padding:10px;border-radius:13px;cursor:pointer;margin-bottom:9px">${hardOn ? '😵 어려운 문장으로 표시됨 · 탭하면 해제' : '😵 이 문장 어려워요'}</button>`
+    : '';
 
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:${topPad()} 20px 24px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -2661,6 +2738,7 @@ function reviewHTML() {
       ${popHTML}
     </div>
     <div style="font-size:11px;color:#9aa8bd;text-align:center;margin-bottom:10px">${popOn ? '밑줄 친 단어를 탭하면 뜻이 나와요' : '읽기 설정(Aa)에서 단어 팝오버를 켤 수 있어요'}</div>
+    ${hardBtn}
     ${btn}
     ${readCtlPanel()}
   </div>`;
@@ -2710,23 +2788,29 @@ function quizHTML() {
   if (cq.type === 'mc') {
     body = `<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">` + cq.options.map((txt, i) => {
       const picked = state.picks[qi] === i, correct = i === cq.answer;
+      const bad = !checked && (state.qBad[qi] || []).includes(i);   // 이전에 골랐다 틀린 보기
       let bg = '#fff', bd = '#e2e9f2', bbg = '#eef2f8', bfg = '#7d8aa0';
       if (!checked && picked) { bg = '#e7f0fd'; bd = '#2f74e6'; bbg = '#2f74e6'; bfg = '#fff'; }
+      if (bad) { bg = '#fbe4e2'; bd = '#e2564d'; bbg = '#e2564d'; bfg = '#fff'; }
       if (checked && correct) { bg = '#e0f3ea'; bd = '#2fa36b'; bbg = '#2fa36b'; bfg = '#fff'; }
       if (checked && picked && !correct) { bg = '#fbe4e2'; bd = '#e2564d'; bbg = '#e2564d'; bfg = '#fff'; }
-      return `<div data-act="pickOption" data-arg="${i}" style="display:flex;align-items:center;gap:12px;background:${bg};border:1.5px solid ${bd};border-radius:14px;padding:13px 15px;cursor:${checked ? 'default' : 'pointer'}">
-        <div style="width:24px;height:24px;border-radius:50%;background:${bbg};color:${bfg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none">${String.fromCharCode(65 + i)}</div>
+      const lock = checked || bad;
+      return `<div ${lock ? '' : `data-act="pickOption" data-arg="${i}"`} style="display:flex;align-items:center;gap:12px;background:${bg};border:1.5px solid ${bd};border-radius:14px;padding:13px 15px;cursor:${lock ? 'default' : 'pointer'};opacity:${bad ? '.7' : '1'}">
+        <div style="width:24px;height:24px;border-radius:50%;background:${bbg};color:${bfg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none">${bad ? '✕' : String.fromCharCode(65 + i)}</div>
         <div style="flex:1;font-size:14px;font-weight:500;color:#26303f;font-family:'Lora',serif">${esc(txt)}</div>
       </div>`;
     }).join('') + `</div>`;
   } else if (cq.type === 'ox') {
     const opt = (idx, big, label) => {
       const picked = state.picks[qi] === idx, correct = idx === cq.answer;
+      const bad = !checked && (state.qBad[qi] || []).includes(idx);
       let bg = '#fff', bd = '#e2e9f2', color = '#26303f';
       if (!checked && picked) { bg = '#e7f0fd'; bd = '#2f74e6'; color = '#1f57c4'; }
+      if (bad) { bg = '#fbe4e2'; bd = '#e2564d'; color = '#b23a32'; }
       if (checked && correct) { bg = '#e0f3ea'; bd = '#2fa36b'; color = '#1f7a4d'; }
       if (checked && picked && !correct) { bg = '#fbe4e2'; bd = '#e2564d'; color = '#b23a32'; }
-      return `<div ${checked ? '' : `data-act="pickOption" data-arg="${idx}"`} style="flex:1;background:${bg};border:2px solid ${bd};border-radius:16px;padding:22px 10px;text-align:center;cursor:${checked ? 'default' : 'pointer'}"><div style="font-size:36px;font-weight:800;color:${color};line-height:1;font-family:'Lora',serif">${big}</div><div style="font-size:12px;color:${color};margin-top:5px;font-weight:600">${label}</div></div>`;
+      const lock = checked || bad;
+      return `<div ${lock ? '' : `data-act="pickOption" data-arg="${idx}"`} style="flex:1;background:${bg};border:2px solid ${bd};border-radius:16px;padding:22px 10px;text-align:center;cursor:${lock ? 'default' : 'pointer'};opacity:${bad ? '.7' : '1'}"><div style="font-size:36px;font-weight:800;color:${color};line-height:1;font-family:'Lora',serif">${big}</div><div style="font-size:12px;color:${color};margin-top:5px;font-weight:600">${label}</div></div>`;
     };
     body = `<div style="display:flex;gap:12px;margin-top:12px">${opt(0, 'O', '맞아요')}${opt(1, 'X', '틀려요')}</div>
       <div style="text-align:center;font-size:11px;color:#9aa8bd;margin-top:8px">문장이 맞으면 O, 틀리면 X</div>`;
@@ -2734,11 +2818,14 @@ function quizHTML() {
     const p = abParse(cq.sentence);
     const opt = (idx, label) => {
       const picked = state.picks[qi] === idx, correct = idx === cq.answer;
+      const bad = !checked && (state.qBad[qi] || []).includes(idx);
       let bg = '#fff', bd = '#c8d4e2', color = '#26303f';
       if (!checked && picked) { bg = '#e7f0fd'; bd = '#2f74e6'; color = '#1f57c4'; }
+      if (bad) { bg = '#fbe4e2'; bd = '#e2564d'; color = '#b23a32'; }
       if (checked && correct) { bg = '#e0f3ea'; bd = '#2fa36b'; color = '#1f7a4d'; }
       if (checked && picked && !correct) { bg = '#fbe4e2'; bd = '#e2564d'; color = '#b23a32'; }
-      return `<span ${checked ? '' : `data-act="pickOption" data-arg="${idx}"`} style="display:inline-block;margin:0 4px;padding:4px 12px;border-radius:10px;border:1.5px solid ${bd};background:${bg};color:${color};font-weight:700;cursor:${checked ? 'default' : 'pointer'}">${esc(label)}</span>`;
+      const lock = checked || bad;
+      return `<span ${lock ? '' : `data-act="pickOption" data-arg="${idx}"`} style="display:inline-block;margin:0 4px;padding:4px 12px;border-radius:10px;border:1.5px solid ${bd};background:${bg};color:${color};font-weight:700;cursor:${lock ? 'default' : 'pointer'};opacity:${bad ? '.7' : '1'}">${esc(label)}</span>`;
     };
     body = `<div style="background:#fff;border:1px solid #e2e9f2;border-radius:14px;padding:16px 16px;font-family:'Lora',serif;font-size:18px;line-height:2.1;color:#26303f;margin-top:10px;text-align:center">
       ${esc(p.before)}${opt(0, p.a)}<span style="color:#b8c2d2;font-weight:700">/</span>${opt(1, p.b)}${esc(p.after)}
@@ -2786,6 +2873,7 @@ function quizHTML() {
   }
 
   let feedback = '';
+  const tries = state.qWrong[qi] || 0;
   if (checked) {
     const ok = isRight(cq, qi);
     if (cq.type === 'free') {
@@ -2794,11 +2882,18 @@ function quizHTML() {
         ${cq.explain ? `<div style="font-size:12.5px;line-height:1.6;opacity:.92">${esc(cq.explain)}</div>` : ''}
       </div>`;
     } else {
+      // 2번 틀려 공개된 경우 정답을 분명히 알려줌
       feedback = `<div style="margin-top:14px;border-radius:14px;padding:12px 14px;background:${ok ? '#e0f3ea' : '#fbe4e2'};color:${ok ? '#1f7a4d' : '#b23a32'}">
-        <div style="font-size:13px;font-weight:700;margin-bottom:5px">${ok ? '정답이에요! 🎉' : '아쉬워요'}</div>
-        <div style="font-size:12.5px;line-height:1.6;opacity:.92">${esc(cq.explain)}</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:5px">${ok ? '정답이에요! 🎉' : `아쉬워요 — 정답은 ${esc(quizAnswerText(cq))}`}</div>
+        ${cq.explain ? `<div style="font-size:12.5px;line-height:1.6;opacity:.92">${esc(cq.explain)}</div>` : ''}
       </div>`;
     }
+  } else if (tries > 0) {
+    // 틀렸지만 아직 기회가 남음 — 힌트 주고 다시 풀게
+    feedback = `<div style="margin-top:14px;border-radius:14px;padding:12px 14px;background:#fff5e0;color:#a5760f;border:1px solid #f0d79a">
+      <div style="font-size:13px;font-weight:700;margin-bottom:${cq.explain ? '5px' : '0'}">🤔 아쉬워요, 다시 골라볼까요? (${tries}/2)</div>
+      ${cq.explain ? `<div style="font-size:12px;line-height:1.6;opacity:.95">💡 힌트: ${esc(cq.explain)}</div>` : '<div style="font-size:12px;opacity:.9">한 번 더 생각해 보세요!</div>'}
+    </div>`;
   }
 
   const footer = checked
@@ -2995,7 +3090,8 @@ function previewLevelsHTML() {
 /* ---- 플래시카드 화면 (예습 살살 · 어휘 복습 공용) ---- */
 function flashcardScreenHTML(mode) {
   const isPreview = mode === 'preview';
-  const isVocab = mode === 'vocab';   // 힌트/뒤로가기 등은 '어휘 복습'만 예외
+  const isVocab = mode === 'vocab';   // 뒤로가기 등은 '어휘 복습'만 예외
+  const showHint = isVocab || isPreview;   // 힌트(단어가 든 문장)는 어휘 복습·예습 살살 모두 제공
   const cards = flashcardCards(mode);
   const total = cards.length || 1;
   const i = Math.min(state.fcI || 0, total - 1);
@@ -3008,7 +3104,7 @@ function flashcardScreenHTML(mode) {
     : mode === 'vocabPrep'
       ? `<span style="display:inline-flex;align-items:center;gap:6px;background:#e7f0fd;color:#1f57c4;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">📘 어휘 예습 · 다음 수업 팝오버 단어</span>`
       : `<span style="display:inline-flex;align-items:center;gap:6px;background:#fdeede;color:#b8480f;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">🔤 어휘 복습</span>`;
-  const hintSent = (isVocab && state.fcHint) ? wordHintSentence(c.word) : '';
+  const hintSent = (showHint && state.fcHint) ? wordHintSentence(c.word) : '';
 
   const face = `<div style="width:100%;background:#fff;border:1px solid #e2e9f2;border-radius:22px;padding:30px 22px;text-align:center;box-shadow:0 16px 36px -20px rgba(20,50,90,.6);${flipped ? 'animation:pop .35s ease' : ''}">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px">
@@ -3031,7 +3127,7 @@ function flashcardScreenHTML(mode) {
 
   const controls = flipped
     ? `<button data-act="fcNext" style="width:100%;border:none;background:${last ? '#2fa36b' : '#2f74e6'};color:#fff;font-size:14px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 ${last ? '#1f7a4d' : '#1f57c4'};cursor:pointer">${last ? (isVocab ? '복습 완료 ✓' : '예습 완료 ✓') : '다음 →'}</button>`
-    : `${isVocab ? `<button data-act="fcHint" style="width:100%;border:1.5px solid ${state.fcHint ? '#2f74e6' : '#dbe4ef'};background:#fff;color:${state.fcHint ? '#2f74e6' : '#5f7794'};font-size:12.5px;font-weight:700;padding:10px;border-radius:13px;cursor:pointer;margin-bottom:9px">💡 힌트 — 이 단어가 든 문장 보기</button>` : ''}
+    : `${showHint ? `<button data-act="fcHint" style="width:100%;border:1.5px solid ${state.fcHint ? '#2f74e6' : '#dbe4ef'};background:#fff;color:${state.fcHint ? '#2f74e6' : '#5f7794'};font-size:12.5px;font-weight:700;padding:10px;border-radius:13px;cursor:pointer;margin-bottom:9px">💡 힌트 — 이 단어가 든 문장 보기</button>` : ''}
       <div style="display:flex;gap:10px">
         <button data-act="fcDontKnow" style="flex:1;border:1.5px solid #f3c7c2;background:#fff;color:#c0392b;font-size:15px;font-weight:700;padding:14px;border-radius:15px;cursor:pointer">🤔 몰라요</button>
         <button data-act="fcKnow" style="flex:1;border:none;background:#2fa36b;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:15px;box-shadow:0 5px 0 #1f7a4d;cursor:pointer">🙂 알아요</button>
@@ -3310,7 +3406,15 @@ function previewMediumHTML() {
   const feedback = state.pmMsg === 'reveal'
     ? `<div style="text-align:center;font-size:13px;font-weight:700;color:#1f7a4d;background:#e0f3ea;border-radius:12px;padding:10px 12px;margin-top:12px">3번 틀렸어요. <b>색칠된 부분이 정답</b>이에요 — 해석과 함께 확인하고 넘어가요.</div>`
     : state.pmMsg === 'wrong'
-      ? `<div style="text-align:center;font-size:13px;font-weight:700;color:#c0392b;background:#fbe4e2;border-radius:12px;padding:10px;margin-top:12px">다시 해석해 보세요 🤔 (${state.pmWrong || 0}/3)</div>` : '';
+      ? `<div style="text-align:center;font-size:13px;font-weight:700;color:#c0392b;background:#fbe4e2;border-radius:12px;padding:10px 12px;margin-top:12px">${state.pmHint ? esc(state.pmHint) : '다시 해석해 보세요 🤔'} <span style="font-weight:500;opacity:.8">(${state.pmWrong || 0}/3)</span></div>` : '';
+  // 이 문장 속 어휘(단어 뜻 보기) — 예습 보통에서도 팝오버처럼 제공
+  const vcards = dayVocabCards(activeDay());
+  const inSent = vcards.filter(v => { const w = (v.word || '').toLowerCase(); return w && new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(c.text || ''); });
+  const showVocab = !!state.pmShowVocab;
+  const vocabBlock = inSent.length ? `<div style="text-align:center;margin-top:10px">
+      <button data-act="pmToggleVocab" style="border:1.5px solid ${showVocab ? '#2fa36b' : '#dbe4ef'};background:${showVocab ? '#e0f3ea' : '#fff'};color:${showVocab ? '#1f7a4d' : '#5f7794'};font-size:12.5px;font-weight:700;padding:8px 16px;border-radius:12px;cursor:pointer">${showVocab ? '🙈 단어 숨기기' : '💬 단어 뜻 보기'}</button>
+      ${showVocab ? `<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px">${inSent.map(v => `<span data-act="fcSpeakWord" data-arg="${esc(v.word)}" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #dbeafe;border-radius:10px;padding:6px 11px;font-size:12.5px;cursor:pointer"><b style="font-family:'Lora',serif;color:#14243f">${esc(v.head || v.word)}</b><span style="color:#5f7794">${esc(v.def)}</span> 🔊</span>`).join('')}</div>` : ''}
+    </div>` : '';
 
   return `<div style="padding:${topPad()} 20px 30px;min-height:100%;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -3330,6 +3434,7 @@ function previewMediumHTML() {
         <button data-act="pmToggleKo" style="border:1.5px solid ${showKo ? '#2f74e6' : '#dbe4ef'};background:${showKo ? '#e7f0fd' : '#fff'};color:${showKo ? '#2f74e6' : '#5f7794'};font-size:12.5px;font-weight:700;padding:8px 16px;border-radius:12px;cursor:pointer">${showKo ? '🙈 해석 숨기기' : '💬 해석 보기'}</button>
         ${showKo ? `<div style="font-size:14px;color:#3a5578;margin-top:12px;font-family:'IBM Plex Sans KR',sans-serif;line-height:1.65;background:#f4f8fd;border:1px solid #dbeafe;border-radius:12px;padding:11px 13px">${esc(c.ko)}</div>` : ''}
       </div>` : ''}
+      ${vocabBlock}
       ${feedback}
     </div>
     <div style="margin-top:12px">${btn}</div>
@@ -3809,7 +3914,10 @@ function presentHTML() {
 
     <!-- 상단 바 -->
     <div style="position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:16px 20px;pointer-events:none">
-      <div style="font-size:13px;font-weight:600;letter-spacing:.3px;color:rgba(${dim},.6)">${esc(p.title) || '수업 자료'}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:13px;font-weight:600;letter-spacing:.3px;color:rgba(${dim},.6)">${esc(p.title) || '수업 자료'}</div>
+        ${((p.hard || {})[i] || 0) > 0 ? `<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(226,86,77,.22);color:#ff9e97;font-size:12.5px;font-weight:800;padding:5px 11px;border-radius:20px;pointer-events:none">😵 어려워요 ${(p.hard || {})[i]}명</div>` : ''}
+      </div>
       <div style="display:flex;gap:9px;pointer-events:auto">
         <div style="display:flex;align-items:center;background:rgba(${dim},.12);border-radius:12px;height:40px;overflow:hidden">
           <div data-act="presentFontDown" title="글씨 작게 (-)" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;cursor:${fs <= PRESENT_FONT_MIN ? 'default' : 'pointer'};opacity:${fs <= PRESENT_FONT_MIN ? '.35' : '1'};font-size:15px;font-weight:800">A−</div>

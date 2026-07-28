@@ -205,6 +205,33 @@ create policy "messages delete own or teacher" on public.er_messages
   for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
 
 -- =========================================================
+-- v8: 예습 버닝 '어려워요' 표시 (학생 → 문장별, 교사 발표에서 횟수 집계)
+-- 학생이 버닝 단계에서 문장마다 '어려워요'를 체크하면, 교사가 그 지문을
+-- PPT로 띄울 때 문장별로 몇 명이 어려워했는지 왼쪽 위에 떠요.
+-- 이미 실행했어도 안전하게 재실행됩니다.
+-- =========================================================
+create table if not exists public.er_hard (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  user_id uuid not null default auth.uid(),
+  chapter text not null,        -- 챕터 이름(book.chapter 또는 label)
+  idx int not null,             -- 지문 내 문장 인덱스
+  sent text,                    -- 문장 원문(참고용)
+  unique (user_id, chapter, idx)
+);
+create index if not exists er_hard_chapter_idx on public.er_hard (chapter);
+alter table public.er_hard enable row level security;
+drop policy if exists "hard own insert" on public.er_hard;
+drop policy if exists "hard own update" on public.er_hard;
+drop policy if exists "hard read own or teacher" on public.er_hard;
+drop policy if exists "hard delete own or teacher" on public.er_hard;
+create policy "hard own insert" on public.er_hard for insert to authenticated with check (user_id = auth.uid());
+create policy "hard own update" on public.er_hard for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+-- 본인 것 + 교사는 전체 조회(발표 집계용)
+create policy "hard read own or teacher" on public.er_hard for select to authenticated using (user_id = auth.uid() or public.is_teacher());
+create policy "hard delete own or teacher" on public.er_hard for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
+
+-- =========================================================
 -- 교사 계정 지정 (최초 1회):
 -- 앱에서 선생님도 학생처럼 가입한 뒤, 아래에서 아이디만 바꿔 실행하세요.
 -- (교사 계정은 승인 대기 없이 바로 사용됩니다)
