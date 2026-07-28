@@ -3466,7 +3466,51 @@
       "quiz": {
         "preview": [],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "input",
+            "prompt": "빈칸에 들어갈 알맞은 '한 단어'를 써 넣으세요.",
+            "explain": "serve as : ~로 일하다",
+            "sentence": "“It is my title,” she explained, “not my first name. I serve (           ) a judge on the High Court.”",
+            "accept": [
+              "As",
+              "as"
+            ]
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장을 읽고, 어법적으로 옳지 않은 한 단어를 바르게 고쳐 주세요!",
+            "explain": "'carved in the middle of it'이라는 형용사구가 먼저 와서 + V + S 순으로 도치가 발생했어요. 주어는 'an image of an eye'로, 단수니 was가 답입니다.",
+            "sentence": "The front door needed to be repainted, and carved in the middle of it were an image of an eye.",
+            "wrong": 14,
+            "accept": [
+              "was",
+              "Was"
+            ]
+          },
+          {
+            "type": "scramble",
+            "prompt": "다음 해석에 맞도록 요소들을 알맞게 배열해 보세요.",
+            "explain": "What + a + 형용사 + 명사 = 얼마나 (형용사)~한 ...(명사)",
+            "chunks": [
+              "As they",
+              "stepped into the house,",
+              "the Baudelaire orphans realized",
+              "what",
+              "a",
+              "ridiculous thing",
+              "Count Olaf had just said."
+            ],
+            "ko": "그들이 집 안으로 들어올 때, Baudelaire 고아들은 Olaf 백작이 얼마나 어처구니 없는 것을 방금 말했는지 깨달았습니다."
+          },
+          {
+            "type": "ab",
+            "prompt": "둘중 알맞은 것은?",
+            "explain": "see(지각동사) + O + O.C. 인 구조에서, O.C. 에는 동사 혹은 ~ing형이 옵니다!",
+            "sentence": "The children could see his Adam’s apple [to bob / bob] in his skinny throat—and shrugged his patchy shoulders.",
+            "answer": 0
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
