@@ -5379,56 +5379,144 @@
       "coreSentences": [
         {
           "text": "His face was kind, but it didn’t look like he really believed what the Baudelaire orphans were saying.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            1,
+            5,
+            9,
+            13,
+            14,
+            15
+          ],
+          "verb": [
+            2,
+            6,
+            7,
+            11,
+            16,
+            17
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "Now that you are in his care, the Count may raise you using any methods he sees fit.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            2,
+            7,
+            8,
+            15
+          ],
+          "verb": [
+            3,
+            9,
+            10,
+            16
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
-          "text": "I’m sorry if your parents did not make you do any household chores, or if you never saw them drink any wine, or if you like their friends better than Count Olaf’s friends, but these are things that you must get used to, as Count Olaf is acting in loco parentis.",
-          "subject": [],
-          "verb": [],
+          "text": "I am sorry if your parents did not make you do any household chores, or if you never saw them drink any wine, or if you like their friends better than Count Olaf’s friends, but these are things that you must get used to, as Count Olaf is acting in loco parentis.",
+          "subject": [
+            0,
+            4,
+            5,
+            16,
+            25,
+            35,
+            39,
+            46,
+            45
+          ],
+          "verb": [
+            1,
+            6,
+            7,
+            8,
+            17,
+            18,
+            26,
+            36,
+            40,
+            41,
+            47,
+            48
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "As one of the phones began ringing, she stood up and walked out of the room, followed by Klaus, who was carrying Sunny.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            1,
+            2,
+            3,
+            4,
+            7
+          ],
+          "verb": [
+            5,
+            8,
+            11,
+            20,
+            21
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "But by immersing themselves in their favorite reading topics, they felt far away from their predicament, as if they had escaped.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            9,
+            18
+          ],
+          "verb": [
+            10,
+            19,
+            20
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "In the situation of the orphans, figuratively escaping was not enough, of course, but at the end of a tiring and hopeless day, it would have to do.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            6,
+            7,
+            23
+          ],
+          "verb": [
+            8,
+            24,
+            25
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "Violet, Klaus； and Sunny read their books and, in the back of their minds, hoped that soon their figurative escape would eventually turn into a literal one.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            1,
+            2,
+            3,
+            17,
+            18,
+            19
+          ],
+          "verb": [
+            4,
+            14,
+            20,
+            22
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
