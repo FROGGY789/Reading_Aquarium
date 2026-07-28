@@ -5223,7 +5223,63 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "ab",
+            "prompt": "다음 괄호 안에서 어법상 알맞은 표현을 고르시오.",
+            "explain": "가정법 과거(현재 사실의 반대)에서, be동사는 'were'만 사용합니다!",
+            "sentence": "Having cried all night, they rose the next morning feeling as if a weight [ was / were ] off their shoulders.",
+            "answer": 1
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 밑줄 친 부분을 어법에 맞게 올바르게 고쳐 쓰시오.",
+            "explain": "make (사역동사) + O + V (동사원형) 입니다. doing이 아니라 do가 와야 하겠죠?",
+            "sentence": "He makes us doing a great many difficult chores.",
+            "wrong": 3,
+            "accept": [
+              "do",
+              "Do"
+            ]
+          },
+          {
+            "type": "scramble",
+            "prompt": "다음 우리말과 같은 뜻이 되도록 보기의 단어를 올바르게 배열하시오.",
+            "explain": "take one's chances. 위험을 무릅쓰다, 운을 시험하다 라는 숙어에요. 꼭 알아 두세요!",
+            "chunks": [
+              "I would",
+              "take my chances",
+              "on the streets",
+              "rather than",
+              "live",
+              "in this terrible place."
+            ],
+            "ko": "이 끔찍한 곳에서 사느니 차라리 거리에서 위험을 무릅쓰는 게 낫겠어요."
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 빈칸에 들어갈 알맞은 시제/형태를 고르시오.",
+            "explain": "밑줄 친 부분이 있는 절을 해석해 보면: 그가 그들이 거기 있었다는 것을 \"까먹었던\" 것 처럼 - 즉, 과거 사실의 반대이기 때문에 '가정법 과거 완료'를 사용해야 해요. had forgotten이 답입니다.",
+            "sentence": "He hung up the phone and looked at the Baudelaires as if he __________ they were there.",
+            "options": [
+              "forgets",
+              "forgot",
+              "had forgotten",
+              "has forgotten"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "input",
+            "prompt": "다음 문장의 괄호 안 단어 chop을 문맥과 어법에 맞게 변형하여 쓰시오.",
+            "explain": "order + 목적어 + to V : 목적어가 ~하도록 명령하다 입니다. 기억해 주세요~",
+            "sentence": "The morning’s note from Count Olaf ordered them ____________________ (chop) firewood in the backyard.",
+            "accept": [
+              "To chop",
+              "to chop"
+            ]
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
