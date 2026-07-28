@@ -2294,7 +2294,41 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "ab",
+            "prompt": "다음 중 어법적으로 옳은 것을 골라주세요!",
+            "explain": "see (지각동사) + 목적어 + 동사 원형 or ~ing 입니다! bob혹은 bobbing만 가능하겠죠?",
+            "sentence": "the children could see his Adam’s apple [to bob / bob] in his skinny throat—and shrugged his patchy shoulders.",
+            "answer": 1
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 어법적으로 잘못 된 한 단어를 바르게 고쳐주세요.",
+            "explain": "Carved~ 형용사구가 먼저 등장하면서, 동사 + 주어 순으로 도치가 발생했어요. 주어는 'an image of an eye', 즉 단수입니다.",
+            "sentence": "carved in the middle of it were an image of an eye.",
+            "wrong": 6,
+            "accept": [
+              "Was",
+              "was"
+            ]
+          },
+          {
+            "type": "scramble",
+            "prompt": "다음 해석에 맞도록 요소를 배열해 보세요.",
+            "explain": "What + a + 형용사 + 명사 = 얼마나 ~한 ... 인지",
+            "chunks": [
+              "the Baudelaire orphans",
+              "realized",
+              "what",
+              "a",
+              "ridiculous",
+              "thing",
+              "Count Olaf had just said."
+            ],
+            "ko": "Baudelaire 고아들은 방금 Olaf 백작이 얼마나 터무니없는 것을 말했는지 깨달았습니다."
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
