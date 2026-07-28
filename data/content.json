@@ -5314,164 +5314,164 @@
       "passage": "A Series of Unfortunate Events By Lemony Snicket\n\nThe Bad Beginning Chapter 5-2.\n\n“He calls us orphans?\n\n“He has terrible friends.”\n\n“He is always asking about our money.”\n\n“Poko!” (This was from Sunny.)\n\nMr. Poe put up his hands to <indicate> he had heard enough. “Children, children,” he said. “You must %%give%% yourselves time to <adjust to> your new home. You’ve only been there a few days.”\n\n“We have been there long enough to know Count Olaf is a bad man,” Klaus said.\n\nMr. Poe <sighed>, and looked at each of the three children. ==His face was kind, but it didn’t look like he really believed what the Baudelaire orphans were saying.== “Are you familiar with the Latin term ‘in loco parentis’?” he asked.\n\nViolet and Sunny looked at Klaus. The biggest reader %%of%% the three, he was the most <likely to know> vocabulary words and foreign phrases. “Something about trains?” he asked. Maybe Mr. Poe was going to take them by train to another relative.\n\nMr. Poe shook his head. “‘In loco parentis’ means 'acting in the role of parent,” he said. “It is a legal <term> and it <applies to> Count Olaf. ==<Now that> you are in his care, the Count may raise you using any methods he sees <fit>. I’m sorry if your parents did not %%make%% you do any household chores, or if you never %%saw%% them drink any wine, or if you like their friends better than Count Olaf’s friends, but these are things %%that%% you must <get used to>, as Count Olaf is acting in loco parentis.== Understand?”\n\n“But he struck my brother!” Violet said. “Look at his face!”\n\nAs Violet spoke, Mr. Poe reached into his pocket for his handkerchief and, covering his mouth, coughed many, many times into it. He coughed %%so%% loudly %%that%% Violet could not be certain he had heard her.\n\n“Whatever Count Olaf has done,” Mr. Poe said, <glancing> down at one of his papers and circling a number, “he has acted in loco parentis, and there’s nothing I can do about it. Your money will be well protected by myself and by the bank, but Count Olaf’s parenting techniques are his own business. Now, I hate to <usher> you out <posthaste>, but I have very much work to do.”\n\nThe children just sat there, <stunned>. Mr. Poe looked up, and <cleared his throat>. “‘Posthaste,’” he said, “means—”\n\n“—means you’ll do nothing to help us,” Violet finished for him. She was shaking with anger and <frustration>. ==%%As%% one of the phones began ringing, she stood up and walked out of the room, followed by Klaus%%, who%% was carrying Sunny.== They <stalked> out of the bank and stood on the street, not knowing what to do next.\n\n“What shall we do next?” Klaus asked sadly.\n\nViolet stared up at the sky. She %%wished%% she %%could%% invent something %%that%% could take them out of there. “It’s getting a bit late,” she said. “We <might as well> just go back and think of something else tomorrow. Perhaps we can stop and see Justice Strauss.”\n\n“But you said she wouldn't help us,” Klaus said.\n\n“Not for help,” Violet said, “for books.”\n\n%%It%% is very useful, when %%one%% is young, %%to learn%% the difference %%between%% “<literally>” %%and%% “<figuratively>.” If something happens literally, it actually happens; if something happens figuratively； it feels like it’s happening. If you are literally jumping for joy, for instance, it means you are <leaping> in the air because you are very happy. If you are figuratively jumping for joy, it means you are %%so%% happy %%that%% you could jump for joy, but are saving your energy for other <matters>. The Baudelaire orphans walked back to Count Olaf’s neighborhood and stopped at the home of Justice Strauss%%, who%% welcomed them inside and %%let%% them choose books from the library. Violet chose several about <mechanical> inventions, Klaus chose several about wolves； and Sunny found a book with many pictures of teeth inside. They then went to their room and <crowded together> on the one bed, reading <intently> and happily. Figuratively, they escaped from Count Olaf and their miserable <existence>. They did not literally escape, because they were still in his house and <vulnerable to> Olaf’s evil in loco parentis ways. ==But by <immersing themselves in> their favorite reading topics, they felt far away from their <predicament>, as if they had escaped. In the situation of the orphans, figuratively escaping was not enough, of course, but at the end of a tiring and hopeless day, %%it%% would have to %%do%%. Violet, Klaus； and Sunny read their books and, in the back of their minds, hoped that soon their figurative escape would eventually <turn into> a literal one.==",
       "vocab": {
         "indicate": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "v.",
+          "def": "나타내다, 표시하다",
+          "ex": "He indicated the door with his hand."
         },
         "adjust to": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "~에 적응하다",
+          "ex": "It takes time to adjust to a new school.",
           "head": "adjust to ~"
         },
         "sighed": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "v.",
+          "def": "한숨 쉬다",
+          "ex": "She sighed with relief.",
           "head": "sigh"
         },
         "likely to know": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "~할 가능성이 있는",
+          "ex": "He is likely to win.",
           "head": "likely to V"
         },
         "term": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "n.",
+          "def": "용어",
+          "ex": "This is a legal term."
         },
         "applies to": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "~에 적용되다",
+          "ex": "The rule applies to everyone.",
           "head": "apply to ~"
         },
         "Now that": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "conj.",
+          "def": "이제 ~이므로",
+          "ex": "Now that you are here, let us begin.",
           "head": "Now that S V"
         },
         "fit": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "adj.",
+          "def": "적합한",
+          "ex": "Do what you see fit."
         },
         "get used to": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "~에 익숙해지다",
+          "ex": "You will soon get used to the weather.",
           "head": "get/be used to"
         },
         "glancing": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "v.",
+          "def": "흘끗 보다",
+          "ex": "She glanced at her watch.",
           "head": "glance"
         },
         "usher": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "v.",
+          "def": "안내하다",
+          "ex": "He ushered us into the room."
         },
         "posthaste": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "adv.",
+          "def": "즉시, 서둘러",
+          "ex": "Please come here posthaste."
         },
         "stunned": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "adj.",
+          "def": "망연자실한, 충격받은",
+          "ex": "We were stunned by the news."
         },
         "cleared his throat": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "헛기침하다",
+          "ex": "He cleared his throat before speaking.",
           "head": "clear one's throat"
         },
         "frustration": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "n.",
+          "def": "좌절감",
+          "ex": "She felt frustration."
         },
         "stalked": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "v.",
+          "def": "성큼성큼 걷다",
+          "ex": "He stalked out of the room.",
           "head": "stalk"
         },
         "might as well": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "~하는 게 낫다",
+          "ex": "We might as well go home now.",
           "head": "might as well V"
         },
         "literally": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "adv.",
+          "def": "말 그대로",
+          "ex": "I literally forgot."
         },
         "figuratively": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "adv.",
+          "def": "비유적으로",
+          "ex": "Figuratively speaking."
         },
         "leaping": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "v.",
+          "def": "껑충 뛰다",
+          "ex": "The frog leaped.",
           "head": "leap"
         },
         "matters": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "n.",
+          "def": "문제, 일",
+          "ex": "More important matters.",
           "head": "matter"
         },
         "mechanical": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "adj.",
+          "def": "기계의",
+          "ex": "Mechanical inventions."
         },
         "crowded together": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "옹기종기 모이다",
+          "ex": "They crowded together.",
           "head": "crowd together"
         },
         "intently": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "adv.",
+          "def": "집중해서",
+          "ex": "She listened intently."
         },
         "existence": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "n.",
+          "def": "삶, 존재",
+          "ex": "A miserable existence."
         },
         "vulnerable to": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "~에 취약한",
+          "ex": "Children are vulnerable to danger.",
           "head": "vulnerable to ~"
         },
         "immersing themselves in": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "~에 몰두하다",
+          "ex": "She immersed herself in the novel.",
           "head": "immerse oneselves in"
         },
         "predicament": {
-          "pos": "",
-          "def": "",
-          "ex": ""
+          "pos": "n.",
+          "def": "곤경",
+          "ex": "They were in a difficult predicament."
         },
         "turn into": {
-          "pos": "",
-          "def": "",
-          "ex": "",
+          "pos": "phr.",
+          "def": "~으로 변하다",
+          "ex": "Dreams turned into reality.",
           "head": "turn into ~"
         }
       },
