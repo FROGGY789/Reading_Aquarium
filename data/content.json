@@ -1766,7 +1766,60 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "input",
+            "prompt": "빈칸에 들어갈 한 단어로 알맞은 것을 작성해 주세요!",
+            "explain": "To부정사의 의미상의 주어는 for + 목적격 명사에요.",
+            "sentence": "It is useless [         ] me to describe to you how terrible Violet, Klaus, and even Sunny felt in the time that followed.",
+            "accept": [
+              "For",
+              "for"
+            ]
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 중, be to V 용법으로 알맞지 않은 것은?",
+            "explain": "",
+            "options": [
+              "~ 할 예정이다",
+              "~ 해야 한다",
+              "~ 할 운명이다",
+              "~ 할 수 없다"
+            ],
+            "answer": 3
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장을 읽고, 어법적으로 틀린 한 단어를 고쳐주세요!",
+            "explain": "instruct(명령하다) + tha절(의무) 인 경우에는, that절에 반드시 should 동사가 사용되고, 이 should는 생략될 수 있어요!",
+            "sentence": "“Your parents’ will,” Mr. Poe said, “instructs that you are raised in the most  convenient way possible.",
+            "wrong": 9,
+            "accept": [
+              "be",
+              "Be",
+              "Should be",
+              "should be",
+              "Should Be"
+            ]
+          },
+          {
+            "type": "scramble",
+            "prompt": "아래 해석에 맞도록 요소들을 알맞게 배열해 보아요.",
+            "explain": "",
+            "chunks": [
+              "They heard",
+              "him",
+              "coughing into his handkerchief",
+              "and then",
+              "the front door",
+              "creaked shut",
+              "as",
+              "he left the house."
+            ],
+            "ko": "그들은 그가 손수건에 대고 기침하는 소리를 들었고, 그가 나가면서 정문이 끼익 하는 소리를 내며 닫혔다."
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
