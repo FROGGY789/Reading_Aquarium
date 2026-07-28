@@ -4440,48 +4440,102 @@
       "coreSentences": [
         {
           "text": "“If I were you I would try not to anger Count Olaf, or he might wreck that pretty little face of yours.”",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            1,
+            4,
+            13
+          ],
+          "verb": [
+            2,
+            5,
+            6,
+            14,
+            15
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "The Baudelaire children, alone in the kitchen, found themselves breathing heavily, as if they had just run a long distance.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            1,
+            2,
+            13
+          ],
+          "verb": [
+            7,
+            14,
+            16
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "She thought of switching to her left hand, but because she was right- handed she was afraid she might spill the sauce with her left hand, which could enrage Count Olaf again.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            10,
+            14,
+            17
+          ],
+          "verb": [
+            1,
+            11,
+            15,
+            18,
+            19,
+            27,
+            28
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "They listened to the wild, rough laughter of Count Olaf and his theater troupe, and they picked at their own portions of food, too miserable to eat.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            15
+          ],
+          "verb": [
+            1,
+            16
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "Members of the theater troupe stopped in their tracks at this outburst, and glanced from Klaus to Count Olaf to see what would happen next.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            21
+          ],
+          "verb": [
+            5,
+            13,
+            22,
+            23
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
         },
         {
           "text": "Klaus began to sob, not so much from the pain but from rage at the terrible situation they were in.",
-          "subject": [],
-          "verb": [],
+          "subject": [
+            0
+          ],
+          "verb": [
+            1
+          ],
           "bold": [],
           "italic": [],
           "ko": ""
