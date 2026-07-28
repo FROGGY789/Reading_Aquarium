@@ -808,6 +808,7 @@ const DEFAULT_STATE = {
   pmWrong: 0, pmReveal: false,     // 예습 보통: 틀린 횟수 / 정답 공개
   pmShowKo: false, pmShowVocab: false,   // 예습 보통: 해석 보기 / 단어 뜻 보기 토글
   hardMarks: {},            // 예습 버닝: '어려워요' 체크한 문장 { 'chapter::idx': true }
+  burnPos: {},              // 예습 버닝: 챕터별 읽던 위치 { chapterKey: idx } — 나갔다 와도 이어읽기
   vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 최대 30개로 고정)
   result: null,
   hatchStage: 'idle', hatchSpecies: null,
@@ -1291,7 +1292,13 @@ const actions = {
     if (!dayCoreSentencesRich(activeDay()).length) return;
     set({ screen: 'previewMedium', pmIndex: 0, pmPhaseIdx: 0, pmSel: [], pmMsg: '', pmWrong: 0, pmReveal: false, pmShowKo: false });
   },
-  previewHard() { armReviewGate(); set({ screen: 'review', reviewMode: 'burning', revIndex: 0, pop: null }); },   // 버닝: 지문 복습처럼 한 문장씩 읽기
+  previewHard() {   // 버닝: 지문 복습처럼 한 문장씩 읽기 — 나갔다 와도 읽던 위치부터
+    armReviewGate();
+    const total = passageToReviewSentences(dayPassage(activeDay())).length;
+    const saved = (state.burnPos || {})[chapterKey(activeDay())] || 0;
+    const start = Math.max(0, Math.min(saved, Math.max(0, total - 1)));
+    set({ screen: 'review', reviewMode: 'burning', revIndex: start, pop: null });
+  },
   // 2단계 보통: 주어/동사 클릭 채점
   pmToggle(arg) {
     if (state.pmReveal) return;   // 정답 공개 상태에선 잠금
@@ -1434,7 +1441,10 @@ const actions = {
       completeTask('review'); return;
     }
     armReviewGate();
-    set({ revIndex: (state.revIndex || 0) + 1, pop: null });
+    const next = (state.revIndex || 0) + 1;
+    const patch = { revIndex: next, pop: null };
+    if (state.reviewMode === 'burning') patch.burnPos = Object.assign({}, state.burnPos, { [chapterKey(activeDay())]: next });   // 버닝: 읽던 위치 저장
+    set(patch);
   },
 
   pickOption(arg) {
@@ -1739,6 +1749,7 @@ function completePreviewLevel(level) {
   const giveBonus = allThree && !bonusGiven;
   if (giveBonus) gain += PREVIEW_ALL_BONUS;
   const patch = { screen: 'preview', quizTask: null, result: null, pop: null, readerBurning: false, reviewMode: 'review' };
+  if (level === 'burning') { const bp = Object.assign({}, state.burnPos); delete bp[chapterKey(activeDay())]; patch.burnPos = bp; }   // 버닝 완료 → 이어읽기 위치 초기화(다시 하면 처음부터)
   if (gain) patch.xp = (state.xp || 0) + gain;
   if (giveBonus) ui.grantMsg = '예습 3단계를 모두 끝냈어요! 보너스 경험치 +' + PREVIEW_ALL_BONUS + ' 🎁';
   patch.progress = Object.assign({}, state.progress, { [key]: Object.assign({}, cur, { tasks, pv, pvBonusGiven: bonusGiven || allThree }) });
