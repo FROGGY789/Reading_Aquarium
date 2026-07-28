@@ -319,11 +319,16 @@ async function postRecord(rec) {
   if (!auth) return; // 계정 기반: 로그인한 상태에서만 기록
   rec.student = studentName();
   try {
-    await sbFetch('/rest/v1/er_records', {
+    const res = await sbFetch('/rest/v1/er_records', {
       method: 'POST',
       headers: { 'Prefer': 'return=minimal' },
       body: JSON.stringify(rec)
     });
+    // chapter 컬럼이 아직 없는(스키마 v7 미적용) 저장소면 400 → chapter 빼고 재시도(기록은 반드시 남기기)
+    if (res && !res.ok && 'chapter' in rec) {
+      const rec2 = Object.assign({}, rec); delete rec2.chapter;
+      await sbFetch('/rest/v1/er_records', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify(rec2) });
+    }
   } catch (e) { /* 오프라인이면 조용히 건너뜀 */ }
 }
 async function loadRecords() {
@@ -332,7 +337,7 @@ async function loadRecords() {
   render();
   try {
     const [r1, r2, r3] = await Promise.all([
-      sbFetch('/rest/v1/er_records?date=eq.' + todayKey() + '&select=student,task,chapter,kind,score,total,created_at&order=created_at.asc'),
+      sbFetch('/rest/v1/er_records?date=eq.' + todayKey() + '&select=*&order=created_at.asc'),   // select=* → chapter 컬럼이 없어도 400 안 남
       sbFetch('/rest/v1/er_profiles?is_teacher=eq.false&select=id,name,username,class,student_no,approved&order=class.asc,student_no.asc'),
       sbFetch('/rest/v1/er_progress?select=user_id,state,updated_at')   // 학생별 상태(학습시간·알 부화 포함) — RLS로 교사 전체 조회 허용
     ]);
