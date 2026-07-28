@@ -5667,7 +5667,50 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "ab",
+            "prompt": "다음 중 알맞은 표현을 고르시오.",
+            "explain": "few + 셀 수 있는 명사 / little + 셀 수 없는 명사 입니다.",
+            "sentence": "You’ve only been there a [few / little] days.",
+            "answer": 0
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 문장의 빈칸에 들어갈 말로 어법상 가장 알맞은 것은?",
+            "explain": "welcome이라는 동사 앞에, 주격 관계대명사가 필요한 자리입니다. 동시에 선행사가 Justice Strauss, 즉 사람이기 때문에 who만 가능한 자리입니다.",
+            "sentence": "The Baudelaire orphans walked back to Count Olaf’s neighborhood and stopped at the home of Justice Strauss, ________ welcomed them inside.",
+            "options": [
+              "who",
+              "which",
+              "whom",
+              "what"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "ab",
+            "prompt": "다음 중 알맞은 표현을 고르시오.",
+            "explain": "By(전치사) 뒤에는 동명사 (ing)형태가 와야 합니다. immersing이 정답닙니다.",
+            "sentence": "By [immersing / immersed] themselves in their favorite reading topics, they felt far away from their predicament.",
+            "answer": 0
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 어법상 어색한 단어 한 개를 찾아 올바르게 고치시오.",
+            "explain": "해석상 Baudelaire 고아들이 말하고 있는 \"것\" 이 되어야 하므로 that이 아니라 what이 와야 합니다.",
+            "sentence": "It didn’t look like he really believed that the Baudelaire orphans were saying.",
+            "wrong": 7,
+            "accept": [
+              "what"
+            ]
+          },
+          {
+            "type": "free",
+            "prompt": "지문에서는 '문자 그대로(literally)'와 '비유적으로(figuratively)' 탈출하는 것의 차이를 설명합니다. 여러분도 너무 힘들거나 지칠 때, 책, 음악, 게임 등을 통해 **'비유적으로 탈출(figurative escape)'**해 본 경험이 있나요? 그때 어떤 느낌이었는지 써보세요.",
+            "explain": "우리 삶에는 literal escape가 불가능할 때가 많은 것 같아요. 무리하게 literal escape를 시도했다가는 좋지 않은 결과로 이어지고요. 그럴때는, Figurative escape할 수 있는 방법을 찾아 나서야 해요. 여러분들의 마음을 잠시 다른 곳으로 탈출시켜주는 여러분들의 figurative escape route를 찾길 바라요."
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
