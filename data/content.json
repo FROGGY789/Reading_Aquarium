@@ -4038,7 +4038,66 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "input",
+            "prompt": "다음 문장의 빈칸에 들어갈 treat의 알맞은 형태를 쓰시오.",
+            "explain": "With + O (목적어가) + O.C. (목적격 보어 한 채로) 구문에서, O가 능동적으로 O.C. 하는 경우에는 O.C. 자리에 ~ing (현재분사)을 사용합니다.",
+            "sentence": "\"With their kind parents dead and Count Olaf (       ) them so abominably, the three children were not used to kindness from adults...\"",
+            "accept": [
+              "Treating",
+              "treating"
+            ]
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 (A)와 (B)에 들어갈 알맞은 be동사가 바르게 짝지어진 것은?",
+            "explain": "둘 다 도치구문이죠. 각 빈칸 뒤에 오는 명사가 주어에요. A 는 그 뒤의 주어인 'a man'과 수 일치, B는 'two hooks'와 수 일치 해야 하겠죠?",
+            "sentence": "\"Behind the women (  A  ) a man with very long and skinny arms, at the end of which (  B  ) two hooks instead of hands.\"",
+            "options": [
+              "was - was",
+              "was - were",
+              "were - was",
+              "were - were"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 어법상 틀린 부분을 찾아 바르게 고치시오.",
+            "explain": "ask + 사람 + toV (사람에게 ~해달라고 부탁하다)",
+            "sentence": "\"At a pasta store they selected interestingly shaped noodles and asked the woman run the store the proper amount for thirteen people.\"",
+            "wrong": 13,
+            "accept": [
+              "to run",
+              "To run"
+            ]
+          },
+          {
+            "type": "scramble",
+            "prompt": "다음 우리말 뜻에 맞게 주어진 단어들을 바르게 배열하여 문장을 완성하시오.",
+            "explain": "would have P.P. = ~했을 것이",
+            "chunks": [
+              "I",
+              "don't know",
+              "what",
+              "we would",
+              "have done",
+              "without you."
+            ],
+            "ko": "당신이 없었더라면 우리가 어떻게 했을지 모르겠어요."
+          },
+          {
+            "type": "input",
+            "prompt": "다음 빈칸에 들어갈 알맞은 접속사는?",
+            "explain": "So ... that~ 너무 ...하여 ~ 하다 라는 용법이죠!",
+            "sentence": "“Yes,” Count Olaf said. “They are so awful (       ) I can scarcely stand to touch them.”",
+            "accept": [
+              "That",
+              "that"
+            ]
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
