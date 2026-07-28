@@ -4038,7 +4038,71 @@
           }
         ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "input",
+            "prompt": "다음 문장의 빈칸에 들어갈 treat의 알맞은 형태를 쓰시오.",
+            "explain": "With + O (목적어가) + O.C. (목적격 보어 한 채로) 구문에서, O가 능동적으로 O.C. 하는 경우에는 O.C. 자리에 ~ing (현재분사)을 사용합니다.",
+            "sentence": "\"With their kind parents dead and Count Olaf (       ) them so abominably, the three children were not used to kindness from adults...\"",
+            "accept": [
+              "Treating",
+              "treating"
+            ]
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 (A)와 (B)에 들어갈 알맞은 be동사가 바르게 짝지어진 것은?",
+            "explain": "둘 다 도치구문이죠. 각 빈칸 뒤에 오는 명사가 주어에요. A 는 그 뒤의 주어인 'a man'과 수 일치, B는 'two hooks'와 수 일치 해야 하겠죠?",
+            "sentence": "\"Behind the women (  A  ) a man with very long and skinny arms, at the end of which (  B  ) two hooks instead of hands.\"",
+            "options": [
+              "was - was",
+              "was - were",
+              "were - was",
+              "were - were"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 어법상 틀린 부분을 찾아 바르게 고치시오.",
+            "explain": "ask + 사람 + toV (사람에게 ~해달라고 부탁하다)",
+            "sentence": "\"At a pasta store they selected interestingly shaped noodles and asked the woman run the store the proper amount for thirteen people.\"",
+            "wrong": 13,
+            "accept": [
+              "to run",
+              "To run"
+            ]
+          },
+          {
+            "type": "scramble",
+            "prompt": "다음 우리말 뜻에 맞게 주어진 단어들을 바르게 배열하여 문장을 완성하시오.",
+            "explain": "would have P.P. = ~했을 것이",
+            "chunks": [
+              "I",
+              "don't know",
+              "what",
+              "we would",
+              "have done",
+              "without you."
+            ],
+            "ko": "당신이 없었더라면 우리가 어떻게 했을지 모르겠어요."
+          },
+          {
+            "type": "input",
+            "prompt": "다음 빈칸에 들어갈 알맞은 접속사는?",
+            "explain": "So ... that~ 너무 ...하여 ~ 하다 라는 용법이죠!",
+            "sentence": "“Yes,” Count Olaf said. “They are so awful (       ) I can scarcely stand to touch them.”",
+            "accept": [
+              "That",
+              "that"
+            ]
+          },
+          {
+            "type": "free",
+            "prompt": "올라프 백작이 어린 써니를 번쩍 들어 올렸을 때, 키도 닿지 않는 클라우스가 위험을 무릅쓰고 뛰어올랐어요. 자신이 힘으로 이길 수 없는 상대 앞에서도 동생을 구하려 했던 클라우스의 마음은 어땠을까요?",
+            "explain": "샘은.. 언니로서 동생이 당하는 장면을 눈으로 직접 본다고 생각하면 Klaus처럼 참을 수 없을것 같아. Klaus도 어리지만 동생을 향한 깊은 사랑과 애정이 있기에 가능한 행동이었을 거야. 자신을 해할지도 모르는 명백한 악인에게 저항한다는 것이 얼마나 힘든 일이니."
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
@@ -4065,13 +4129,540 @@
         "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
         "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
       },
-      "passage": "",
-      "vocab": {},
-      "coreSentences": [],
+      "passage": "A Series of Unfortunate Events\n\nThe Bad Beginning\n\nChapter 4-2.\n\nBy Lemony Snicket\n\nCount Olaf <rubbed> his hands together <as if> he had been holding something <revolting> instead of an infant. “Well, enough talk, he said. “I suppose we will eat their dinner, even though it is all wrong. Everyone, follow me to the <dining room> and I will %%pour%% us some wine. Perhaps <by the time> these <brats> serve us, we will be %%too%% drunk %%to%% care if it is roast beef or not.”\n\n“<Hurrah!>” cried several members of the <troupe>, and they <marched> through the kitchen, following Count Olaf into the dining room. Nobody paid a bit of attention to the children, except for the bald man%%, who%% stopped and %%stared Violet in the eye%%.\n\n“You’re a pretty one,” he said, taking her face in his rough hands. ==“If I were you I would try not to anger Count Olaf, %%or%% he might <wreck> that pretty little face of yours.”== Violet <shuddered>, and the bald man gave a <high-pitched giggle> and left the room.\n\n==The Baudelaire children, alone in the kitchen, %%found%% themselves breathing heavily, as if they had just run a long distance.== Sunny continued to <wail>, and Klaus found that his eyes were wet with tears <as well>. Only Violet did%%n’t%% cry, %%but%% <merely trembled> with fear and <revulsion>, a word %%which%% here means “an unpleasant mixture of horror and disgust.” For several moments none of them could speak.\n\n“This is terrible, terrible,” Klaus said finally. “Violet, what can we do?”\n\n“I don’t know,” she said. “I’m afraid.” “Me too,” Klaus said.\n\n“Hux!” Sunny said, %%as%% she stopped crying.\n\n“Let’s have some dinner!” someone shouted from the dining room, and the theater troupe began <pounding on> the table in strict rhythm%%, which%% is an <exceedingly> rude thing to do.\n\n“We’d better serve the puttanesca,” Klaus said, “%%or%% who knows what Count Olaf will do to us.”\n\nViolet thought of what the bald man had said； about <wrecking> her face, and <nodded>. The two of them looked at the pot of <bubbling> sauce%%, which%% had seemed so cozy while they were making it and now looked like a <vat of blood>. Then, %%leaving Sunny behind in the kitchen%%, they walked into the dining room, Klaus carrying a bowl of the interestingly shaped noodles and Violet carrying the pot of puttanesca sauce and a large <ladle> %%with which%% to serve it. The theater troupe was talking and <cackling>, drinking again and again from their wine cups and paying no attention to the Baudelaire orphans %%as%% they circled the table serving everyone dinner. Violet’s right hand <ached> from holding the heavy ladle. ==She thought of switching to her left hand, but because she was right- handed she was afraid she might spill the sauce with her left hand%%, which%% could <enrage> Count Olaf again.== She stared <miserably> at Olaf’s <plate> of food and %%found%% herself wishing she had bought poison at the market and put it in the puttanesca sauce. Finally, they were <through serving>, and Klaus and Violet slipped back into the kitchen. ==They listened to the wild, rough laughter of Count Olaf and his theater troupe, and they picked at their own <portions> of food, %%too%% miserable %%to%% eat.== <Before long>, Olaf’s friends were <pounding on> the table in strict rhythm again, and the orphans went out to the dining room to clear the table, and then again to serve the chocolate pudding. <By now> %%it%% was obvious %%that%% Count Olaf and his <associates> had drunk <a great deal of> wine, and they <slouched> at the table and spoke much less. Finally, they <roused> themselves, and <trooped> back through the kitchen, scarcely glancing at the children on their way out of the house. Count Olaf looked around the room%%, which%% was filled with dirty dishes.\n\n“Because you haven’t cleaned up yet,” he said to the orphans, “I suppose you can <be excused from attending> tonight’s performance. But after cleaning up, you %%are to go%% straight to your beds.”\n\nKlaus had been <glaring at> the floor, trying to hide how upset he was. But at this he could not remain silent. “You mean our bed!” he shouted. “You have only <provided> us with one bed!”\n\n==Members of the theater troupe stopped in their <tracks> at this <outburst>, and <glanced> %%from%% Klaus %%to%% Count Olaf to see what would happen next.== Count Olaf raised his one eyebrow, and his eyes shone bright, but he spoke calmly.\n\n“If you would like another bed,” he said, “tomorrow you may go into town and purchase one.”\n\n“You know perfectly well we haven’t any money,” Klaus said.\n\n“Of course you do,” Count Olaf said, and his voice began to get a little louder. “You are the <inheritors> of an enormous fortune.”\n\n“That money,” Klaus said, remembering what Mr. Poe said, “%%is not to be used%% until Violet is <of age>.”\n\nCount Olaf’s face grew very red. For a moment he said nothing. Then, in one sudden movement, he reached down and %%struck%% Klaus %%across the face.%% Klaus fell to the floor, his face inches from the eye tattooed on Olaf’s ankle. His glasses <leaped> from his face and <skittered> into a corner. His left cheek%%, where%% Olaf had struck him, felt as if it were on fire. The theater troupe laughed, and a few of them applauded as if Count Olaf had done something very brave instead of something <despicable>.\n\n“Come on, friends,” Count Olaf said to his <comrades.> “We’ll be late for our own performance.”\n\n“If I know you, Olaf,” said the man with the hook­hands, “you’ll <figure out> a way to %%get at%% that Baudelaire money.”\n\n“We’ll see,” Count Olaf said, but his eyes were shining bright as if he already had an idea. There was another loud boom %%as%% the front door shut behind Count Olaf and his terrible friends, and the Baudelaire children were alone in the kitchen. Violet <knelt> at Klaus’s side, giving him a hug to try to %%make%% him feel better. Sunny <crawled> over to his glasses, picked them up, and brought them to him. ==Klaus began to <sob>, %%not%% so much from the pain %%but%% from <rage> at the terrible situation they were in.== Violet and Sunny cried with him, and they continued <weeping> %%as%% they washed the dishes, and %%as%% they blew out the candles in the dining room, and %%as%% they changed out of their clothes and <lay down> to go to sleep, Klaus in the bed, Violet on the floor, Sunny on her little cushion of curtains. The moonlight shone through the window, and %%if%% anyone %%had looked%% into the Baudelaire orphans’ bedroom, they %%would have seen%% three children crying quietly all night long.",
+      "vocab": {
+        "rubbed": {
+          "pos": "동사",
+          "def": "문지르다, 비비다",
+          "ex": "Count Olaf rubbed his hands together as if he had been holding...",
+          "head": "rub"
+        },
+        "as if": {
+          "pos": "접속사구",
+          "def": "마치 ~인 것처럼",
+          "ex": "...as if he had been holding something revolting..."
+        },
+        "revolting": {
+          "pos": "형용사",
+          "def": "혐오스러운, 역겨운",
+          "ex": "...holding something revolting instead of an infant."
+        },
+        "dining room": {
+          "pos": "명사",
+          "def": "식당, 식사하는 방",
+          "ex": "Everyone, follow me to the dining room..."
+        },
+        "by the time": {
+          "pos": "접속사구",
+          "def": "~할 때쯤이면",
+          "ex": "Perhaps by the time these brats serve us, we will be too drunk...",
+          "head": "by the time S V"
+        },
+        "brats": {
+          "pos": "명사",
+          "def": "버릇없는 아이, 꼬마 녀석",
+          "ex": "Perhaps by the time these brats serve us...",
+          "head": "brat"
+        },
+        "Hurrah!": {
+          "pos": "감탄사",
+          "def": "만세!, 야호!",
+          "ex": "“Hurrah!” cried several members of the troupe..."
+        },
+        "troupe": {
+          "pos": "명사",
+          "def": "(순회 연극) 극단",
+          "ex": "...cried several members of the troupe..."
+        },
+        "marched": {
+          "pos": "동사",
+          "def": "행진하다, 당당하게 걷다",
+          "ex": "...and they marched through the kitchen...",
+          "head": "march"
+        },
+        "wreck": {
+          "pos": "동사",
+          "def": "망가뜨리다, 파괴하다",
+          "ex": "...or he might wreck that pretty little face of yours."
+        },
+        "shuddered": {
+          "pos": "동사",
+          "def": "몸을 떨다, 몸서리치다",
+          "ex": "Violet shuddered, and the bald man gave a high-pitched giggle...",
+          "head": "shudder"
+        },
+        "high-pitched giggle": {
+          "pos": "명사구",
+          "def": "높은 소리의 킬킬거림",
+          "ex": "...gave a high-pitched giggle and left the room."
+        },
+        "wail": {
+          "pos": "동사/명사",
+          "def": "울부짖다, 통곡하다",
+          "ex": "Sunny continued to wail..."
+        },
+        "as well": {
+          "pos": "부사구",
+          "def": "또한, 역시",
+          "ex": "...his eyes were wet with tears as well."
+        },
+        "merely trembled": {
+          "pos": "동사구",
+          "def": "그저 떨었다",
+          "ex": "Only Violet didn’t cry, but merely trembled with fear..."
+        },
+        "revulsion": {
+          "pos": "명사",
+          "def": "극도의 혐오감",
+          "ex": "...merely trembled with fear and revulsion..."
+        },
+        "pounding on": {
+          "pos": "동사구",
+          "def": "~을 쾅쾅 치다, 두드리다",
+          "ex": "...the theater troupe began pounding on the table...",
+          "head": "pound on ~"
+        },
+        "exceedingly": {
+          "pos": "부사",
+          "def": "대단히, 극도로",
+          "ex": "...which is an exceedingly rude thing to do."
+        },
+        "wrecking": {
+          "pos": "동사",
+          "def": "망가뜨리다",
+          "ex": "Violet thought of what the bald man had said； about wrecking her face...",
+          "head": "wreck"
+        },
+        "nodded": {
+          "pos": "동사",
+          "def": "고개를 끄덕이다",
+          "ex": "...about wrecking her face, and nodded.",
+          "head": "nod"
+        },
+        "bubbling": {
+          "pos": "명사구",
+          "def": "보글보글 끓는 소스",
+          "ex": "The two of them looked at the pot of bubbling sauce...",
+          "head": "bubbling sauce"
+        },
+        "vat of blood": {
+          "pos": "명사구",
+          "def": "피가 가득 찬 들통[통]",
+          "ex": "...now looked like a vat of blood."
+        },
+        "ladle": {
+          "pos": "명사",
+          "def": "국자",
+          "ex": "...carrying the pot of puttanesca sauce and a large ladle..."
+        },
+        "cackling": {
+          "pos": "동사/명사",
+          "def": "낄낄웃다, 낄낄거리는 소리",
+          "ex": "The theater troupe was talking and cackling...",
+          "head": "cackle"
+        },
+        "ached": {
+          "pos": "동사",
+          "def": "아프다, 쑤시다",
+          "ex": "Violet’s right hand ached from holding the heavy ladle.",
+          "head": "ache"
+        },
+        "enrage": {
+          "pos": "동사",
+          "def": "격분시키다, 화나게 하다",
+          "ex": "...which could enrage Count Olaf again."
+        },
+        "miserably": {
+          "pos": "부사",
+          "def": "비참하게, 쓸쓸히",
+          "ex": "She stared miserably at Olaf’s plate of food..."
+        },
+        "plate": {
+          "pos": "명사",
+          "def": "접시",
+          "ex": "She stared miserably at Olaf’s plate of food..."
+        },
+        "through serving": {
+          "pos": "동사구",
+          "def": "~을 마치다, 끝내다",
+          "ex": "Finally, they were through serving...",
+          "head": "be through ~ing"
+        },
+        "portions": {
+          "pos": "명사",
+          "def": "몫, 1인분",
+          "ex": "...they picked at their own portions of food...",
+          "head": "portion"
+        },
+        "Before long": {
+          "pos": "부사구",
+          "def": "머지않아, 곧",
+          "ex": "Before long, Olaf’s friends were pounding on the table..."
+        },
+        "By now": {
+          "pos": "부사구",
+          "def": "이제는, 지금쯤은",
+          "ex": "By now it was obvious that Count Olaf and his associates..."
+        },
+        "associates": {
+          "pos": "명사",
+          "def": "동료, 패거리",
+          "ex": "...Count Olaf and his associates had drunk a great deal of wine...",
+          "head": "associate"
+        },
+        "a great deal of": {
+          "pos": "형용사구",
+          "def": "많은, 다량의",
+          "ex": "...had drunk a great deal of wine..."
+        },
+        "slouched": {
+          "pos": "동사",
+          "def": "구부정하게 앉다",
+          "ex": "...and they slouched at the table and spoke much less.",
+          "head": "slouch"
+        },
+        "roused": {
+          "pos": "동사",
+          "def": "몸을 일으키다, 깨어나다",
+          "ex": "Finally, they roused themselves...",
+          "head": "rouse"
+        },
+        "trooped": {
+          "pos": "동사",
+          "def": "무리를 지어 이동하다",
+          "ex": "...and trooped back through the kitchen...",
+          "head": "troop"
+        },
+        "be excused from attending": {
+          "pos": "동사구",
+          "def": "~하는 것을 면제받다",
+          "ex": "...I suppose you can be excused from attending tonight’s performance.",
+          "head": "be excused from V-ing"
+        },
+        "glaring at": {
+          "pos": "동사구",
+          "def": "~을 노려보다",
+          "ex": "Klaus had been glaring at the floor...",
+          "head": "glare at ~"
+        },
+        "provided": {
+          "pos": "동사구",
+          "def": "A에게 B를 제공하다",
+          "ex": "You have only provided us with one bed!",
+          "head": "provide A with B"
+        },
+        "tracks": {
+          "pos": "명사",
+          "def": "하던 일을 멈추다",
+          "ex": "Members of the theater troupe stopped in their tracks at this outburst...",
+          "head": "stop in one's tracks"
+        },
+        "outburst": {
+          "pos": "명사",
+          "def": "감정의 폭발, 분통",
+          "ex": "...stopped in their tracks at this outburst..."
+        },
+        "glanced": {
+          "pos": "동사",
+          "def": "흘끗 보다",
+          "ex": "...and glanced from Klaus to Count Olaf...",
+          "head": "glance"
+        },
+        "inheritors": {
+          "pos": "명사",
+          "def": "상속인",
+          "ex": "You are the inheritors of an enormous fortune.",
+          "head": "inheritor"
+        },
+        "of age": {
+          "pos": "형용사구",
+          "def": "성년이 된",
+          "ex": "...until Violet is of age."
+        },
+        "leaped": {
+          "pos": "동사",
+          "def": "튀어 오르다, 뛰다",
+          "ex": "His glasses leaped from his face...",
+          "head": "leap"
+        },
+        "skittered": {
+          "pos": "동사",
+          "def": "미끄러지다",
+          "ex": "...and skittered into a corner.",
+          "head": "skitter"
+        },
+        "despicable": {
+          "pos": "형용사",
+          "def": "비열한, 야비한",
+          "ex": "...instead of something despicable."
+        },
+        "comrades.": {
+          "pos": "명사",
+          "def": "동료, 패거리",
+          "ex": "“Come on, friends,” Count Olaf said to his comrades.",
+          "head": "comrades"
+        },
+        "figure out": {
+          "pos": "동사구",
+          "def": "알아내다, 고안해내다",
+          "ex": "...you’ll figure out a way to get at that Baudelaire money."
+        },
+        "knelt": {
+          "pos": "동사",
+          "def": "무릎을 꿇다",
+          "ex": "Violet knelt at Klaus’s side, giving him a hug...",
+          "head": "kneel - knelt - knelt"
+        },
+        "crawled": {
+          "pos": "동사",
+          "def": "기어가다",
+          "ex": "Sunny crawled over to his glasses...",
+          "head": "crawl"
+        },
+        "sob": {
+          "pos": "동사",
+          "def": "흐느껴 울다",
+          "ex": "Klaus began to sob, not so much from the pain..."
+        },
+        "rage": {
+          "pos": "명사",
+          "def": "분노, 격노",
+          "ex": "...from rage at the terrible situation they were in."
+        },
+        "weeping": {
+          "pos": "동사",
+          "def": "눈물을 흘리다, 울다",
+          "ex": "...and they continued weeping as they washed the dishes...",
+          "head": "weep"
+        },
+        "lay down": {
+          "pos": "동사구",
+          "def": "눕다",
+          "ex": "...and lay down to go to sleep...",
+          "head": "lie down (lie-lay-lain)"
+        }
+      },
+      "coreSentences": [
+        {
+          "text": "“If I were you I would try not to anger Count Olaf, or he might wreck that pretty little face of yours.”",
+          "subject": [
+            1,
+            4,
+            13
+          ],
+          "verb": [
+            2,
+            5,
+            6,
+            14,
+            15
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "“내가 너라면 올라프 백작을 화나게 하지 않도록 노력하겠어, 그렇지 않으면 그가 너의 그 예쁜 작은 얼굴을 망가뜨릴지도 모르니까.”"
+        },
+        {
+          "text": "The Baudelaire children, alone in the kitchen, found themselves breathing heavily, as if they had just run a long distance.",
+          "subject": [
+            0,
+            1,
+            2,
+            13
+          ],
+          "verb": [
+            7,
+            14,
+            16
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "부엌에 홀로 남겨진 보들레르가의 아이들은 마치 방금 장거리를 달린 것처럼 자신들이 가쁘게 숨을 쉬고 있음을 깨달았다."
+        },
+        {
+          "text": "She thought of switching to her left hand, but because she was right- handed she was afraid she might spill the sauce with her left hand, which could enrage Count Olaf again.",
+          "subject": [
+            0,
+            10,
+            14,
+            17
+          ],
+          "verb": [
+            1,
+            11,
+            15,
+            18,
+            19,
+            27,
+            28
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "그녀는 오른손 대신 왼손으로 바꿀까 생각했지만, 오른손잡이였기 때문에 왼손으로 소스를 쏟아 올라프 백작을 다시 격분시킬까 봐 두려웠다."
+        },
+        {
+          "text": "They listened to the wild, rough laughter of Count Olaf and his theater troupe, and they picked at their own portions of food, too miserable to eat.",
+          "subject": [
+            0,
+            15
+          ],
+          "verb": [
+            1,
+            16
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "그들은 올라프 백작과 그 극단원들의 거칠고 사나운 웃음소리를 들으며, 너무 비참해서 차마 먹지도 못하고 자신들의 몫으로 나온 음식을 마지못해 조금씩 뒤적거렸다."
+        },
+        {
+          "text": "Members of the theater troupe stopped in their tracks at this outburst, and glanced from Klaus to Count Olaf to see what would happen next.",
+          "subject": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            21
+          ],
+          "verb": [
+            5,
+            13,
+            22,
+            23
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "극단원들은 이 갑작스러운 고함 소리에 가던 길을 멈추고, 다음에 무슨 일이 일어날지 보려고 클라우스와 올라프 백작을 번갈아 흘끗거렸다."
+        },
+        {
+          "text": "Klaus began to sob, not so much from the pain but from rage at the terrible situation they were in.",
+          "subject": [
+            0
+          ],
+          "verb": [
+            1
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "클라우스는 통증 때문이라기보다는 자신들이 처한 끔찍한 상황에 대한 분노 때문에 흐느껴 울기 시작했다."
+        }
+      ],
       "quiz": {
-        "preview": [],
+        "preview": [
+          {
+            "type": "mc",
+            "prompt": "대머리 남자가 바이올렛의 얼굴을 손으로 잡으며 화나게 만들지 말라고 경고한 대상은 누구인가요?",
+            "explain": "“If I were you I would try not to anger Count Olaf, or he might wreck that pretty little face of yours.”",
+            "options": [
+              "Count Olaf",
+              "The Bald man",
+              "Mr. Poe",
+              "Mrs. Poe"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "ox",
+            "prompt": "바이올렛은 무거운 국자를 들어 오른손이 아팠기 때문에, 소스를 쏟을 위험을 무릅쓰고 왼손으로 바꾸어 음식을 서빙했다.",
+            "explain": "Violet’s right hand ached from holding the heavy ladle.  She thought of switching to her left hand, but because she was right- handed she was afraid she might spill the sauce with her left hand, which could enrage Count Olaf again.",
+            "answer": 1
+          },
+          {
+            "type": "mc",
+            "prompt": "Count Olaf가 침대를 하나 더 사라고 했을 때, Klaus가 그럴 수 없다고 반박한 이유는 무엇인가요?",
+            "explain": "",
+            "options": [
+              "가구점이 너무 멀리 떨어져 있어서",
+              "올라프 백작이 집안일 수당을 주지 않아서",
+              "바이올렛이 성년이 될 때까지 유산을 사용할 수 없어서",
+              "포 남매의 계좌가 동결되어 있어서"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "input",
+            "prompt": "올라프 백작에게 뺨을 맞고 바닥에 쓰러진 클라우스의 얼굴 몇 인치 옆에 있던, 백작의 발목에 문신으로 새겨져 있던 모양은 무엇인가요? (한 단어)",
+            "explain": "Klaus fell to the floor,  his face inches from the eye tattooed on Olaf’s ankle.",
+            "accept": [
+              "Eye",
+              "eye"
+            ]
+          },
+          {
+            "type": "ox",
+            "prompt": "잠자리에 들 때 클라우스는 침대에서, 바이올렛은 바닥에서, 써니는 커튼으로 만든 쿠션 위에서 잤다. (O / X)",
+            "explain": "... and lay down  to go to sleep, Klaus in the bed, Violet on the floor, Sunny on her little cushion of curtains.",
+            "answer": 0
+          }
+        ],
         "vocab": [],
-        "sentence": [],
+        "sentence": [
+          {
+            "type": "mc",
+            "prompt": "다음 빈칸 (A)와 (B)에 들어갈 알맞은 be동사가 바르게 짝지어진 것은?",
+            "explain": "가정법 과거(현재의 사실을 반대)에서, be동사 was는 사용하지 않아요. 가정법 과거에서 be동사는 \"were\"만 사용하기로 해요!",
+            "sentence": "\"If I (  A  ) you I would try not to anger Count Olaf...\" \"His left cheek, where Olaf had struck him, felt as if it (  B  ) on fire.\"",
+            "options": [
+              "was - was",
+              "was - were",
+              "were - was",
+              "were - were"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "input",
+            "prompt": "다음 문장의 괄호 안에 주어진 단어를 어법에 맞게 변형하여 쓰시오.",
+            "explain": "be excused from -ing 는 '~에서 면제되다'는 숙어에요. 숙어를 빼고 보더라도, 'from'이 전치사기 때문에 뒤에 동명사(-ing)형태가 와야 합니다.",
+            "sentence": "\"Because you haven’t cleaned up yet, I suppose you can be excused from ( attend ) tonight’s performance.\"",
+            "accept": [
+              "Attending",
+              "attending"
+            ]
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 어법상 틀린 단어를 하나 찾아 바르게 고치시오.",
+            "explain": "Ch1에서 한번 보았던 문제입니다. ,(콤마) 뒤에 관계사 that은 절! 대! 올수 없어요. which로 바꾸어 주세요~",
+            "sentence": "\"She was afraid she might spill the sauce with her left hand, that could enrage Count Olaf again.\"",
+            "wrong": 12,
+            "accept": [
+              "Which",
+              "which"
+            ]
+          },
+          {
+            "type": "scramble",
+            "prompt": "다음 우리말 뜻에 맞게 주어진 단어들을 바르게 배열하여 문장을 완성하시오.",
+            "explain": "be to V 용법은 기억나죠? 미래에 관한 다양한 해석이 있었어요. (~할 예정이다, ~해야한다, ~할 운명이다 등). 이 문장에서는 '사용되어서는 안 된다', 즉 의무이면서 부정까지 들어가 작문이 까다로웠네요. is / not / to be used. 다시 한번 기억해요!",
+            "chunks": [
+              "That money",
+              "is",
+              "not",
+              "to be used",
+              "until",
+              "Violet is of age."
+            ],
+            "ko": "그 돈은 바이올렛이 성년이 될 때까지 사용되어서는 안 돼요."
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 빈칸에 들어갈 알맞은 연결어는?",
+            "explain": "Not A but B, A가 아니라 B이다. '아픔때문이 아니라, 분노 때문에'로 해석해야 적절한 맥락이기 때문에 but이 답입니다.",
+            "sentence": "\"Klaus began to sob, not so much from the pain (       ) from rage at the terrible situation they were in.\"",
+            "options": [
+              "and",
+              "but",
+              "so",
+              "for"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "free",
+            "prompt": "올라프 백작이 클라우스의 뺨을 때렸을 때, 극단원들은 말리기는커녕 그것이 '용감한 일'이라도 되는 것처럼 웃고 박수를 쳤어요. 어른들의 이러한 행동이 아이들에게 어떤 상처를 주었을지 이야기해 보세요.",
+            "explain": "때로 어린 시절 어른으로부터 받은 상처는 평생을 가는 아픔이 되기도 하는 것 같아. 너희들에게 그런 상처가 (기왕이면) 없기를, 있다면 많은 사랑을 주고 받으며 치유되기를 바랄게."
+          }
+        ],
         "vocabPrep": [],
         "sentPrep": [],
         "grammar": []
