@@ -3837,7 +3837,10 @@ function editorHTML() {
     const on = i === ui.presDay;
     const md = (day.date || '').slice(5).replace('-', '/');
     const ct = day.class ? ` 〔${esc(day.class)}〕` : '';
-    return `<div data-act="edSelectDayView" data-arg="${i}" style="flex:none;font-size:11.5px;font-weight:700;padding:8px 13px;border-radius:11px;cursor:pointer;white-space:nowrap;color:${on ? '#fff' : '#4a5a72'};background:${on ? '#14243f' : '#fff'};border:1px solid ${on ? '#14243f' : '#e2e9f2'}">${esc(md)}${day.label ? ' · ' + esc(day.label) : ''}${ct}</div>`;
+    return `<div data-act="edSelectDayView" data-arg="${i}" style="display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:700;padding:11px 13px;border-radius:11px;cursor:pointer;color:${on ? '#fff' : '#4a5a72'};background:${on ? '#14243f' : '#fff'};border:1px solid ${on ? '#14243f' : '#e2e9f2'}">
+      <span style="flex:none;width:16px;height:16px;border-radius:50%;border:2px solid ${on ? '#fff' : '#cdd8e6'};display:flex;align-items:center;justify-content:center">${on ? '<span style="width:7px;height:7px;border-radius:50%;background:#fff"></span>' : ''}</span>
+      <span style="flex:1;min-width:0">${esc(md)}${day.label ? ' · ' + esc(day.label) : ''}${ct}</span>
+    </div>`;
   }).join('');
 
   return `
@@ -3848,8 +3851,8 @@ function editorHTML() {
     </div>
 
     <div class="ed-card">
-      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:8px">📅 어떤 날을 띄울까요?</div>
-      <div style="display:flex;align-items:center;gap:7px;overflow-x:auto;padding-bottom:4px">${dayChips || '<span style="font-size:12px;color:#b8c2d2">아직 배포된 Day가 없어요</span>'}</div>
+      <div style="font-size:13px;font-weight:700;color:#14243f;margin-bottom:8px">📅 어떤 날을 띄울까요? <span style="font-size:11px;color:#9aa8bd;font-weight:500">· 위아래로 넘겨서 골라요</span></div>
+      <div style="display:flex;flex-direction:column;gap:7px;max-height:230px;overflow-y:auto;padding-right:2px">${dayChips || '<span style="font-size:12px;color:#b8c2d2">아직 배포된 Day가 없어요</span>'}</div>
     </div>
 
     <div class="ed-card" style="background:linear-gradient(150deg,#0b243f,#123a63);border:none;color:#fff">
