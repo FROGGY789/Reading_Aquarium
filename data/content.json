@@ -4695,7 +4695,7 @@
       "book": {
         "title": "The Bad Beginning",
         "author": "Lemony Snicket",
-        "chapter": "Chapter 05-1",
+        "chapter": "Chapter 05-2",
         "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
         "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
       },
@@ -4710,7 +4710,11 @@
         "sentPrep": [],
         "grammar": []
       },
-      "class": "2026 여름방학 영방반"
+      "class": "2026 여름방학 영방반",
+      "reviewFrom": "2026-07-31",
+      "reviewTo": "2026-07-31",
+      "previewFrom": "2026-07-30",
+      "previewTo": "2026-07-30"
     },
     {
       "date": "2026-07-28",
@@ -4739,7 +4743,12 @@
         "sentPrep": [],
         "grammar": []
       },
-      "class": "2026 여름방학 영방반"
+      "class": "2026 여름방학 영방반",
+      "reviewFrom": "2026-07-31",
+      "reviewTo": "2026-07-31",
+      "previewFrom": "2026-07-30",
+      "previewTo": "2026-07-30",
+      "shelfHidden": false
     }
   ],
   "grammar": [],
