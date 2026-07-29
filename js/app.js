@@ -414,23 +414,29 @@ async function grantReward(id, eggs, xp) {
   } catch (e) { ui.grantBusy = ''; ui.recError = e.message; }
   render();
 }
-// 교사 → 선택한 여러 학생에게 알림 메시지 한 번에 전송(er_messages에 여러 행 INSERT)
+// 교사 → 선택한 여러 학생에게 보상(알·경험치)+메시지 한 번에 전송
 async function sendBulkMessage() {
   const ids = (ui.selected || []).filter(Boolean);
   const text = (ui.bulkDraft || '').trim();
-  if (!ids.length || !text) return;
+  const eggs = ui.bulkEggs || 0, xp = ui.bulkXp || 0;
+  if (!ids.length || (!text && !eggs && !xp)) return;   // 아무것도 없으면 무시
   ui.bulkBusy = true; ui.dashMsg = ''; ui.recError = ''; render();
   try {
-    const body = JSON.stringify(ids.map(id => ({ user_id: id, text })));   // PostgREST 배열 삽입(한 번에)
-    const res = await sbFetch('/rest/v1/er_messages', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body });
-    if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 404 || res.status === 400 ? ' — er_messages 테이블을 먼저 만들어 주세요' : ''));
+    // 우선 er_messages 배열(보상+메시지 함께)
+    let res = await sbFetch('/rest/v1/er_messages', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify(ids.map(id => ({ user_id: id, text, eggs, xp }))) });
+    if (!res.ok) {
+      // eggs/xp 컬럼(또는 테이블) 없음 → 보상은 er_grants로, 텍스트는 er_messages(텍스트만)로 분리
+      if (eggs || xp) { const g = await sbFetch('/rest/v1/er_grants', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify(ids.map(id => ({ user_id: id, eggs, xp }))) }); if (!g.ok) throw new Error('HTTP ' + g.status); }
+      if (text) { res = await sbFetch('/rest/v1/er_messages', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify(ids.map(id => ({ user_id: id, text }))) }); if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 404 || res.status === 400 ? ' — er_messages 테이블을 먼저 만들어 주세요' : '')); }
+    }
     const n = ids.length;
     const mb = ui.msgById || (ui.msgById = {});   // 보낸 메시지 즉시 표시(안읽음)
-    ids.forEach(id => (mb[id] = mb[id] || []).unshift({ id: 'tmp' + Date.now() + id, user_id: id, text, eggs: 0, xp: 0, applied: false, created_at: new Date().toISOString() }));
-    ui.bulkBusy = false; ui.bulkMsgOpen = false; ui.bulkDraft = ''; ui.selected = [];
-    ui.dashMsg = `📨 ${n}명에게 알림을 보냈어요! 학생 앱이 열려 있으면 곧, 아니면 다음에 열 때 떠요.`;
+    ids.forEach(id => (mb[id] = mb[id] || []).unshift({ id: 'tmp' + Date.now() + id, user_id: id, text, eggs, xp, applied: false, created_at: new Date().toISOString() }));
+    ui.bulkBusy = false; ui.bulkMsgOpen = false; ui.bulkDraft = ''; ui.bulkEggs = 0; ui.bulkXp = 0; ui.selected = [];
+    const rwTxt = (xp ? '경험치+' + xp : '') + (xp && eggs ? '·' : '') + (eggs ? '🥚+' + eggs : '');
+    ui.dashMsg = `📨 ${n}명에게 ${rwTxt ? rwTxt + ' ' : ''}${text ? '메시지 ' : ''}보냈어요! 학생 앱이 열려 있으면 곧, 아니면 다음에 열 때 반영돼요.`;
     setTimeout(() => { ui.dashMsg = ''; render(); }, 4000);
-  } catch (e) { ui.bulkBusy = false; ui.recError = '메시지 전송 실패: ' + e.message; }
+  } catch (e) { ui.bulkBusy = false; ui.recError = '전송 실패: ' + e.message; }
   render();
 }
 // 예습 버닝: 이 문장 '어려워요' 체크/해제(교사 PPT에서 문장별 횟수로 집계)
@@ -949,7 +955,7 @@ const ui = {
   dashDetail: null,             // 펼친 학생의 복습/예습 상세 열림('review'|'preview'|null)
   dashMsg: '',                  // 교사 대시보드: 전송 완료 안내 문구
   selected: [],                 // 교사: 체크된 학생 id들(알림 일괄 전송용)
-  bulkMsgOpen: false, bulkDraft: '', bulkBusy: false,   // 교사→여러 학생 알림 작성/전송
+  bulkMsgOpen: false, bulkDraft: '', bulkBusy: false, bulkEggs: 0, bulkXp: 0,   // 교사→여러 학생 보상·알림 작성/전송
   rewardMsg: '', msgById: {},   // 교사: 보상과 함께 보낼 메시지 / 학생별 보낸 메시지(읽음 확인)
   inboxOpen: false,             // 학생: 메시지함 열림
   teacherMsgs: [],              // 학생: 선생님이 보낸 알림 메시지(뜨면 팝업)
@@ -1627,8 +1633,10 @@ const actions = {
   },
   dashSelAll(arg) { ui.selected = (arg || '').split(',').filter(Boolean); render(); },   // 전체 선택
   dashSelClear() { ui.selected = []; render(); },                                        // 선택 해제
-  bulkMsgOpen() { if (!(ui.selected || []).length) return; ui.bulkMsgOpen = true; ui.bulkDraft = ''; ui.recError = ''; ui.dashMsg = ''; render(); },
+  bulkMsgOpen() { if (!(ui.selected || []).length) return; ui.bulkMsgOpen = true; ui.bulkDraft = ''; ui.bulkEggs = 0; ui.bulkXp = 0; ui.recError = ''; ui.dashMsg = ''; render(); },
   bulkMsgClose() { ui.bulkMsgOpen = false; render(); },
+  bulkPickXp(arg) { const v = Number(arg); ui.bulkXp = ui.bulkXp === v ? 0 : v; render(); },   // 경험치 선택/해제(토글)
+  bulkPickEgg(arg) { const v = Number(arg); ui.bulkEggs = ui.bulkEggs === v ? 0 : v; render(); },
   bulkMsgSend() { sendBulkMessage(); },
   dashToastClose() { ui.dashMsg = ''; ui.grantToast = ''; ui.recError = ''; render(); },
 
@@ -2300,15 +2308,29 @@ function teacherToastHTML() {
 // 교사: 체크한 학생들에게 알림 메시지 한 번에 작성/전송하는 모달
 function bulkMsgHTML() {
   const n = (ui.selected || []).length;
-  return `<div style="position:absolute;inset:0;z-index:130;background:rgba(10,25,45,.5);display:flex;align-items:flex-end;justify-content:center;padding:0">
-    <div style="width:100%;max-width:520px;background:#fff;border-radius:22px 22px 0 0;padding:20px 20px 24px;box-shadow:0 -20px 60px -20px rgba(0,0,0,.5)">
+  const xpChip = x => `<button data-act="bulkPickXp" data-arg="${x}" style="flex:1;border:1.5px solid ${ui.bulkXp === x ? '#2f74e6' : '#d5e4f7'};background:${ui.bulkXp === x ? '#2f74e6' : '#fff'};color:${ui.bulkXp === x ? '#fff' : '#2f74e6'};font-size:13px;font-weight:800;padding:9px 0;border-radius:11px;cursor:pointer">+${x}</button>`;
+  const eggChip = e => `<button data-act="bulkPickEgg" data-arg="${e}" style="flex:1;border:1.5px solid ${ui.bulkEggs === e ? '#e0a41a' : '#f0dba6'};background:${ui.bulkEggs === e ? '#f0a92e' : '#fff'};color:${ui.bulkEggs === e ? '#fff' : '#b0851f'};font-size:13px;font-weight:800;padding:9px 0;border-radius:11px;cursor:pointer">🥚 +${e}</button>`;
+  const hasReward = (ui.bulkXp || 0) > 0 || (ui.bulkEggs || 0) > 0;
+  const canSend = hasReward || (ui.bulkDraft || '').trim();
+  return `<div style="position:absolute;inset:0;z-index:130">
+    <div data-act="bulkMsgClose" style="position:absolute;inset:0;background:rgba(10,25,45,.5)"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;background:#fff;border-radius:22px 22px 0 0;padding:20px 20px 24px;box-shadow:0 -20px 60px -20px rgba(0,0,0,.5);max-height:88%;overflow-y:auto">
       <div style="width:38px;height:4px;border-radius:3px;background:#dbe2ec;margin:0 auto 14px"></div>
-      <div style="font-size:16px;font-weight:800;color:#14243f">🔔 알림 보내기 <span style="font-size:13px;font-weight:700;color:#2f74e6">· ${n}명</span></div>
-      <div style="font-size:11.5px;color:#9aa8bd;margin-top:3px">선택한 학생들의 핸드폰(앱)에 팝업으로 떠요.</div>
-      <textarea id="bulk-msg" placeholder="예: 오늘 복습 꼭 끝내자! 화이팅 💪" style="width:100%;min-height:96px;border:1.5px solid #cfe0f5;border-radius:13px;padding:12px 13px;font-size:14px;font-family:inherit;line-height:1.6;resize:vertical;box-sizing:border-box;margin-top:14px">${esc(ui.bulkDraft || '')}</textarea>
+      <div style="font-size:16px;font-weight:800;color:#14243f">🎁 보상·알림 보내기 <span style="font-size:13px;font-weight:700;color:#2f74e6">· ${n}명</span></div>
+      <div style="font-size:11.5px;color:#9aa8bd;margin-top:3px">선택한 학생들에게 <b>경험치·알·메시지</b>를 한 번에 보내요. (원하는 것만 골라요)</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+        <span style="flex:none;display:inline-flex;justify-content:center;min-width:44px;font-size:10.5px;font-weight:800;color:#2f74e6;background:#eaf2ff;border-radius:8px;padding:6px">경험치</span>
+        ${[10, 30, 50].map(xpChip).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <span style="flex:none;display:inline-flex;justify-content:center;min-width:44px;font-size:10.5px;font-weight:800;color:#b0851f;background:#fff4d9;border-radius:8px;padding:6px">알</span>
+        ${[1, 3, 5].map(eggChip).join('')}
+      </div>
+      <div style="font-size:10px;color:#b8c2d2;margin-top:6px">보상 버튼을 다시 누르면 취소돼요.</div>
+      <textarea id="bulk-msg" placeholder="메시지 (선택) — 예: 이번 주 정말 잘했어! 화이팅 💪" style="width:100%;min-height:80px;border:1.5px solid #cfe0f5;border-radius:13px;padding:12px 13px;font-size:14px;font-family:inherit;line-height:1.6;resize:vertical;box-sizing:border-box;margin-top:12px">${esc(ui.bulkDraft || '')}</textarea>
       <div style="display:flex;gap:9px;margin-top:12px">
         <button data-act="bulkMsgClose" style="flex:none;border:1.5px solid #dbe2ec;background:#fff;color:#7d8aa0;font-size:14px;font-weight:700;padding:13px 20px;border-radius:14px;cursor:pointer">취소</button>
-        <button data-act="bulkMsgSend" style="flex:1;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:800;padding:13px;border-radius:14px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">${ui.bulkBusy ? '보내는 중…' : `전송 📨 (${n}명)`}</button>
+        <button data-act="bulkMsgSend" style="flex:1;border:none;background:${canSend ? '#2f74e6' : '#c3d2e6'};color:#fff;font-size:14px;font-weight:800;padding:13px;border-radius:14px;box-shadow:0 4px 0 ${canSend ? '#1f57c4' : '#a9bad4'};cursor:${canSend ? 'pointer' : 'default'}">${ui.bulkBusy ? '보내는 중…' : `전송 📨 (${n}명)`}</button>
       </div>
     </div>
   </div>`;
@@ -3874,7 +3896,7 @@ function liveDashHTML(day) {
         <span style="font-size:12.5px;font-weight:700;color:#4a5a72">${selN ? `${selN}명 선택됨` : '전체 선택'}</span>
       </div>
       ${selN ? `<button data-act="dashSelClear" style="border:1px solid #dbe2ec;background:#fff;color:#7d8aa0;font-size:11.5px;font-weight:700;padding:7px 12px;border-radius:10px;cursor:pointer">해제</button>
-      <button data-act="bulkMsgOpen" style="border:none;background:#2f74e6;color:#fff;font-size:12.5px;font-weight:800;padding:8px 15px;border-radius:10px;cursor:pointer;box-shadow:0 3px 0 #1f57c4">🔔 알림 보내기</button>` : ''}
+      <button data-act="bulkMsgOpen" style="border:none;background:#2f74e6;color:#fff;font-size:12.5px;font-weight:800;padding:8px 15px;border-radius:10px;cursor:pointer;box-shadow:0 3px 0 #1f57c4">🎁 보상·알림</button>` : ''}
     </div>` : '';
 
   const shownTodayRecs = filt ? todayRecs.filter(r => (nameClass[r.student] || '') === filt) : todayRecs;
