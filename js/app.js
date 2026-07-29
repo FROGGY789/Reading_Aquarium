@@ -3706,7 +3706,7 @@ function chapterGroups(rs, cat) {
     ? ['vocab', 'sentence', 'review'].includes(r.task)
     : (r.task || '').indexOf('preview') === 0);
   const groups = {}; const order = [];
-  items.forEach(r => { const c = r.chapter || '(챕터 미기록)'; if (!(c in groups)) { groups[c] = []; order.push(c); } groups[c].push(r); });
+  items.forEach(r => { const c = r.chapter || '챕터 정보 없는 이전 기록'; if (!(c in groups)) { groups[c] = []; order.push(c); } groups[c].push(r); });
   return order.map(c => {
     const list = groups[c];
     const doneTasks = new Set(list.map(r => cat === 'preview' ? 'preview' : r.task));   // 예습은 단계 무관하게 '완료'로
