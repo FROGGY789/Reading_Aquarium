@@ -360,11 +360,12 @@ async function loadRecords() {
   ui.recLoading = true; ui.recError = '';
   render();
   try {
-    const [r1, r2, r3, r4] = await Promise.all([
+    const [r1, r2, r3, r4, r5] = await Promise.all([
       sbFetch('/rest/v1/er_records?select=*&order=created_at.asc'),   // 날짜 제한 없이 전체 — 챕터 단위 진행도(select=*로 chapter 없어도 안전)
       sbFetch('/rest/v1/er_profiles?is_teacher=eq.false&select=id,name,username,class,student_no,approved&order=class.asc,student_no.asc'),
       sbFetch('/rest/v1/er_progress?select=user_id,state,updated_at'),   // 학생별 상태(학습시간·알 부화 포함) — RLS로 교사 전체 조회 허용
-      sbFetch('/rest/v1/er_messages?select=*&order=created_at.desc')     // 내가 보낸 메시지(읽음 확인용) — 테이블 없으면 무시
+      sbFetch('/rest/v1/er_messages?select=*&order=created_at.desc'),     // 내가 보낸 메시지(읽음 확인용) — 테이블 없으면 무시
+      sbFetch('/rest/v1/er_letters?select=*&order=created_at.desc')       // 학생이 보낸 편지(우편함) — 테이블 없으면 무시
     ]);
     if (!r1.ok) throw new Error('HTTP ' + r1.status);
     ui.records = await r1.json();
@@ -379,6 +380,7 @@ async function loadRecords() {
     const msgById = {};
     if (r4 && r4.ok) { (await r4.json()).forEach(m => { (msgById[m.user_id] = msgById[m.user_id] || []).push(m); }); }
     ui.msgById = msgById;
+    ui.letters = (r5 && r5.ok) ? await r5.json() : [];   // 학생이 보낸 편지(우편함)
   } catch (e) {
     ui.recError = e.message;
     ui.records = null;
@@ -439,6 +441,30 @@ async function sendBulkMessage() {
   } catch (e) { ui.bulkBusy = false; ui.recError = '전송 실패: ' + e.message; }
   render();
 }
+// 학생 → 선생님 편지 전송(er_letters)
+async function sendLetter() {
+  const text = (ui.letterDraft || '').trim();
+  if (!text) return;
+  if (!auth || isTeacherUser() || !sbConf()) { ui.letterMsg = '로그인한 학생만 보낼 수 있어요.'; render(); return; }
+  ui.letterBusy = true; ui.letterMsg = ''; render();
+  try {
+    const res = await sbFetch('/rest/v1/er_letters', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ name: studentName(), text }) });
+    if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 404 || res.status === 400 ? ' — er_letters 테이블을 먼저 만들어 주세요' : ''));
+    ui.letterBusy = false; ui.letterOpen = false; ui.letterDraft = '';
+    ui.letterSent = '📮 선생님께 편지를 보냈어요!';
+    setTimeout(() => { ui.letterSent = ''; render(); }, 3500);
+  } catch (e) { ui.letterBusy = false; ui.letterMsg = '보내지 못했어요: ' + e.message; }
+  render();
+}
+// 교사: 우편함 열 때 안읽은 편지를 읽음 처리
+async function markLettersRead() {
+  const unread = (ui.letters || []).filter(l => !l.read && l.id);
+  if (!unread.length) return;
+  ui.letters = (ui.letters || []).map(l => Object.assign({}, l, { read: true }));
+  try {
+    await sbFetch('/rest/v1/er_letters?id=in.(' + unread.map(l => l.id).join(',') + ')', { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ read: true }) });
+  } catch (e) { /* 무시 */ }
+}
 // 예습 버닝: 이 문장 '어려워요' 체크/해제(교사 PPT에서 문장별 횟수로 집계)
 async function toggleHard(idx, sentence) {
   const chapter = recChapter();
@@ -491,6 +517,7 @@ async function purgeUserData(id) {
   await sbFetch('/rest/v1/er_grants?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
   await sbFetch('/rest/v1/er_messages?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }).catch(() => {});
   await sbFetch('/rest/v1/er_hard?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }).catch(() => {});
+  await sbFetch('/rest/v1/er_letters?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }).catch(() => {});
   await sbFetch('/rest/v1/er_records?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
   await sbFetch('/rest/v1/er_progress?user_id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
   const res = await sbFetch('/rest/v1/er_profiles?id=eq.' + id, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
@@ -958,6 +985,8 @@ const ui = {
   bulkMsgOpen: false, bulkDraft: '', bulkBusy: false, bulkEggs: 0, bulkXp: 0,   // 교사→여러 학생 보상·알림 작성/전송
   rewardMsg: '', msgById: {},   // 교사: 보상과 함께 보낼 메시지 / 학생별 보낸 메시지(읽음 확인)
   inboxOpen: false,             // 학생: 메시지함 열림
+  letterOpen: false, letterDraft: '', letterBusy: false, letterMsg: '', letterSent: '',   // 학생 → 선생님 편지
+  letters: [], mailOpen: false, // 교사: 받은 편지 / 우편함 열림
   teacherMsgs: [],              // 학생: 선생님이 보낸 알림 메시지(뜨면 팝업)
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
   dashClass: '',   // 교사 대시보드: 반별 보기 필터('' = 전체)
@@ -1619,6 +1648,11 @@ const actions = {
   dismissTeacherMsg() { ui.teacherMsgs = []; markInboxRead(); render(); },
   openInbox() { ui.inboxOpen = true; markInboxRead(); render(); },
   closeInbox() { ui.inboxOpen = false; render(); },
+  openLetter() { ui.letterOpen = true; ui.letterDraft = ''; ui.letterMsg = ''; render(); },   // 학생: 편지 쓰기 열기
+  closeLetter() { ui.letterOpen = false; render(); },
+  sendLetter() { sendLetter(); },
+  openTeacherMail() { ui.mailOpen = true; markLettersRead(); render(); },   // 교사: 우편함 열기(읽음 처리)
+  closeTeacherMail() { ui.mailOpen = false; render(); },
 
   /* ---- 교사 ---- */
   pickClass(arg) { ui.li.classId = (ui.li.classId === arg) ? '' : arg; ui.authMsg = ''; render(); },  // 가입: 반 칩 선택/해제
@@ -2265,6 +2299,41 @@ function inboxHTML() {
     </div>
   </div>`;
 }
+// 학생: 선생님께 편지 쓰기 모달
+function letterHTML() {
+  return `<div style="position:absolute;inset:0;z-index:126">
+    <div data-act="closeLetter" style="position:absolute;inset:0;background:rgba(10,25,45,.5)"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;background:#fff;border-radius:22px 22px 0 0;padding:20px 20px 26px;box-shadow:0 -20px 60px -20px rgba(0,0,0,.5)">
+      <div style="width:38px;height:4px;border-radius:3px;background:#dbe2ec;margin:0 auto 14px"></div>
+      <div style="font-size:16px;font-weight:800;color:#14243f">✉️ 선생님께 편지 보내기</div>
+      <div style="font-size:11.5px;color:#9aa8bd;margin-top:3px">궁금한 점, 하고 싶은 말을 자유롭게 적어요. 선생님만 볼 수 있어요.</div>
+      <textarea id="letter-text" placeholder="선생님, 안녕하세요! …" style="width:100%;min-height:120px;border:1.5px solid #cfe0f5;border-radius:13px;padding:12px 13px;font-size:14px;font-family:inherit;line-height:1.6;resize:vertical;box-sizing:border-box;margin-top:14px">${esc(ui.letterDraft || '')}</textarea>
+      ${ui.letterMsg ? `<div style="font-size:11.5px;color:#c0392b;margin-top:8px">${esc(ui.letterMsg)}</div>` : ''}
+      <div style="display:flex;gap:9px;margin-top:12px">
+        <button data-act="closeLetter" style="flex:none;border:1.5px solid #dbe2ec;background:#fff;color:#7d8aa0;font-size:14px;font-weight:700;padding:13px 20px;border-radius:14px;cursor:pointer">취소</button>
+        <button data-act="sendLetter" style="flex:1;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:800;padding:13px;border-radius:14px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">${ui.letterBusy ? '보내는 중…' : '편지 보내기 📮'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+// 교사: 우편함(학생들이 보낸 편지)
+function mailHTML() {
+  const list = (ui.letters || []);
+  return `<div style="position:absolute;inset:0;z-index:126">
+    <div data-act="closeTeacherMail" style="position:absolute;inset:0;background:rgba(10,25,45,.5)"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;background:#fff;border-radius:22px 22px 0 0;padding:18px 18px 26px;max-height:80%;display:flex;flex-direction:column;box-shadow:0 -20px 60px -20px rgba(0,0,0,.5)">
+      <div style="width:38px;height:4px;border-radius:3px;background:#dbe2ec;margin:0 auto 14px"></div>
+      <div style="font-size:16px;font-weight:800;color:#14243f;margin-bottom:12px">📬 우편함 <span style="font-size:12px;font-weight:600;color:#9aa8bd">· 학생이 보낸 편지 ${list.length}</span></div>
+      <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px">
+        ${list.length ? list.map(l => `<div style="background:#f4f8fd;border:1px solid #e2e9f2;border-radius:14px;padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span style="font-size:13px;font-weight:800;color:#14243f">${esc(l.name || '학생')}</span><span style="font-size:10.5px;color:#b8c2d2">${l.created_at ? fmtRecDT(l.created_at) : ''}</span></div>
+          <div style="font-size:14px;line-height:1.6;color:#26303f;white-space:pre-wrap">${esc(l.text || '')}</div>
+        </div>`).join('') : '<div style="text-align:center;color:#b8c2d2;font-size:13px;padding:30px 0">아직 받은 편지가 없어요</div>'}
+      </div>
+      <button data-act="closeTeacherMail" style="margin-top:14px;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:700;padding:13px;border-radius:14px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">닫기</button>
+    </div>
+  </div>`;
+}
 // 경험치 팝오버(레벨 배지 클릭 시)
 function xpPopHTML() {
   const pct = Math.round(xpInto() / XP_NEED * 100);
@@ -2504,7 +2573,8 @@ function homeHTML() {
     ${shelfHTML()}
 
     ${authMode() ? `
-    <div style="margin-top:26px;display:flex;justify-content:center;gap:8px">
+    <div style="margin-top:26px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
+      <div data-act="openLetter" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#fff;background:#2f74e6;border:1px solid #2f74e6;border-radius:12px;padding:10px 18px;cursor:pointer;box-shadow:0 3px 0 #1f57c4">✉️ 선생님께 편지</div>
       <div data-act="openAccount" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#4a5a72;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">⚙️ 내 계정</div>
       <div data-act="doLogout" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#7d8aa0;background:#fff;border:1px solid #e2e9f2;border-radius:12px;padding:10px 18px;cursor:pointer">↩︎ 로그아웃</div>
     </div>` : ''}
@@ -3932,6 +4002,7 @@ function liveDashHTML(day) {
         <div style="font-size:12px;color:#7d8aa0;margin-top:2px">${esc(day.book.title)} · ${shown.length}명${filt ? ` (전체 ${students.length})` : ''} · ${todayKey()}</div>
       </div>
       <div style="display:flex;gap:6px">
+        <button data-act="openTeacherMail" class="ed-btn ghost" style="position:relative;padding:8px 12px;font-size:13px" title="학생이 보낸 편지 우편함">📬${(() => { const u = (ui.letters || []).filter(l => !l.read).length; return u ? `<span style="position:absolute;top:-5px;right:-4px;min-width:16px;height:16px;padding:0 4px;background:#e2564d;color:#fff;font-size:9.5px;font-weight:800;border-radius:9px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">${u}</span>` : ''; })()}</button>
         <button data-act="dashRefresh" class="ed-btn ghost" style="padding:8px 13px;font-size:11.5px">${ui.recLoading ? '⏳' : '🔄'}</button>
         <button data-act="doLogout" class="ed-btn ghost" style="padding:8px 11px;font-size:11.5px" title="교사 계정 로그아웃">↩︎</button>
       </div>
@@ -4251,8 +4322,11 @@ function render() {
 
   if (ui.xpPop && state.role === 'student') html += xpPopHTML();   // 경험치 팝오버
   if (ui.inboxOpen && state.role === 'student') html += inboxHTML();   // 학생 메시지함
+  if (ui.letterOpen && state.role === 'student') html += letterHTML();   // 학생: 선생님께 편지 쓰기
+  if (ui.letterSent && state.role === 'student') html += `<div style="position:absolute;left:0;right:0;bottom:80px;display:flex;justify-content:center;z-index:140;padding:0 16px;pointer-events:none"><div style="background:#e0f3ea;border:1px solid #b6e0c8;color:#1f7a4d;font-size:12.5px;font-weight:700;padding:12px 16px;border-radius:14px;box-shadow:0 16px 34px -12px rgba(20,50,90,.55)">${esc(ui.letterSent)}</div></div>`;
   if ((ui.teacherMsgs || []).length && state.role === 'student') html += teacherMsgHTML();   // 선생님 알림 메시지 팝업
   if (ui.bulkMsgOpen && isTeacherUser()) html += bulkMsgHTML();   // 교사: 선택 학생에게 알림 작성
+  if (ui.mailOpen && isTeacherUser()) html += mailHTML();   // 교사: 우편함
   if (isTeacherUser() && state.role === 'teacher') html += teacherToastHTML();   // 교사: 전송 결과/오류 토스트
   if (auth && ui.acct.open) html += accountHTML();  // 내 계정(비번 변경/탈퇴)
   if (ui.present.on) html += presentHTML();  // 수업용 전체화면 발표(최상단)
@@ -4338,6 +4412,7 @@ appEl.addEventListener('input', e => {
   if (el.id === 'li-studentno') { ui.li.studentNo = el.value; return; }
   if (el.id === 'bulk-msg') { ui.bulkDraft = el.value; return; }   // 교사→학생 알림 메시지 입력
   if (el.id === 'reward-msg') { ui.rewardMsg = el.value; return; }   // 교사: 보상과 함께 보낼 메시지
+  if (el.id === 'letter-text') { ui.letterDraft = el.value; return; }   // 학생 → 선생님 편지
   if (el.dataset.gbind && gEd) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
   if (bind && ed && el.type !== 'radio' && el.tagName !== 'SELECT') {

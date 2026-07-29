@@ -235,6 +235,32 @@ create policy "hard read own or teacher" on public.er_hard for select to authent
 create policy "hard delete own or teacher" on public.er_hard for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
 
 -- =========================================================
+-- v10: 학생 → 선생님 편지 (학생이 보내고, 교사 우편함에서 받아봄)
+-- 이미 실행했어도 안전하게 재실행됩니다.
+-- =========================================================
+create table if not exists public.er_letters (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  user_id uuid not null default auth.uid(),   -- 보낸 학생
+  name text,                                  -- 학생 이름(표시용)
+  text text not null,                         -- 편지 내용
+  read boolean not null default false         -- 교사가 읽었는지
+);
+create index if not exists er_letters_read_idx on public.er_letters (read);
+alter table public.er_letters enable row level security;
+drop policy if exists "letters own insert" on public.er_letters;
+drop policy if exists "letters read own or teacher" on public.er_letters;
+drop policy if exists "letters teacher update" on public.er_letters;
+drop policy if exists "letters delete own or teacher" on public.er_letters;
+-- 학생은 본인 이름으로만 편지 작성
+create policy "letters own insert" on public.er_letters for insert to authenticated with check (user_id = auth.uid());
+-- 본인 것 + 교사는 전체 조회
+create policy "letters read own or teacher" on public.er_letters for select to authenticated using (user_id = auth.uid() or public.is_teacher());
+-- 교사는 읽음 처리 가능
+create policy "letters teacher update" on public.er_letters for update to authenticated using (public.is_teacher()) with check (public.is_teacher());
+create policy "letters delete own or teacher" on public.er_letters for delete to authenticated using (user_id = auth.uid() or public.is_teacher());
+
+-- =========================================================
 -- 교사 계정 지정 (최초 1회):
 -- 앱에서 선생님도 학생처럼 가입한 뒤, 아래에서 아이디만 바꿔 실행하세요.
 -- (교사 계정은 승인 대기 없이 바로 사용됩니다)
