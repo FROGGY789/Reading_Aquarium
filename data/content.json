@@ -3008,6 +3008,11 @@
               "in the first place."
             ],
             "ko": "\"만약 그들이 여기 있었다면, 우리는 애당초 Count Olaf와 함께 있지도 않을 텐데.\""
+          },
+          {
+            "type": "free",
+            "prompt": "작가는 '슬픔을 겪는 사람에게 친구가 가장 필요한 순간에, 오히려 사람들은 그 친구를 피하곤 한다'는 안타까운 진실을 언급합니다. 주변에 큰 아픔이나 슬픔을 겪은 친구가 있다면, 우리는 어떤 마음과 태도로 다가가야 할까요?",
+            "explain": "너무 힘든 사람에게 어떻게 대해야 할 지 몰라 연락하기 어려운 마음도 이해는 가요. 하지만, 정말 깊은 수렁 속에 있는 친구에게는 말 한마디, 전화 한통이 그 친구에게는 숨 쉴수 있는 틈이 되어줄 수 있어요. 선생님은 힘든 친구에게 힘 내라는 말보다, 그냥 밥 잘 먹었냐, 오늘 뭐하냐, 이런 일상적인 이야기들을 했던 것 같아요. 여러분은 어떨지 궁금하네요."
           }
         ],
         "vocabPrep": [],
@@ -3466,6 +3471,11 @@
               "which sounded",
               "Which sounded"
             ]
+          },
+          {
+            "type": "free",
+            "prompt": "아이들은 올라프 백작의 부당한 요구(10인분 요리하기)에 좌절하지만 않고, 이웃인 스트로스 판사에게 요리책을 빌려달라고 지혜롭게 도움을 요청했습니다. 혼자 해결하기 힘든 커다란 문제에 직면했을 때 타인에게 도움을 구하는 것은 왜 중요할까요?",
+            "explain": "이 세상에는 우리 개개인의 힘으로 해결하지 못하는 문제가 산더미처럼 많답니다. 당장 여러분들의 삶에도 하나하나 따져보면 혼자 할 수 있는 일이 많지 않아요. 그럴 때 도움을 청하는 사람이 똑똑하고, 현명하고, 겸손하고, 성장하는 멋진 사람이 된답니다. 나이가 들수록 '나이가 들었다는 것' 자체가 족쇄가 되어 도움을 구하기 점점 어려워 져요. 그럼에도 불구하고 낮은 자세로 도움을 구하는 선생님과, 여러분이 되기를!"
           }
         ],
         "vocabPrep": [],
@@ -4672,6 +4682,1044 @@
       "reviewTo": "2026-07-30",
       "previewFrom": "2026-07-29",
       "previewTo": "2026-07-29"
+    },
+    {
+      "date": "2026-07-28",
+      "label": "Ch 05-1",
+      "quote": {
+        "en": "",
+        "ko": "",
+        "teacher": "",
+        "comment": ""
+      },
+      "book": {
+        "title": "The Bad Beginning",
+        "author": "Lemony Snicket",
+        "chapter": "Chapter 05-1",
+        "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
+        "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
+      },
+      "passage": "A Series of Unfortunate Events By Lemony Snicket\n\nThe Bad Beginning Chapter 5-1.\n\n%%Unless%% you have been very, very lucky, you have <undoubtedly> experienced events in your life %%that%% have %%made%% you cry. ==So %%unless%% you have been very, very lucky, you know that a good, long session of <weeping> can often %%make%% you feel better, even if your circumstances have not changed one bit.== So it was with the Baudelaire orphans. %%Having cried all night%%, ==they rose the next morning feeling as if a weight were off their shoulders.== The three children knew, of course, that they were still in a terrible situation, but they thought they might do something to make it better.\n\nThe morning’s <note> from Count Olaf <ordered them to> chop <firewood> in the backyard, and %%as%% Violet and Klaus swung the axe down over each <log> to break it into smaller pieces, they discussed possible plans of action, while Sunny chewed <meditatively> on a small piece of wood.\n\n“Clearly,” Klaus said, fingering the ugly <bruise> on his face %%where%% Olaf had <struck> him, “we cannot stay here any longer. ==I would rather <take my chances> on the streets than live in this terrible place.==”\n\n“But who knows what <misfortunes> would <befall> us on the streets?” Violet <pointed out>. “At least here we have a roof over our heads.”\n\n“I wish our parents’ money could be used now, instead of when you <come of age>,” Klaus said. “Then we could buy a castle and live in it, %%with%% <armed> guards <patrolling> the outside to keep out Count Olaf and his troupe.”\n\n“And I could have a large inventing studio,” Violet said <wistfully>. She swung the axe down and split a log <neatly> in two. “Filled with gears and <pulleys> and wires and an <elaborate> computer system.”\n\n“And I could have a large library,” Klaus said, “%%as comfortable as%% Justice Strauss’s, but more enormous.”\n\n“Gibbo!” Sunny <shrieked>%%, which%% appeared to mean “And I could have lots of things to bite.”\n\n“But <in the meantime>,” Violet said, “we have to do something about our <predicament>.”\n\n“Perhaps Justice Strauss could <adopt> us,” Klaus said.\n\n“She said we were always welcome in her home.”\n\n“But she meant for a visit, or to use her library,” Violet <pointed out>. “She didn’t mean to live.\"\n\n“Perhaps %%if%% we %%explained%% our situation to her, she %%would agree%% to adopt us,” Klaus said hopefully, but when Violet looked at him she saw that he knew it was <of no use>. Adoption is an enormous decision, and not <likely to> happen <impulsively>. ==I’m sure you, in your life, have <occasionally> wished to be raised by different people than the %%ones who%% are raising you, but knew in your heart that <the chances of this were very slim>.==\n\n“I think we should go see Mr. Poe,” Violet said. “He told us when he dropped us here that we could <contact> him at the bank if we had any questions?\n\n“We don't really have a question,” Klaus said. “We have a complaint.” He was thinking %%of%% Mr. Poe %%walking%% toward them at Briny Beach, with his terrible message. Even though the fire was of course not Mr. Poe’s <fault>, Klaus <was reluctant to see> Mr. Poe because he was afraid of getting more bad news.\n\n“I can’t think of anyone else to contact,” Violet said. “Mr. Poe is <in charge of> our <affairs>, and I’m sure if he knew how <horrid> Count Olaf is, he would take us right out of here.”\n\nKlaus <pictured> Mr. Poe arriving in his car and putting the Baudelaire orphans inside, to go somewhere else, and felt a <stirring> of hope. Anywhere would be better than here. “Okay,” he said. “Let’s %%get%% this firewood all chopped and we’ll go to the bank.”\n\n<Invigorated> by their plan, the Baudelaire orphans swung their axes %%at%% an amazing speed, and soon enough they were done <chopping> firewood and ready to go to the bank. ==They remembered Count Olaf saying he had a map of the city, and they looked <thoroughly> for it, but they couldn't find any trace of a map, and decided it must be in the tower%%, where%% they <were forbidden to go>.== So, without directions of any <sort>, the Baudelaire children <set off> for the city’s <banking district> in hopes of finding Mr. Poe.\n\n%%After walking through the meat district%%； the flower district, and the <sculpture> district, the three children arrived at the banking district, <pausing> to take a refreshing <sip of water> at the Fountain of Victorious Finance. ==The banking district <consisted of> several wide streets %%with%% large <marble> buildings on each side of them%%,%% all banks.== They went first to Trustworthy Bank, and then to Faithful Savings and Loan, and then to Subservient Financial Services, each time <inquiring for> Mr. Poe. Finally, a <receptionist> at Subservient said she knew that Mr. Poe worked down the street, at Mulctuary Money Management. The building was square and <rather plain­looking>, though once inside, the three orphans were <intimidated> by the <hustle and bustle> of the people %%as%% they raced around the large, <echoey> room. Finally, they asked a uniformed guard whether they had arrived at the right place to speak to Mr. Poe, and he led them into a large office with many file cabinets and no windows.\n\n“Why, hello,” said Mr. Poe, in a <puzzled> tone of voice. He was sitting at a desk covered in <typed> papers %%that%% looked important and boring. Surrounding a small framed photograph of his wife and his two <beastly> sons %%[was / were]%% three telephones with flashing lights. “Please come in.”\n\n“Thank you,” said Klaus, shaking Mr. Poe’s hand. The Baudelaire youngsters sat down in three large and comfortable chairs.\n\nMr. Poe opened his mouth to speak, but had to cough into a handkerchief before he could begin. “I’m very busy today,” he said, finally. “So I don’t have too much time to chat. Next time you should call <ahead of> time %%when%% you plan on being in the neighborhood, and I will <put some time aside> to take you to lunch.”\n\n“That would be very pleasant,” Violet said, “and we’re sorry we didn’t contact you before we <stopped by>, but we %%find%% ourselves in an urgent situation.”\n\n“Count Olaf is a madman,” Klaus said, <getting right to the point>. “We cannot stay with him.”\n\n“He %%struck%% Klaus %%across the face%%. See his <bruise>?” Violet said, but <just as> she said it, one of the telephones rang, in a loud, <unpleasant wail>. “Excuse me,” Mr. Poe said, and picked up the phone. “Poe here,” he said into the receiver. “What? Yes. Yes. Yes. Yes. No. Yes. Thank you.” He <hung up the phone> and looked at the Baudelaires as if he had forgotten they were there.\n\n“I’m sorry,” Mr. Poe said, “what were we talking about? Oh, yes, Count Olaf. I’m sorry you don’t have a good first impression of him.”\n\n“He has only %%provided%% us %%with%% one bed,” Klaus said.\n\n“He %%makes%% us do a great many difficult <chores>.”\n\n“He drinks too much wine.”\n\n“Excuse me,” Mr. Poe said, as another telephone rang. “Poe here,” he said. “Seven. Seven. Seven. Seven. Six and a half. Seven. You’re welcome.” He <hung up> and quickly wrote something down on one of his papers, then looked at the children. “I’m sorry,” he said, “what were you saying about Count Olaf? %%Making%% you do chores doesn’t sound too bad.”",
+      "vocab": {
+        "undoubtedly": {
+          "pos": "부사",
+          "def": "틀림없이, 의심할 여지 없이",
+          "ex": "Unless you have been very, very lucky, you have undoubtedly experienced events in your life that have made you cry."
+        },
+        "weeping": {
+          "pos": "명사",
+          "def": "울다, 눈물을 흘리다",
+          "ex": "So unless you have been very, very lucky, you know that a good, long session of weeping can often make you feel better...",
+          "head": "weep"
+        },
+        "note": {
+          "pos": "명사",
+          "def": "쪽지, 편지",
+          "ex": "The morning’s note from Count Olaf ordered them to chop firewood in the backyard..."
+        },
+        "ordered them to": {
+          "pos": "동사구",
+          "def": "~에게 …하라고 명령했다",
+          "ex": "The morning’s note from Count Olaf ordered them to chop firewood in the backyard...",
+          "head": "order A to V"
+        },
+        "firewood": {
+          "pos": "명사",
+          "def": "장작",
+          "ex": "The morning’s note from Count Olaf ordered them to chop firewood in the backyard..."
+        },
+        "log": {
+          "pos": "명사",
+          "def": "통나무",
+          "ex": "...as Violet and Klaus swung the axe down over each log to break it into smaller pieces..."
+        },
+        "meditatively": {
+          "pos": "부사",
+          "def": "생각에 잠겨, 명상에 잠기어",
+          "ex": "...while Sunny chewed meditatively on a small piece of wood."
+        },
+        "bruise": {
+          "pos": "명사",
+          "def": "멍, 상처",
+          "ex": "“Clearly,” Klaus said, fingering the ugly bruise on his face where Olaf had struck him..."
+        },
+        "struck": {
+          "pos": "동사",
+          "def": "때리다, 치다",
+          "ex": "...where Olaf had struck him, “we cannot stay here any longer.”",
+          "head": "strike - struck - struck"
+        },
+        "take my chances": {
+          "pos": "동사구",
+          "def": "위험을 무릅쓰다, 운에 맡기다",
+          "ex": "I would rather take my chances on the streets than live in this terrible place.",
+          "head": "take one's chances"
+        },
+        "misfortunes": {
+          "pos": "명사",
+          "def": "불운, 불행",
+          "ex": "“But who knows what misfortunes would befall us on the streets?” Violet pointed out."
+        },
+        "befall": {
+          "pos": "동사",
+          "def": "(불행 등이) 닥치다",
+          "ex": "“But who knows what misfortunes would befall us on the streets?” Violet pointed out."
+        },
+        "pointed out": {
+          "pos": "동사구",
+          "def": "지적하다, 언급하다",
+          "ex": "“But who knows what misfortunes would befall us on the streets?” Violet pointed out.",
+          "head": "point out"
+        },
+        "come of age": {
+          "pos": "동사구",
+          "def": "성인이 되다",
+          "ex": "“I wish our parents’ money could be used now, instead of when you come of age,” Klaus said."
+        },
+        "armed": {
+          "pos": "형용사",
+          "def": "무장한",
+          "ex": "...with armed guards patrolling the outside to keep out Count Olaf and his troupe."
+        },
+        "patrolling": {
+          "pos": "동사",
+          "def": "순찰하다",
+          "ex": "...with armed guards patrolling the outside to keep out Count Olaf and his troupe.",
+          "head": "patrol"
+        },
+        "wistfully": {
+          "pos": "부사",
+          "def": "아쉬운 듯이, 탐내는 듯이",
+          "ex": "“And I could have a large inventing studio,” Violet said wistfully."
+        },
+        "neatly": {
+          "pos": "부사",
+          "def": "깔끔하게, 단정하게",
+          "ex": "She swung the axe down and split a log neatly in two."
+        },
+        "pulleys": {
+          "pos": "명사",
+          "def": "도르래",
+          "ex": "Filled with gears and pulleys and wires and an elaborate computer system.",
+          "head": "pulley"
+        },
+        "elaborate": {
+          "pos": "형용사",
+          "def": "정교한, 공들인",
+          "ex": "Filled with gears and pulleys and wires and an elaborate computer system."
+        },
+        "shrieked": {
+          "pos": "동사(과거)",
+          "def": "비명을 지르다",
+          "ex": "“Gibbo!” Sunny shrieked, which appeared to mean...",
+          "head": "shriek"
+        },
+        "in the meantime": {
+          "pos": "부사구",
+          "def": "그러는 동안에, 한편",
+          "ex": "“But in the meantime,” Violet said, “we have to do something about our predicament.”"
+        },
+        "predicament": {
+          "pos": "명사",
+          "def": "곤경, 궁지",
+          "ex": "“But in the meantime,” Violet said, “we have to do something about our predicament.”"
+        },
+        "adopt": {
+          "pos": "동사",
+          "def": "입양하다",
+          "ex": "“Perhaps Justice Strauss could adopt us,” Klaus said."
+        },
+        "of no use": {
+          "pos": "형용사구",
+          "def": "소용없는, 쓸모없는",
+          "ex": "...but when Violet looked at him she saw that he knew it was of no use."
+        },
+        "likely to": {
+          "pos": "형용사구",
+          "def": "~할 가능성이 있는",
+          "ex": "Adoption is an enormous decision, and not likely to happen impulsively.",
+          "head": "likely to V"
+        },
+        "impulsively": {
+          "pos": "부사",
+          "def": "충동적으로",
+          "ex": "Adoption is an enormous decision, and not likely to happen impulsively."
+        },
+        "occasionally": {
+          "pos": "부사",
+          "def": "가끔, 때때로",
+          "ex": "I’m sure you, in your life, have occasionally wished to be raised by different people..."
+        },
+        "the chances of this were very slim": {
+          "pos": "표현",
+          "def": "가능성이 매우 희박하다",
+          "ex": "...but knew in your heart that the chances of this were very slim.",
+          "head": "the chances are slim"
+        },
+        "contact": {
+          "pos": "동사",
+          "def": "연락하다",
+          "ex": "He told us when he dropped us here that we could contact him at the bank if we had any questions?"
+        },
+        "fault": {
+          "pos": "명사",
+          "def": "잘못, 과실",
+          "ex": "Even though the fire was of course not Mr. Poe’s fault..."
+        },
+        "was reluctant to see": {
+          "pos": "동사구",
+          "def": "~을 하기를 꺼려하다",
+          "ex": "...Klaus was reluctant to see Mr. Poe because he was afraid of getting more bad news.",
+          "head": "be reluctant to V"
+        },
+        "in charge of": {
+          "pos": "전치사구",
+          "def": "~을 담당하는, 책임지는",
+          "ex": "Mr. Poe is in charge of our affairs...",
+          "head": "in charge of ~"
+        },
+        "affairs": {
+          "pos": "명사",
+          "def": "사안, 업무, 일",
+          "ex": "Mr. Poe is in charge of our affairs..."
+        },
+        "horrid": {
+          "pos": "형용사",
+          "def": "지독한, 끔찍한",
+          "ex": "...and I’m sure if he knew how horrid Count Olaf is, he would take us right out of here."
+        },
+        "pictured": {
+          "pos": "동사",
+          "def": "마음속에 그리다, 상상하다",
+          "ex": "Klaus pictured Mr. Poe arriving in his car and putting the Baudelaire orphans inside...",
+          "head": "picture"
+        },
+        "stirring": {
+          "pos": "명사",
+          "def": "(감정 등의) 일렁임, 동요",
+          "ex": "...and felt a stirring of hope."
+        },
+        "Invigorated": {
+          "pos": "형용사/분사",
+          "def": "활기를 얻은, 기운을 얻은",
+          "ex": "Invigorated by their plan, the Baudelaire orphans swung their axes at an amazing speed..."
+        },
+        "chopping": {
+          "pos": "명사/동명사",
+          "def": "장작 패기, 자르기",
+          "ex": "...and soon enough they were done chopping firewood and ready to go to the bank."
+        },
+        "thoroughly": {
+          "pos": "부사",
+          "def": "철저하게, 샅샅이",
+          "ex": "...and they looked thoroughly for it, but they couldn't find any trace of a map..."
+        },
+        "were forbidden to go": {
+          "pos": "동사구",
+          "def": "~하는 것을 금지당하다",
+          "ex": "...decided it must be in the tower, where they were forbidden to go.",
+          "head": "be forbidden to V"
+        },
+        "sort": {
+          "pos": "명사",
+          "def": "종류, 부류",
+          "ex": "So, without directions of any sort, the Baudelaire children set off..."
+        },
+        "set off": {
+          "pos": "동사구",
+          "def": "출발하다",
+          "ex": "So, without directions of any sort, the Baudelaire children set off for the city’s banking district..."
+        },
+        "banking district": {
+          "pos": "명사",
+          "def": "금융가, 은행가",
+          "ex": "So, without directions of any sort, the Baudelaire children set off for the city’s banking district..."
+        },
+        "sculpture": {
+          "pos": "명사",
+          "def": "조각상, 조각",
+          "ex": "After walking through the meat district； the flower district, and the sculpture district..."
+        },
+        "pausing": {
+          "pos": "동사/현재분사",
+          "def": "잠시 멈추다",
+          "ex": "...the three children arrived at the banking district, pausing to take a refreshing sip of water...",
+          "head": "pause"
+        },
+        "sip of water": {
+          "pos": "명사구",
+          "def": "물 한 모금",
+          "ex": "...pausing to take a refreshing sip of water at the Fountain of Victorious Finance."
+        },
+        "consisted of": {
+          "pos": "동사구",
+          "def": "~로 구성되다",
+          "ex": "The banking district consisted of several wide streets with large marble buildings...",
+          "head": "consist of"
+        },
+        "marble": {
+          "pos": "명사",
+          "def": "대리석",
+          "ex": "The banking district consisted of several wide streets with large marble buildings on each side of them..."
+        },
+        "inquiring for": {
+          "pos": "동사구",
+          "def": "~을 물어서 찾다, 문의하다",
+          "ex": "...each time inquiring for Mr. Poe.",
+          "head": "inquire for"
+        },
+        "receptionist": {
+          "pos": "명사",
+          "def": "접수원",
+          "ex": "Finally, a receptionist at Subservient said she knew that Mr. Poe worked down the street..."
+        },
+        "rather plain­looking": {
+          "pos": "형용사구",
+          "def": "다소 평범하게 생긴",
+          "ex": "The building was square and rather plain-looking...",
+          "head": "rather plain-looking"
+        },
+        "intimidated": {
+          "pos": "형용사/분사",
+          "def": "위압감을 느낀, 겁먹은",
+          "ex": "...though once inside, the three orphans were intimidated by the hustle and bustle..."
+        },
+        "hustle and bustle": {
+          "pos": "명사구",
+          "def": "혼잡, 왁자지껄함",
+          "ex": "...the three orphans were intimidated by the hustle and bustle of the people..."
+        },
+        "echoey": {
+          "pos": "형용사",
+          "def": "울려 퍼지는, 울리는",
+          "ex": "...as they raced around the large, echoey room."
+        },
+        "puzzled": {
+          "pos": "형용사",
+          "def": "어리둥절한, 헷갈려 하는",
+          "ex": "“Why, hello,” said Mr. Poe, in a puzzled tone of voice."
+        },
+        "typed": {
+          "pos": "형용사/분사",
+          "def": "타자로 인쇄된",
+          "ex": "He was sitting at a desk covered in typed papers that looked important and boring."
+        },
+        "beastly": {
+          "pos": "형용사",
+          "def": "지독한, 짐승 같은",
+          "ex": "Surrounding a small framed photograph of his wife and his two beastly sons..."
+        },
+        "ahead of": {
+          "pos": "전치사구",
+          "def": "~보다 사전에, 미리",
+          "ex": "Next time you should call ahead of time when you plan on being in the neighborhood...",
+          "head": "ahead of ~"
+        },
+        "put some time aside": {
+          "pos": "동사구",
+          "def": "시간을 따로 내다",
+          "ex": "...and I will put some time aside to take you to lunch."
+        },
+        "stopped by": {
+          "pos": "동사구",
+          "def": "들르다, 방문하다",
+          "ex": "...and we’re sorry we didn’t contact you before we stopped by...",
+          "head": "stop by"
+        },
+        "getting right to the point": {
+          "pos": "동사구",
+          "def": "바로 본론으로 들어가다",
+          "ex": "“Count Olaf is a madman,” Klaus said, getting right to the point.",
+          "head": "get right to the point"
+        },
+        "just as": {
+          "pos": "접속사구",
+          "def": "막 ~할 때",
+          "ex": "...Violet said, but just as she said it, one of the telephones rang...",
+          "head": "just as S V"
+        },
+        "unpleasant wail": {
+          "pos": "명사구",
+          "def": "불쾌한 울음소리",
+          "ex": "...in a loud, unpleasant wail."
+        },
+        "hung up the phone": {
+          "pos": "동사구",
+          "def": "전화를 끊다",
+          "ex": "He hung up the phone and looked at the Baudelaires...",
+          "head": "hang up the phone"
+        },
+        "chores": {
+          "pos": "명사",
+          "def": "허드렛일, 가사 일",
+          "ex": "“He makes us do a great many difficult chores.”"
+        },
+        "hung up": {
+          "pos": "동사구",
+          "def": "전화를 끊다",
+          "ex": "He hung up and quickly wrote something down on one of his papers...",
+          "head": "hang up"
+        }
+      },
+      "coreSentences": [
+        {
+          "text": "So unless you have been very, very lucky, you know that a good, long session of weeping can often make you feel better, even if your circumstances have not changed one bit.",
+          "subject": [
+            2,
+            8,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            25,
+            26
+          ],
+          "verb": [
+            3,
+            4,
+            9,
+            17,
+            19,
+            27,
+            28,
+            29
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "따라서 당신이 아주아주 운이 좋은 편이 아니라면, 상황이 조금도 바뀌지 않더라도 한참 동안 목놓아 울고 나면 기분이 한결 나아지는 경우가 많다는 것을 알고 있을 것이다."
+        },
+        {
+          "text": "they rose the next morning feeling as if a weight were off their shoulders.",
+          "subject": [
+            0,
+            8,
+            9
+          ],
+          "verb": [
+            1,
+            10
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "그들은 다음 날 아침 어깨 위에 있던 무거운 짐을 벗어던진 듯한 기분으로 일어났다."
+        },
+        {
+          "text": "I would rather take my chances on the streets than live in this terrible place.",
+          "subject": [
+            0
+          ],
+          "verb": [
+            1,
+            3,
+            10
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "이 끔찍한 곳에서 사느니 차라리 거리로 나아가 위험을 무릅쓰는 게 낫겠어요."
+        },
+        {
+          "text": "I am sure you, in your life, have occasionally wished to be raised by different people than the ones who are raising you, but knew in your heart that the chances of this were very slim.",
+          "subject": [
+            0,
+            3,
+            29,
+            30,
+            31,
+            32
+          ],
+          "verb": [
+            1,
+            7,
+            9,
+            20,
+            21,
+            24,
+            33
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": ""
+        },
+        {
+          "text": "They remembered Count Olaf saying he had a map of the city, and they looked thoroughly for it, but they couldn't find any trace of a map, and decided it must be in the tower, where they were forbidden to go.",
+          "subject": [
+            0,
+            5,
+            13,
+            19,
+            29,
+            36
+          ],
+          "verb": [
+            1,
+            6,
+            14,
+            20,
+            21,
+            28,
+            30,
+            31,
+            37,
+            38
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "그들은 올라프 백작이 도시 지도를 가지고 있다고 말했던 것을 기억해 내고 지도를 샅샅이 찾아보았지만, 지도의 흔적조차 찾을 수 없었고, 출입이 금지된 탑 안에 틀림없이 있을 것이라고 결론지었다."
+        },
+        {
+          "text": "The banking district consisted of several wide streets with large marble buildings on each side of them, all banks.",
+          "subject": [
+            0,
+            1,
+            2
+          ],
+          "verb": [
+            3
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "금융가는 양쪽에 커다란 대리석 건물들이 늘어선 여러 개의 넓은 도로로 구성되어 있었는데, 그 건물들은 모두 은행이었다."
+        }
+      ],
+      "quiz": {
+        "preview": [
+          {
+            "type": "mc",
+            "prompt": "Violet과 Klaus가 장작을 패면서 나눈 대화의 내용으로 가장 적절한 것은?",
+            "explain": "\"I wish our parents’ money could be used now... Then we could buy a castle and live in it...\"",
+            "options": [
+              "올라프 백작에게 직접 찾아가 사과하고 화해하자고 했다.",
+              "부모님의 유산을 지금 쓸 수 있다면 성을 사고 경비원을 두고 싶다고 했다.",
+              "스트라우스 판사의 집으로 오늘 밤 바로 가출하자고 결심했다.",
+              "은행에 가기 전에 미리 전화를 걸어 약속을 잡자고 했다."
+            ],
+            "answer": 1
+          },
+          {
+            "type": "mc",
+            "prompt": "세 남매가 포(Mr. Poe) 씨를 만나러 금융가(banking district)로 가는 길에 지나친 곳이 아닌 것은?",
+            "explain": "의류 지구는 언급되지 않았어요.",
+            "options": [
+              "정육점 지구 (meat district)",
+              "꽃 지구 (flower district)",
+              "의류 지구 (clothing district)",
+              "조각 지구 (sculpture district)"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "ox",
+            "prompt": "남매는 올라프 백작의 탑에서 도시 지도를 찾아낸 덕분에 길을 헤매지 않고 은행가로 이동했다.",
+            "explain": "\"without directions of any sort\", 즉 어떤 종류의 길 안내도 받지 않고 이동했어요.",
+            "answer": 1
+          },
+          {
+            "type": "ox",
+            "prompt": "클라우스는 화해를 유도하려는 포 씨를 만나면 혹시나 또 다른 나쁜 소식을 듣게 될까 봐 그를 만나는 것을 꺼려했다.",
+            "explain": "\"...Klaus was reluctant to see Mr. Poe because he was afraid of getting more bad news.\"",
+            "answer": 0
+          }
+        ],
+        "vocab": [],
+        "sentence": [
+          {
+            "type": "ab",
+            "prompt": "다음 괄호 안에서 어법상 알맞은 표현을 고르시오.",
+            "explain": "가정법 과거(현재 사실의 반대)에서, be동사는 'were'만 사용합니다!",
+            "sentence": "Having cried all night, they rose the next morning feeling as if a weight [ was / were ] off their shoulders.",
+            "answer": 1
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 밑줄 친 부분을 어법에 맞게 올바르게 고쳐 쓰시오.",
+            "explain": "make (사역동사) + O + V (동사원형) 입니다. doing이 아니라 do가 와야 하겠죠?",
+            "sentence": "He makes us doing a great many difficult chores.",
+            "wrong": 3,
+            "accept": [
+              "do",
+              "Do"
+            ]
+          },
+          {
+            "type": "scramble",
+            "prompt": "다음 우리말과 같은 뜻이 되도록 보기의 단어를 올바르게 배열하시오.",
+            "explain": "take one's chances. 위험을 무릅쓰다, 운을 시험하다 라는 숙어에요. 꼭 알아 두세요!",
+            "chunks": [
+              "I would",
+              "take my chances",
+              "on the streets",
+              "rather than",
+              "live",
+              "in this terrible place."
+            ],
+            "ko": "이 끔찍한 곳에서 사느니 차라리 거리에서 위험을 무릅쓰는 게 낫겠어요."
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 빈칸에 들어갈 알맞은 시제/형태를 고르시오.",
+            "explain": "밑줄 친 부분이 있는 절을 해석해 보면: 그가 그들이 거기 있었다는 것을 \"까먹었던\" 것 처럼 - 즉, 과거 사실의 반대이기 때문에 '가정법 과거 완료'를 사용해야 해요. had forgotten이 답입니다.",
+            "sentence": "He hung up the phone and looked at the Baudelaires as if he __________ they were there.",
+            "options": [
+              "forgets",
+              "forgot",
+              "had forgotten",
+              "has forgotten"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "input",
+            "prompt": "다음 문장의 괄호 안 단어 chop을 문맥과 어법에 맞게 변형하여 쓰시오.",
+            "explain": "order + 목적어 + to V : 목적어가 ~하도록 명령하다 입니다. 기억해 주세요~",
+            "sentence": "The morning’s note from Count Olaf ordered them ____________________ (chop) firewood in the backyard.",
+            "accept": [
+              "To chop",
+              "to chop"
+            ]
+          },
+          {
+            "type": "free",
+            "prompt": "클라우스는 끔찍한 올라프 백작의 집에서 사느니 차라리 위험을 무릅쓰고 거리로 나가는 게 낫겠다고 생각했지만, 바이올렛은 적어도 머리를 누일 지붕이 있는 곳이 낫다고 판단했습니다. 만약 여러분이 보들레르 남매와 같은 상황이라면 두 사람 중 어떤 생각에 더 동의하나요? 그 이유는 무엇인가요?",
+            "explain": "샘이라면 그래도 비를 피할 수 있는 지붕 아래서 최대한 버티다가, 계획을 잘 짜서 탈출해 볼 것 같아. 쉽지 않기 때문에 옆집 스트라우스 판사님께 진지하게 상담을 받아봐야 할 듯..."
+          }
+        ],
+        "vocabPrep": [],
+        "sentPrep": [],
+        "grammar": []
+      },
+      "class": "2026 여름방학 영방반",
+      "reviewFrom": "2026-07-31",
+      "reviewTo": "2026-07-31",
+      "previewFrom": "2026-07-30",
+      "previewTo": "2026-07-30"
+    },
+    {
+      "date": "2026-07-28",
+      "label": "Ch 05-2",
+      "quote": {
+        "en": "",
+        "ko": "",
+        "teacher": "",
+        "comment": ""
+      },
+      "book": {
+        "title": "The Bad Beginning",
+        "author": "Lemony Snicket",
+        "chapter": "Chapter 05-2",
+        "cover": "https://img.wendybook.com/image_main/img216/21628_l.jpg",
+        "spine": "https://img.wendybook.com/image_main/img216/21628_l.jpg"
+      },
+      "passage": "A Series of Unfortunate Events By Lemony Snicket\n\nThe Bad Beginning Chapter 5-2.\n\n“He calls us orphans?\n\n“He has terrible friends.”\n\n“He is always asking about our money.”\n\n“Poko!” (This was from Sunny.)\n\nMr. Poe put up his hands to <indicate> he had heard enough. “Children, children,” he said. “You must %%give%% yourselves time to <adjust to> your new home. You’ve only been there a few days.”\n\n“We have been there long enough to know Count Olaf is a bad man,” Klaus said.\n\nMr. Poe <sighed>, and looked at each of the three children. ==His face was kind, but it didn’t look like he really believed what the Baudelaire orphans were saying.== “Are you familiar with the Latin term ‘in loco parentis’?” he asked.\n\nViolet and Sunny looked at Klaus. The biggest reader %%of%% the three, he was the most <likely to know> vocabulary words and foreign phrases. “Something about trains?” he asked. Maybe Mr. Poe was going to take them by train to another relative.\n\nMr. Poe shook his head. “‘In loco parentis’ means 'acting in the role of parent,” he said. “It is a legal <term> and it <applies to> Count Olaf. ==<Now that> you are in his care, the Count may raise you using any methods he sees <fit>. I’m sorry if your parents did not %%make%% you do any household chores, or if you never %%saw%% them drink any wine, or if you like their friends better than Count Olaf’s friends, but these are things %%that%% you must <get used to>, as Count Olaf is acting in loco parentis.== Understand?”\n\n“But he struck my brother!” Violet said. “Look at his face!”\n\nAs Violet spoke, Mr. Poe reached into his pocket for his handkerchief and, covering his mouth, coughed many, many times into it. He coughed %%so%% loudly %%that%% Violet could not be certain he had heard her.\n\n“Whatever Count Olaf has done,” Mr. Poe said, <glancing> down at one of his papers and circling a number, “he has acted in loco parentis, and there’s nothing I can do about it. Your money will be well protected by myself and by the bank, but Count Olaf’s parenting techniques are his own business. Now, I hate to <usher> you out <posthaste>, but I have very much work to do.”\n\nThe children just sat there, <stunned>. Mr. Poe looked up, and <cleared his throat>. “‘Posthaste,’” he said, “means—”\n\n“—means you’ll do nothing to help us,” Violet finished for him. She was shaking with anger and <frustration>. ==%%As%% one of the phones began ringing, she stood up and walked out of the room, followed by Klaus%%, who%% was carrying Sunny.== They <stalked> out of the bank and stood on the street, not knowing what to do next.\n\n“What shall we do next?” Klaus asked sadly.\n\nViolet stared up at the sky. She %%wished%% she %%could%% invent something %%that%% could take them out of there. “It’s getting a bit late,” she said. “We <might as well> just go back and think of something else tomorrow. Perhaps we can stop and see Justice Strauss.”\n\n“But you said she wouldn't help us,” Klaus said.\n\n“Not for help,” Violet said, “for books.”\n\n%%It%% is very useful, when %%one%% is young, %%to learn%% the difference %%between%% “<literally>” %%and%% “<figuratively>.” If something happens literally, it actually happens; if something happens figuratively； it feels like it’s happening. If you are literally jumping for joy, for instance, it means you are <leaping> in the air because you are very happy. If you are figuratively jumping for joy, it means you are %%so%% happy %%that%% you could jump for joy, but are saving your energy for other <matters>. The Baudelaire orphans walked back to Count Olaf’s neighborhood and stopped at the home of Justice Strauss%%, who%% welcomed them inside and %%let%% them choose books from the library. Violet chose several about <mechanical> inventions, Klaus chose several about wolves； and Sunny found a book with many pictures of teeth inside. They then went to their room and <crowded together> on the one bed, reading <intently> and happily. Figuratively, they escaped from Count Olaf and their miserable <existence>. They did not literally escape, because they were still in his house and <vulnerable to> Olaf’s evil in loco parentis ways. ==But by <immersing themselves in> their favorite reading topics, they felt far away from their <predicament>, as if they had escaped. In the situation of the orphans, figuratively escaping was not enough, of course, but at the end of a tiring and hopeless day, %%it%% would have to %%do%%. Violet, Klaus； and Sunny read their books and, in the back of their minds, hoped that soon their figurative escape would eventually <turn into> a literal one.==",
+      "vocab": {
+        "indicate": {
+          "pos": "v.",
+          "def": "나타내다, 표시하다",
+          "ex": "He indicated the door with his hand."
+        },
+        "adjust to": {
+          "pos": "phr.",
+          "def": "~에 적응하다",
+          "ex": "It takes time to adjust to a new school.",
+          "head": "adjust to ~"
+        },
+        "sighed": {
+          "pos": "v.",
+          "def": "한숨 쉬다",
+          "ex": "She sighed with relief.",
+          "head": "sigh"
+        },
+        "likely to know": {
+          "pos": "phr.",
+          "def": "~할 가능성이 있는",
+          "ex": "He is likely to win.",
+          "head": "likely to V"
+        },
+        "term": {
+          "pos": "n.",
+          "def": "용어",
+          "ex": "This is a legal term."
+        },
+        "applies to": {
+          "pos": "phr.",
+          "def": "~에 적용되다",
+          "ex": "The rule applies to everyone.",
+          "head": "apply to ~"
+        },
+        "Now that": {
+          "pos": "conj.",
+          "def": "이제 ~이므로",
+          "ex": "Now that you are here, let us begin.",
+          "head": "Now that S V"
+        },
+        "fit": {
+          "pos": "adj.",
+          "def": "적합한",
+          "ex": "Do what you see fit."
+        },
+        "get used to": {
+          "pos": "phr.",
+          "def": "~에 익숙해지다",
+          "ex": "You will soon get used to the weather.",
+          "head": "get/be used to"
+        },
+        "glancing": {
+          "pos": "v.",
+          "def": "흘끗 보다",
+          "ex": "She glanced at her watch.",
+          "head": "glance"
+        },
+        "usher": {
+          "pos": "v.",
+          "def": "안내하다",
+          "ex": "He ushered us into the room."
+        },
+        "posthaste": {
+          "pos": "adv.",
+          "def": "즉시, 서둘러",
+          "ex": "Please come here posthaste."
+        },
+        "stunned": {
+          "pos": "adj.",
+          "def": "망연자실한, 충격받은",
+          "ex": "We were stunned by the news."
+        },
+        "cleared his throat": {
+          "pos": "phr.",
+          "def": "헛기침하다",
+          "ex": "He cleared his throat before speaking.",
+          "head": "clear one's throat"
+        },
+        "frustration": {
+          "pos": "n.",
+          "def": "좌절감",
+          "ex": "She felt frustration."
+        },
+        "stalked": {
+          "pos": "v.",
+          "def": "성큼성큼 걷다",
+          "ex": "He stalked out of the room.",
+          "head": "stalk"
+        },
+        "might as well": {
+          "pos": "phr.",
+          "def": "~하는 게 낫다",
+          "ex": "We might as well go home now.",
+          "head": "might as well V"
+        },
+        "literally": {
+          "pos": "adv.",
+          "def": "말 그대로",
+          "ex": "I literally forgot."
+        },
+        "figuratively": {
+          "pos": "adv.",
+          "def": "비유적으로",
+          "ex": "Figuratively speaking."
+        },
+        "leaping": {
+          "pos": "v.",
+          "def": "껑충 뛰다",
+          "ex": "The frog leaped.",
+          "head": "leap"
+        },
+        "matters": {
+          "pos": "n.",
+          "def": "문제, 일",
+          "ex": "More important matters.",
+          "head": "matter"
+        },
+        "mechanical": {
+          "pos": "adj.",
+          "def": "기계의",
+          "ex": "Mechanical inventions."
+        },
+        "crowded together": {
+          "pos": "phr.",
+          "def": "옹기종기 모이다",
+          "ex": "They crowded together.",
+          "head": "crowd together"
+        },
+        "intently": {
+          "pos": "adv.",
+          "def": "집중해서",
+          "ex": "She listened intently."
+        },
+        "existence": {
+          "pos": "n.",
+          "def": "삶, 존재",
+          "ex": "A miserable existence."
+        },
+        "vulnerable to": {
+          "pos": "phr.",
+          "def": "~에 취약한",
+          "ex": "Children are vulnerable to danger.",
+          "head": "vulnerable to ~"
+        },
+        "immersing themselves in": {
+          "pos": "phr.",
+          "def": "~에 몰두하다",
+          "ex": "She immersed herself in the novel.",
+          "head": "immerse oneselves in"
+        },
+        "predicament": {
+          "pos": "n.",
+          "def": "곤경",
+          "ex": "They were in a difficult predicament."
+        },
+        "turn into": {
+          "pos": "phr.",
+          "def": "~으로 변하다",
+          "ex": "Dreams turned into reality.",
+          "head": "turn into ~"
+        }
+      },
+      "coreSentences": [
+        {
+          "text": "His face was kind, but it didn’t look like he really believed what the Baudelaire orphans were saying.",
+          "subject": [
+            0,
+            1,
+            5,
+            9,
+            13,
+            14,
+            15
+          ],
+          "verb": [
+            2,
+            6,
+            7,
+            11,
+            16,
+            17
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "그의 얼굴은 친절해 보였지만, 보들레어 고아들의 말을 정말로 믿는 것 같지는 않았다."
+        },
+        {
+          "text": "Now that you are in his care, the Count may raise you using any methods he sees fit.",
+          "subject": [
+            2,
+            7,
+            8,
+            15
+          ],
+          "verb": [
+            3,
+            9,
+            10,
+            16
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "이제 너희가 그의 보호를 받고 있으니, 올라프 백작은 적절하다고 생각하는 어떤 방식으로든 너희를 키울 수 있다."
+        },
+        {
+          "text": "I am sorry if your parents did not make you do any household chores, or if you never saw them drink any wine, or if you like their friends better than Count Olaf’s friends, but these are things that you must get used to, as Count Olaf is acting in loco parentis.",
+          "subject": [
+            0,
+            4,
+            5,
+            16,
+            25,
+            35,
+            39,
+            45,
+            46
+          ],
+          "verb": [
+            1,
+            6,
+            7,
+            8,
+            17,
+            18,
+            26,
+            36,
+            40,
+            41,
+            48,
+            47
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "부모님이 집안일을 시키지 않았거나, 와인을 마시는 모습을 보여 주지 않았거나, 백작의 친구들보다 부모님의 친구들을 더 좋아했다 하더라도, 이제는 그런 것들에 익숙해져야 한다."
+        },
+        {
+          "text": "As one of the phones began ringing, she stood up and walked out of the room, followed by Klaus, who was carrying Sunny.",
+          "subject": [
+            1,
+            2,
+            3,
+            4,
+            7
+          ],
+          "verb": [
+            5,
+            8,
+            11,
+            20,
+            21
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "전화기 하나가 울리기 시작하자, 바이올렛은 자리에서 일어나 밖으로 걸어나갔고, 써니를 안고 있던 클라우스가 그 뒤를 따랐다."
+        },
+        {
+          "text": "But by immersing themselves in their favorite reading topics, they felt far away from their predicament, as if they had escaped.",
+          "subject": [
+            9,
+            18
+          ],
+          "verb": [
+            10,
+            19,
+            20
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "하지만 자신들이 가장 좋아하는 독서 주제에 푹 빠져 있었기에, 그들은 마치 그 곤경에서 벗어난 것처럼 멀리 떨어져 있는 기분을 느꼈다."
+        },
+        {
+          "text": "In the situation of the orphans, figuratively escaping was not enough, of course, but at the end of a tiring and hopeless day, it would have to do.",
+          "subject": [
+            6,
+            7,
+            23
+          ],
+          "verb": [
+            8,
+            24,
+            25
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "고아들의 상황에서는 비유적으로 현실을 벗어나는 것만으로는 물론 충분하지 않았지만, 지치고 희망 없는 하루의 끝에서 그것으로라도 만족해야 했다."
+        },
+        {
+          "text": "Violet, Klaus； and Sunny read their books and, in the back of their minds, hoped that soon their figurative escape would eventually turn into a literal one.",
+          "subject": [
+            0,
+            1,
+            2,
+            3,
+            17,
+            18,
+            19
+          ],
+          "verb": [
+            4,
+            14,
+            20,
+            22
+          ],
+          "bold": [],
+          "italic": [],
+          "ko": "바이올렛과 클라우스, 그리고 써니는 책을 읽으며 마음 한구석에서는 자신들의 비유적인 탈출이 언젠가는 실제 탈출이 되기를 바랐다."
+        }
+      ],
+      "quiz": {
+        "preview": [
+          {
+            "type": "mc",
+            "prompt": "보들레르 남매가 포 씨(Mr. Poe)를 찾아간 가장 큰 이유는 무엇인가요?",
+            "explain": "\"We have been there long enough to know Count Olaf is a bad man,\" Klaus said.",
+            "options": [
+              "스트라우스 판사에게 가는 길을 묻기 위해",
+              "유산을 받기 위해",
+              "올라프 백작에 대해 이야기하고 도움을 요청하기 위해",
+              "새로운 유산 집행인을 소개받기 위해"
+            ],
+            "answer": 2
+          },
+          {
+            "type": "mc",
+            "prompt": "포 씨가 설명한 'in loco parentis'의 의미로 가장 알맞은 것은?",
+            "explain": "\"'In loco parentis' means 'acting in the role of parent.'\"",
+            "options": [
+              "친척과 함께 살아가는 것",
+              "부모의 역할을 대신하는 것",
+              "아이들의 재산을 관리하는 것",
+              "부모를 대신해 돈을 보관하는 것"
+            ],
+            "answer": 1
+          },
+          {
+            "type": "ox",
+            "prompt": "포 씨는 올라프 백작이 아이들을 학대했다는 말을 그대로 믿고 적극적으로 도와주었다.",
+            "explain": "\"Whatever Count Olaf has done... there is nothing I can do about it.\"",
+            "answer": 1
+          },
+          {
+            "type": "input",
+            "prompt": "아이들이 Strauss 판사의 집에서 책을 고를 때, Klaus는 무엇에 관한 책을 골랐나요?",
+            "explain": "\"Klaus chose several about wolves.\"",
+            "accept": [
+              "Wolves",
+              "늑대",
+              "wolves",
+              "wolf",
+              "Wolf"
+            ]
+          }
+        ],
+        "vocab": [],
+        "sentence": [
+          {
+            "type": "ab",
+            "prompt": "다음 중 알맞은 표현을 고르시오.",
+            "explain": "few + 셀 수 있는 명사 / little + 셀 수 없는 명사 입니다.",
+            "sentence": "You’ve only been there a [few / little] days.",
+            "answer": 0
+          },
+          {
+            "type": "mc",
+            "prompt": "다음 문장의 빈칸에 들어갈 말로 어법상 가장 알맞은 것은?",
+            "explain": "welcome이라는 동사 앞에, 주격 관계대명사가 필요한 자리입니다. 동시에 선행사가 Justice Strauss, 즉 사람이기 때문에 who만 가능한 자리입니다.",
+            "sentence": "The Baudelaire orphans walked back to Count Olaf’s neighborhood and stopped at the home of Justice Strauss, ________ welcomed them inside.",
+            "options": [
+              "who",
+              "which",
+              "whom",
+              "what"
+            ],
+            "answer": 0
+          },
+          {
+            "type": "ab",
+            "prompt": "다음 중 알맞은 표현을 고르시오.",
+            "explain": "By(전치사) 뒤에는 동명사 (ing)형태가 와야 합니다. immersing이 정답닙니다.",
+            "sentence": "By [immersing / immersed] themselves in their favorite reading topics, they felt far away from their predicament.",
+            "answer": 0
+          },
+          {
+            "type": "fix",
+            "prompt": "다음 문장에서 어법상 어색한 단어 한 개를 찾아 올바르게 고치시오.",
+            "explain": "해석상 Baudelaire 고아들이 말하고 있는 \"것\" 이 되어야 하므로 that이 아니라 what이 와야 합니다.",
+            "sentence": "It didn’t look like he really believed that the Baudelaire orphans were saying.",
+            "wrong": 7,
+            "accept": [
+              "what"
+            ]
+          },
+          {
+            "type": "free",
+            "prompt": "지문에서는 '문자 그대로(literally)'와 '비유적으로(figuratively)' 탈출하는 것의 차이를 설명합니다. 여러분도 너무 힘들거나 지칠 때, 책, 음악, 게임 등을 통해 **'비유적으로 탈출(figurative escape)'**해 본 경험이 있나요? 그때 어떤 느낌이었는지 써보세요.",
+            "explain": "우리 삶에는 literal escape가 불가능할 때가 많은 것 같아요. 무리하게 literal escape를 시도했다가는 좋지 않은 결과로 이어지고요. 그럴때는, Figurative escape할 수 있는 방법을 찾아 나서야 해요. 여러분들의 마음을 잠시 다른 곳으로 탈출시켜주는 여러분들의 figurative escape route를 찾길 바라요."
+          }
+        ],
+        "vocabPrep": [],
+        "sentPrep": [],
+        "grammar": []
+      },
+      "class": "2026 여름방학 영방반",
+      "reviewFrom": "2026-07-31",
+      "reviewTo": "2026-07-31",
+      "previewFrom": "2026-07-30",
+      "previewTo": "2026-07-30"
     }
   ],
   "grammar": [],
