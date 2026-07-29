@@ -197,16 +197,40 @@ async function pullGrants() {
 async function pullMessages() {
   if (!auth || isTeacherUser()) return;
   try {
-    const res = await sbFetch('/rest/v1/er_messages?user_id=eq.' + auth.user.id + '&applied=eq.false&select=id,text&order=created_at.asc');
+    const res = await sbFetch('/rest/v1/er_messages?user_id=eq.' + auth.user.id + '&applied=eq.false&select=*&order=created_at.asc');
     if (!res.ok) return;   // 테이블이 아직 없으면 조용히 넘어감
     const rows = await res.json();
     if (!rows.length) return;
-    ui.teacherMsgs = (ui.teacherMsgs || []).concat(rows.map(r => r.text).filter(Boolean));
-    const ids = rows.map(r => r.id);
+    const inbox = (state.inbox || []).slice();
+    let eggs = 0, xp = 0; const ids = []; const newMsgs = [];
+    rows.forEach(m => {
+      if (inbox.some(x => x.id === m.id)) return;   // 이미 받은 것 → 중복 보상 방지
+      eggs += m.eggs || 0; xp += m.xp || 0;
+      const item = { id: m.id, text: m.text || '', eggs: m.eggs || 0, xp: m.xp || 0, ts: m.created_at, read: false };
+      inbox.push(item); newMsgs.push(item); ids.push(m.id);
+    });
+    if (!ids.length) return;
+    const patch = { inbox };
+    if (eggs) patch.eggs = (state.eggs || 0) + eggs;
+    if (xp) patch.xp = (state.xp || 0) + xp;
+    set(patch);
+    // 새 메시지 팝업(텍스트 + 보상 안내)
+    const pops = newMsgs.map(m => {
+      const rw = (m.eggs || m.xp) ? `🎁 ${m.xp ? '경험치 ' + m.xp : ''}${m.xp && m.eggs ? ' · ' : ''}${m.eggs ? '알 ' + m.eggs + '개' : ''}` : '';
+      return [m.text, rw].filter(Boolean).join('\n');
+    }).filter(Boolean);
+    if (pops.length) ui.teacherMsgs = (ui.teacherMsgs || []).concat(pops);
+    // 전달됨 표시(교사 '읽음' 확인용)
     await sbFetch('/rest/v1/er_messages?id=in.(' + ids.join(',') + ')', {
       method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ applied: true })
     });
+    render();
   } catch (e) { /* 무시 */ }
+}
+// 학생: 메시지함의 안읽음을 읽음으로(로컬)
+function markInboxRead() {
+  const inbox = (state.inbox || []);
+  if (inbox.some(m => !m.read)) set({ inbox: inbox.map(m => Object.assign({}, m, { read: true })) });
 }
 // 승인된 학생: 앱이 열려 있는 동안 30초마다 새 알림 메시지 확인(핸드폰 알림처럼 뜨게)
 let msgTimer = null;
@@ -336,10 +360,11 @@ async function loadRecords() {
   ui.recLoading = true; ui.recError = '';
   render();
   try {
-    const [r1, r2, r3] = await Promise.all([
-      sbFetch('/rest/v1/er_records?date=eq.' + todayKey() + '&select=*&order=created_at.asc'),   // select=* → chapter 컬럼이 없어도 400 안 남
+    const [r1, r2, r3, r4] = await Promise.all([
+      sbFetch('/rest/v1/er_records?select=*&order=created_at.asc'),   // 날짜 제한 없이 전체 — 챕터 단위 진행도(select=*로 chapter 없어도 안전)
       sbFetch('/rest/v1/er_profiles?is_teacher=eq.false&select=id,name,username,class,student_no,approved&order=class.asc,student_no.asc'),
-      sbFetch('/rest/v1/er_progress?select=user_id,state,updated_at')   // 학생별 상태(학습시간·알 부화 포함) — RLS로 교사 전체 조회 허용
+      sbFetch('/rest/v1/er_progress?select=user_id,state,updated_at'),   // 학생별 상태(학습시간·알 부화 포함) — RLS로 교사 전체 조회 허용
+      sbFetch('/rest/v1/er_messages?select=*&order=created_at.desc')     // 내가 보낸 메시지(읽음 확인용) — 테이블 없으면 무시
     ]);
     if (!r1.ok) throw new Error('HTTP ' + r1.status);
     ui.records = await r1.json();
@@ -350,6 +375,10 @@ async function loadRecords() {
     const prog = {};
     if (r3.ok) { (await r3.json()).forEach(row => { prog[row.user_id] = row.state || {}; }); }
     ui.progById = prog;
+    // 학생별로 보낸 메시지 색인(읽음 여부 표시용)
+    const msgById = {};
+    if (r4 && r4.ok) { (await r4.json()).forEach(m => { (msgById[m.user_id] = msgById[m.user_id] || []).push(m); }); }
+    ui.msgById = msgById;
   } catch (e) {
     ui.recError = e.message;
     ui.records = null;
@@ -369,13 +398,19 @@ async function approveStudent(id, ok) {
   } catch (e) { ui.recError = e.message; render(); }
 }
 async function grantReward(id, eggs, xp) {
+  const text = (ui.rewardMsg || '').trim();
   ui.grantBusy = id + ':' + eggs + ':' + xp; render();
   try {
-    await sbFetch('/rest/v1/er_grants', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ user_id: id, eggs, xp }) });
-    ui.grantBusy = ''; ui.recError = '';
-    // 살짝 안내
-    ui.grantToast = '부여 완료! 학생이 다음에 접속하면 반영돼요.';
-    setTimeout(() => { ui.grantToast = ''; render(); }, 2500);
+    // 우선 er_messages(보상+메시지 함께). 컬럼/테이블 없으면 구 방식 er_grants로 보상만
+    let res = await sbFetch('/rest/v1/er_messages', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ user_id: id, eggs, xp, text }) });
+    let viaMsg = res.ok;
+    if (!res.ok) res = await sbFetch('/rest/v1/er_grants', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ user_id: id, eggs, xp }) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    ui.grantBusy = ''; ui.recError = ''; ui.rewardMsg = '';
+    // 보낸 메시지를 즉시 목록에 표시(안읽음) — 실제 읽음 상태는 새로고침 때 갱신
+    if (viaMsg) { const mb = ui.msgById || (ui.msgById = {}); (mb[id] = mb[id] || []).unshift({ id: 'tmp' + Date.now(), user_id: id, eggs, xp, text, applied: false, created_at: new Date().toISOString() }); }
+    ui.grantToast = '🎁 보상' + (text ? '·메시지' : '') + '을 보냈어요! 학생 앱이 열려 있으면 곧 떠요.';
+    setTimeout(() => { ui.grantToast = ''; render(); }, 3000);
   } catch (e) { ui.grantBusy = ''; ui.recError = e.message; }
   render();
 }
@@ -390,6 +425,8 @@ async function sendBulkMessage() {
     const res = await sbFetch('/rest/v1/er_messages', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body });
     if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 404 || res.status === 400 ? ' — er_messages 테이블을 먼저 만들어 주세요' : ''));
     const n = ids.length;
+    const mb = ui.msgById || (ui.msgById = {});   // 보낸 메시지 즉시 표시(안읽음)
+    ids.forEach(id => (mb[id] = mb[id] || []).unshift({ id: 'tmp' + Date.now() + id, user_id: id, text, eggs: 0, xp: 0, applied: false, created_at: new Date().toISOString() }));
     ui.bulkBusy = false; ui.bulkMsgOpen = false; ui.bulkDraft = ''; ui.selected = [];
     ui.dashMsg = `📨 ${n}명에게 알림을 보냈어요! 학생 앱이 열려 있으면 곧, 아니면 다음에 열 때 떠요.`;
     setTimeout(() => { ui.dashMsg = ''; render(); }, 4000);
@@ -809,6 +846,7 @@ const DEFAULT_STATE = {
   pmShowKo: false, pmShowVocab: false,   // 예습 보통: 해석 보기 / 단어 뜻 보기 토글
   hardMarks: {},            // 예습 버닝: '어려워요' 체크한 문장 { 'chapter::idx': true }
   burnPos: {},              // 예습 버닝: 챕터별 읽던 위치 { chapterKey: idx } — 나갔다 와도 이어읽기
+  inbox: [],                // 학생: 받은 메시지함 [{id,text,eggs,xp,ts,read}]
   vpDeck: [],               // 어휘 예습 플래시카드 덱(시작 시 랜덤 최대 30개로 고정)
   result: null,
   hatchStage: 'idle', hatchSpecies: null,
@@ -912,6 +950,8 @@ const ui = {
   dashMsg: '',                  // 교사 대시보드: 전송 완료 안내 문구
   selected: [],                 // 교사: 체크된 학생 id들(알림 일괄 전송용)
   bulkMsgOpen: false, bulkDraft: '', bulkBusy: false,   // 교사→여러 학생 알림 작성/전송
+  rewardMsg: '', msgById: {},   // 교사: 보상과 함께 보낼 메시지 / 학생별 보낸 메시지(읽음 확인)
+  inboxOpen: false,             // 학생: 메시지함 열림
   teacherMsgs: [],              // 학생: 선생님이 보낸 알림 메시지(뜨면 팝업)
   li: { id: '', pw: '', name: '', studentNo: '', classId: '' },   // 로그인 폼 입력값(리렌더에도 유지)
   dashClass: '',   // 교사 대시보드: 반별 보기 필터('' = 전체)
@@ -1570,12 +1610,14 @@ const actions = {
     render();
   },
   dismissGrant() { ui.grantMsg = ''; render(); },
-  dismissTeacherMsg() { ui.teacherMsgs = []; render(); },
+  dismissTeacherMsg() { ui.teacherMsgs = []; markInboxRead(); render(); },
+  openInbox() { ui.inboxOpen = true; markInboxRead(); render(); },
+  closeInbox() { ui.inboxOpen = false; render(); },
 
   /* ---- 교사 ---- */
   pickClass(arg) { ui.li.classId = (ui.li.classId === arg) ? '' : arg; ui.authMsg = ''; render(); },  // 가입: 반 칩 선택/해제
   setDashClass(arg) { ui.dashClass = arg || ''; render(); },  // 대시보드: 반별 필터
-  dashToggle(arg) { ui.dashOpen = ui.dashOpen === arg ? null : arg; ui.dashDetail = null; render(); },  // 학생 카드 펼치기/접기
+  dashToggle(arg) { ui.dashOpen = ui.dashOpen === arg ? null : arg; ui.dashDetail = null; ui.rewardMsg = ''; render(); },  // 학생 카드 펼치기/접기
   dashDetailToggle(cat) { ui.dashDetail = ui.dashDetail === cat ? null : cat; render(); },  // 복습/예습 상세(챕터·시각) 열기/닫기
   dashSelToggle(id) {   // 체크박스: 학생 선택/해제(알림 일괄 전송용)
     const cur = (ui.selected || []).slice();
@@ -2185,6 +2227,36 @@ function levelBadgeHTML() {
     <div style="width:100%;height:4px;border-radius:3px;background:#e7edf5;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#2f74e6,#17b0c4);border-radius:3px"></div></div>
   </div>`;
 }
+// 메시지함 아이콘(레벨 옆) — 안읽음 배지
+function inboxBadgeHTML() {
+  const unread = (state.inbox || []).filter(m => !m.read).length;
+  return `<div data-act="openInbox" title="선생님 메시지함" style="position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#fff;border:1px solid #e2e9f2;border-radius:13px;cursor:pointer;box-shadow:0 3px 8px -4px rgba(20,36,63,.3)">
+    <span style="font-size:18px">✉️</span>
+    ${unread ? `<span style="position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;background:#e2564d;color:#fff;font-size:10px;font-weight:800;border-radius:9px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">${unread}</span>` : ''}
+  </div>`;
+}
+// 메시지함 모달(받은 메시지 이력)
+function inboxHTML() {
+  const list = (state.inbox || []).slice().reverse();   // 최신 먼저
+  return `<div style="position:absolute;inset:0;z-index:125">
+    <div data-act="closeInbox" style="position:absolute;inset:0;background:rgba(10,25,45,.5)"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;background:#fff;border-radius:22px 22px 0 0;padding:18px 18px 26px;max-height:78%;display:flex;flex-direction:column;box-shadow:0 -20px 60px -20px rgba(0,0,0,.5)">
+      <div style="width:38px;height:4px;border-radius:3px;background:#dbe2ec;margin:0 auto 14px"></div>
+      <div style="font-size:16px;font-weight:800;color:#14243f;margin-bottom:12px">✉️ 선생님 메시지함</div>
+      <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px">
+        ${list.length ? list.map(m => {
+          const rw = (m.eggs || m.xp) ? `<div style="font-size:11.5px;font-weight:700;color:#b0851f;margin-top:5px">🎁 ${m.xp ? '경험치 +' + m.xp : ''}${m.xp && m.eggs ? ' · ' : ''}${m.eggs ? '알 +' + m.eggs : ''}</div>` : '';
+          return `<div style="background:#f4f8fd;border:1px solid #e2e9f2;border-radius:14px;padding:12px 14px">
+            ${m.text ? `<div style="font-size:14px;line-height:1.6;color:#26303f;white-space:pre-wrap">${esc(m.text)}</div>` : '<div style="font-size:13px;color:#9aa8bd">선생님이 보상을 보냈어요</div>'}
+            ${rw}
+            <div style="font-size:10.5px;color:#b8c2d2;margin-top:6px">${m.ts ? fmtRecDT(m.ts) : ''}</div>
+          </div>`;
+        }).join('') : '<div style="text-align:center;color:#b8c2d2;font-size:13px;padding:30px 0">아직 받은 메시지가 없어요</div>'}
+      </div>
+      <button data-act="closeInbox" style="margin-top:14px;border:none;background:#2f74e6;color:#fff;font-size:14px;font-weight:700;padding:13px;border-radius:14px;box-shadow:0 4px 0 #1f57c4;cursor:pointer">닫기</button>
+    </div>
+  </div>`;
+}
 // 경험치 팝오버(레벨 배지 클릭 시)
 function xpPopHTML() {
   const pct = Math.round(xpInto() / XP_NEED * 100);
@@ -2384,7 +2456,7 @@ function homeHTML() {
           <div style="font-size:11.5px;color:#7d8aa0;margin-top:2px">${esc(todayLabel())}</div>
         </div>
       </div>
-      ${levelBadgeHTML()}
+      <div style="display:flex;align-items:center;gap:8px">${inboxBadgeHTML()}${levelBadgeHTML()}</div>
     </div>
 
     ${quoteBannerHTML(q, '오늘 선생님이 고른 문장')}
@@ -3607,28 +3679,51 @@ function teacherDashHTML() {
     </div>`;
 }
 
-// 기록 시각(ISO) → 'HH:MM'
+// 기록 시각(ISO) → 'HH:MM' / 날짜+시각 'M/D HH:MM'
 function fmtRecTime(iso) {
   try { const d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); } catch (e) { return ''; }
+}
+function fmtRecDT(iso) {
+  try { const d = new Date(iso); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + fmtRecTime(iso); } catch (e) { return ''; }
 }
 // 기록 task 코드 → 학생용 이름
 function taskLabelKo(t) {
   const m = { vocab: '어휘', sentence: '어법', review: '지문', 'preview:easy': '살살', 'preview:medium': '보통', 'preview:burning': '버닝', preview: '예습', grammar: '어법 학습', vocabPrep: '어휘 예습', wbStudy: '단어장', sentPrep: '문장 예습' };
   return m[t] || t;
 }
-// 한 학생의 복습(또는 예습) 기록을 챕터별로 묶어 '무엇을 몇 시에' 상세로
-function recBreakdownHTML(rs, cat) {
+// 챕터 이름 → 콘텐츠의 day(있으면), 그 챕터의 복습/예습 필수 항목
+function dayByChapterName(name) {
+  return contentSource().days.find(d => ((d.book && d.book.chapter) || d.label || '') === name) || null;
+}
+function chapterReqFor(name, cat) {
+  const d = dayByChapterName(name);
+  if (cat === 'preview') return d ? chapterRequiredKeys(d, 'preview') : ['preview'];
+  return d ? chapterRequiredKeys(d, 'review') : ['vocab', 'sentence', 'review'];
+}
+// 한 학생의 복습(예습) 기록을 '챕터별'로 묶기(날짜 상관없이) → 챕터명 순서 + 완료여부
+function chapterGroups(rs, cat) {
   const items = (rs || []).filter(r => cat === 'review'
     ? ['vocab', 'sentence', 'review'].includes(r.task)
     : (r.task || '').indexOf('preview') === 0);
-  if (!items.length) return `<div style="font-size:11.5px;color:#b8c2d2;padding:10px 12px;text-align:center;background:#fff;border-radius:10px;border:1px dashed #e6edf5">아직 ${cat === 'review' ? '복습' : '예습'} 기록이 없어요</div>`;
   const groups = {}; const order = [];
   items.forEach(r => { const c = r.chapter || '(챕터 미기록)'; if (!(c in groups)) { groups[c] = []; order.push(c); } groups[c].push(r); });
   return order.map(c => {
-    const parts = groups[c].slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
-      .map(r => `<span style="display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #e5edf6;border-radius:8px;padding:3px 8px;font-size:11px;color:#3a4658;font-weight:600">${esc(taskLabelKo(r.task))}${r.created_at ? ` <span style="color:#9aa8bd;font-weight:500">${fmtRecTime(r.created_at)}</span>` : ''}</span>`).join(' ');
+    const list = groups[c];
+    const doneTasks = new Set(list.map(r => cat === 'preview' ? 'preview' : r.task));   // 예습은 단계 무관하게 '완료'로
+    const req = cat === 'preview' ? ['preview'] : chapterReqFor(c, 'review');
+    const complete = req.length > 0 && req.every(k => doneTasks.has(k));
+    return { chapter: c, list, complete };
+  });
+}
+// 챕터별 상세(무엇을 언제) — 날짜+시각 포함
+function recBreakdownHTML(rs, cat) {
+  const gs = chapterGroups(rs, cat);
+  if (!gs.length) return `<div style="font-size:11.5px;color:#b8c2d2;padding:10px 12px;text-align:center;background:#fff;border-radius:10px;border:1px dashed #e6edf5">아직 ${cat === 'review' ? '복습' : '예습'} 기록이 없어요</div>`;
+  return gs.map(g => {
+    const parts = g.list.slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+      .map(r => `<span style="display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #e5edf6;border-radius:8px;padding:3px 8px;font-size:11px;color:#3a4658;font-weight:600">${esc(taskLabelKo(r.task))}${r.created_at ? ` <span style="color:#9aa8bd;font-weight:500">${fmtRecDT(r.created_at)}</span>` : ''}</span>`).join(' ');
     return `<div style="display:flex;flex-direction:column;gap:6px">
-      <div style="font-size:12px;font-weight:800;color:#14243f">${cat === 'review' ? '📖' : '👀'} ${esc(c)}</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="font-size:12px;font-weight:800;color:#14243f">${cat === 'review' ? '📖' : '👀'} ${esc(g.chapter)}</span>${g.complete ? '<span style="font-size:9.5px;font-weight:800;color:#2fa36b;background:#e4f5ec;padding:2px 7px;border-radius:20px">완료 ✓</span>' : '<span style="font-size:9.5px;font-weight:700;color:#a5760f;background:#fff4d9;padding:2px 7px;border-radius:20px">진행</span>'}</div>
       <div style="display:flex;flex-wrap:wrap;gap:5px">${parts}</div>
     </div>`;
   }).join('<div style="height:8px"></div>');
@@ -3649,12 +3744,15 @@ function liveDashHTML(day) {
   const req = requiredKeys();
   const reviewReq = chapterRequiredKeys(day, 'review');    // 복습 할 일(어휘·어법·지문 중 존재하는 것)
   const previewReq = chapterRequiredKeys(day, 'preview');  // 예습(있으면 1개)
-  const recs = ui.records || [];
+  const recs = ui.records || [];              // 전체 기록(챕터 단위 진행도)
+  const todayRecs = recs.filter(r => r.date === todayKey());   // 오늘 요약 통계용
   const profiles = ui.profiles || [];
   const pending = ui.pending || [];
 
-  const byStu = {};
+  const byStu = {};        // 이름 → 전체 기록(챕터 배지·상세)
   recs.forEach(r => { (byStu[r.student] = byStu[r.student] || []).push(r); });
+  const byStuToday = {};   // 이름 → 오늘 기록(오늘 요약)
+  todayRecs.forEach(r => { (byStuToday[r.student] = byStuToday[r.student] || []).push(r); });
 
   // 승인된 학생을 기준으로, 기록만 있는 이름도 뒤에 붙임(계정 없는 데모용)
   const students = profiles.map(p => ({ id: p.id, name: p.name, cls: p.class, no: p.student_no }));
@@ -3669,7 +3767,6 @@ function liveDashHTML(day) {
   if (ui.dashClass && !classSet.includes(ui.dashClass)) ui.dashClass = '';  // 사라진 반이 선택돼 있으면 전체로
   const filt = ui.dashClass;
   const shown = filt ? students.filter(s => (s.cls || '') === filt) : students;
-  const shownRecs = filt ? recs.filter(r => (nameClass[r.student] || '') === filt) : recs;
   const classChips = classSet.length ? `
     <div style="display:flex;align-items:center;gap:7px;overflow-x:auto;padding-bottom:2px;margin-top:14px">
       ${['', ...classSet].map(c => {
@@ -3678,8 +3775,25 @@ function liveDashHTML(day) {
       }).join('')}
     </div>` : '';
 
+  // 보낸 메시지 읽음 확인(최근 3개)
+  const receipts = (id) => {
+    const list = ((ui.msgById || {})[id] || []).slice(0, 3);
+    if (!list.length) return '';
+    return `<div style="margin-top:10px;display:flex;flex-direction:column;gap:5px">
+      <div style="font-size:10px;font-weight:800;color:#9aa8bd">보낸 메시지</div>
+      ${list.map(m => {
+        const rw = (m.eggs || m.xp) ? ` <span style="color:#b0851f">${m.xp ? '경험치+' + m.xp : ''}${m.xp && m.eggs ? '·' : ''}${m.eggs ? '🥚+' + m.eggs : ''}</span>` : '';
+        const read = !!m.applied;
+        return `<div style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #eef2f7;border-radius:9px;padding:6px 9px">
+          <span style="flex:1;min-width:0;font-size:11.5px;color:#4a5a72;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.text ? esc(m.text) : '<span style=\"color:#b8c2d2\">(메시지 없음)</span>'}${rw}</span>
+          <span style="flex:none;font-size:9.5px;font-weight:800;color:${read ? '#2fa36b' : '#9aa8bd'};background:${read ? '#e4f5ec' : '#eef2f7'};padding:2px 8px;border-radius:20px">${read ? '읽음 ✓' : '안읽음'}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  };
   const grantBtns = (id) => id ? `
     <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <input id="reward-msg" value="${esc(ui.rewardMsg || '')}" placeholder="메시지 함께 보내기 (선택) — 예: 이번 주 정말 잘했어! 🎉" style="width:100%;border:1.5px solid #dbe4ef;border-radius:11px;padding:9px 12px;font-size:12.5px;font-family:inherit;color:#14243f;outline:none;box-sizing:border-box">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="flex:none;display:inline-flex;justify-content:center;min-width:44px;font-size:10.5px;font-weight:800;color:#2f74e6;background:#eaf2ff;border-radius:8px;padding:5px 6px">경험치</span>
         ${[10, 30, 50].map(x => `<button data-act="grant" data-arg="${id}:0:${x}" style="flex:1;border:1.5px solid #d5e4f7;background:#fff;color:#2f74e6;font-size:13px;font-weight:800;padding:9px 0;border-radius:11px;cursor:pointer">+${x}</button>`).join('')}
@@ -3688,6 +3802,8 @@ function liveDashHTML(day) {
         <span style="flex:none;display:inline-flex;justify-content:center;min-width:44px;font-size:10.5px;font-weight:800;color:#b0851f;background:#fff4d9;border-radius:8px;padding:5px 6px">알</span>
         ${[1, 3, 5].map(e => `<button data-act="grant" data-arg="${id}:${e}:0" style="flex:1;border:1.5px solid #f0dba6;background:#fff;color:#b0851f;font-size:13px;font-weight:800;padding:9px 0;border-radius:11px;cursor:pointer">🥚 +${e}</button>`).join('')}
       </div>
+      <div style="font-size:9.5px;color:#b8c2d2">메시지만 보내려면 옆 목록 체크 후 🔔, 여기 버튼은 <b>보상+메시지</b>를 함께 보내요.</div>
+      ${receipts(id)}
       <div style="text-align:right;margin-top:2px">
         <button data-act="delStudent" data-arg="${id}" style="border:none;background:transparent;color:#c6a9a5;font-size:11px;font-weight:700;padding:4px 4px;cursor:pointer">${ui.grantBusy === 'del:' + id ? '삭제 중…' : '🗑 학생 삭제'}</button>
       </div>
@@ -3698,19 +3814,19 @@ function liveDashHTML(day) {
     const open = ui.dashOpen === key;
     const sel = s.id && (ui.selected || []).includes(s.id);
     const rs = byStu[s.name] || [];
-    const doneSet = new Set(rs.map(r => r.task));
     const scores = rs.filter(r => r.score != null);
     const avg = scores.length ? Math.round(scores.reduce((a, r) => a + r.score, 0) / scores.length) : null;
-    // 복습·예습을 따로 표시 (예습은 기록이 'preview' 또는 'preview:살살/보통/버닝'으로 저장됨)
-    const rvDone = reviewReq.filter(k => doneSet.has(k)).length;
-    const rvAll = reviewReq.length > 0 && rvDone === reviewReq.length;
-    const pvDone = rs.some(r => (r.task || '').indexOf('preview') === 0);
-    const rvCol = rvAll ? ['#2fa36b', '#e4f5ec'] : (rvDone ? ['#2f74e6', '#e9f1fe'] : ['#9aa8bd', '#eef2f7']);
-    const pvCol = pvDone ? ['#2fa36b', '#e4f5ec'] : ['#9aa8bd', '#eef2f7'];
-    const rvTxt = '복습 ' + (rvAll ? '✓' : rvDone + '/' + reviewReq.length);
-    const pvTxt = '예습 ' + (pvDone ? '✓' : '–');
+    // 챕터 단위(날짜 무관): 완료한 복습/예습 챕터 수
+    const rvGroups = chapterGroups(rs, 'review');
+    const pvGroups = chapterGroups(rs, 'preview');
+    const rvCnt = rvGroups.filter(g => g.complete).length;
+    const pvCnt = pvGroups.filter(g => g.complete).length;
+    const rvCol = rvCnt ? ['#2fa36b', '#e4f5ec'] : (rvGroups.length ? ['#2f74e6', '#e9f1fe'] : ['#9aa8bd', '#eef2f7']);
+    const pvCol = pvCnt ? ['#2fa36b', '#e4f5ec'] : (pvGroups.length ? ['#2f74e6', '#e9f1fe'] : ['#9aa8bd', '#eef2f7']);
+    const rvTxt = '복습 ' + (rvCnt ? '✓' + rvCnt : (rvGroups.length ? '진행' : '–'));
+    const pvTxt = '예습 ' + (pvCnt ? '✓' + pvCnt : (pvGroups.length ? '진행' : '–'));
     const pill = (txt, cf, cb, act) => `<span ${act ? `data-act="dashDetailToggle" data-arg="${act}"` : ''} style="flex:none;font-size:9.5px;font-weight:800;color:${cf};background:${cb};padding:3px 8px;border-radius:20px;white-space:nowrap;${act ? 'cursor:pointer' : ''}">${txt}${act ? (ui.dashDetail === act ? ' ▴' : ' ▾') : ''}</span>`;
-    const mkBadges = (click) => `<div style="flex:none;display:flex;gap:5px;align-items:center">${reviewReq.length ? pill(rvTxt, rvCol[0], rvCol[1], click ? 'review' : null) : ''}${previewReq.length ? pill(pvTxt, pvCol[0], pvCol[1], click ? 'preview' : null) : ''}</div>`;
+    const mkBadges = (click) => `<div style="flex:none;display:flex;gap:5px;align-items:center">${pill(rvTxt, rvCol[0], rvCol[1], click ? 'review' : null)}${pill(pvTxt, pvCol[0], pvCol[1], click ? 'preview' : null)}</div>`;
     const stt = s.id ? studentStats((ui.progById || {})[s.id]) : null;
     const tile = (emoji, label, val) => `<div style="background:#fff;border:1px solid #eaf0f7;border-radius:13px;padding:10px 12px"><div style="font-size:10px;color:#9aa8bd;font-weight:700">${emoji} ${label}</div><div style="font-size:16px;font-weight:800;color:#14243f;margin-top:3px">${val}</div></div>`;
     const statsGrid = stt ? `
@@ -3726,7 +3842,7 @@ function liveDashHTML(day) {
           ${mkBadges(true)}
           <span style="font-size:11.5px;color:#7d8aa0">평균 <b style="color:${avg == null ? '#c3ceda' : '#14243f'};font-size:13px">${avg == null ? '–' : avg}</b></span>
         </div>
-        <div style="font-size:10px;color:#b8c2d2;margin-top:5px">복습·예습 배지를 누르면 어떤 챕터를 몇 시에 했는지 볼 수 있어요</div>
+        <div style="font-size:10px;color:#b8c2d2;margin-top:5px">복습·예습 배지를 누르면 어떤 챕터를 언제 했는지(날짜·시각) 볼 수 있어요</div>
         ${ui.dashDetail ? `<div style="margin-top:9px;background:#eef4fb;border:1px solid #dbe7f5;border-radius:12px;padding:11px 12px;display:flex;flex-direction:column;gap:8px">${recBreakdownHTML(rs, ui.dashDetail)}</div>` : ''}
         ${statsGrid}
         ${grantBtns(s.id)}
@@ -3761,11 +3877,12 @@ function liveDashHTML(day) {
       <button data-act="bulkMsgOpen" style="border:none;background:#2f74e6;color:#fff;font-size:12.5px;font-weight:800;padding:8px 15px;border-radius:10px;cursor:pointer;box-shadow:0 3px 0 #1f57c4">🔔 알림 보내기</button>` : ''}
     </div>` : '';
 
-  const totalDone = shown.filter(s => {
-    const doneSet = new Set((byStu[s.name] || []).map(r => r.task));
+  const shownTodayRecs = filt ? todayRecs.filter(r => (nameClass[r.student] || '') === filt) : todayRecs;
+  const totalDone = shown.filter(s => {   // 오늘 활성 챕터를 오늘 다 끝낸 학생 수(요약)
+    const doneSet = new Set((byStuToday[s.name] || []).map(r => r.task));
     return req.length > 0 && req.every(k => doneSet.has(k));
   }).length;
-  const allScores = shownRecs.filter(r => r.score != null);
+  const allScores = shownTodayRecs.filter(r => r.score != null);
   const avgAll = allScores.length ? Math.round(allScores.reduce((a, r) => a + r.score, 0) / allScores.length) : null;
 
   // 반 전체 집계: 오늘 학습시간 합 · 오늘 부화한 알 합 · 오늘 접속(학습>0) 학생 수
@@ -3808,7 +3925,7 @@ function liveDashHTML(day) {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:14px">
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 다 끝낸 학생</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${totalDone}<span style="font-size:12px;color:#7d8aa0">/${shown.length}</span></div></div>
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">퀴즈 평균</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${avgAll == null ? '–' : avgAll}<span style="font-size:12px;color:#7d8aa0">점</span></div></div>
-      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 기록</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${shownRecs.length}<span style="font-size:12px;color:#7d8aa0">건</span></div></div>
+      <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">오늘 기록</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${shownTodayRecs.length}<span style="font-size:12px;color:#7d8aa0">건</span></div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:11px">
       <div style="background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px"><div style="font-size:11px;color:#7d8aa0">⏱ 오늘 접속</div><div style="font-size:22px;font-weight:700;color:#14243f;margin-top:4px">${activeToday}<span style="font-size:12px;color:#7d8aa0">/${shown.length}명</span></div></div>
@@ -4111,6 +4228,7 @@ function render() {
   else if (state.intro && state.role === 'student') html += introHTML();
 
   if (ui.xpPop && state.role === 'student') html += xpPopHTML();   // 경험치 팝오버
+  if (ui.inboxOpen && state.role === 'student') html += inboxHTML();   // 학생 메시지함
   if ((ui.teacherMsgs || []).length && state.role === 'student') html += teacherMsgHTML();   // 선생님 알림 메시지 팝업
   if (ui.bulkMsgOpen && isTeacherUser()) html += bulkMsgHTML();   // 교사: 선택 학생에게 알림 작성
   if (isTeacherUser() && state.role === 'teacher') html += teacherToastHTML();   // 교사: 전송 결과/오류 토스트
@@ -4197,6 +4315,7 @@ appEl.addEventListener('input', e => {
   if (el.id === 'li-name') { ui.li.name = el.value; return; }
   if (el.id === 'li-studentno') { ui.li.studentNo = el.value; return; }
   if (el.id === 'bulk-msg') { ui.bulkDraft = el.value; return; }   // 교사→학생 알림 메시지 입력
+  if (el.id === 'reward-msg') { ui.rewardMsg = el.value; return; }   // 교사: 보상과 함께 보낼 메시지
   if (el.dataset.gbind && gEd) { gEd[el.dataset.gbind] = el.value; return; }
   const bind = el.dataset.bind;
   if (bind && ed && el.type !== 'radio' && el.tagName !== 'SELECT') {

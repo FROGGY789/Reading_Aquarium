@@ -185,6 +185,9 @@ create table if not exists public.er_messages (
   text text not null,             -- 메시지 내용
   applied boolean not null default false   -- 학생이 확인(팝업 표시)했는지
 );
+-- v9: 메시지에 보상(알·경험치)도 함께 담기 — 알/경험치 보낼 때 메시지 첨부
+alter table public.er_messages add column if not exists eggs int not null default 0;
+alter table public.er_messages add column if not exists xp int not null default 0;
 create index if not exists er_messages_user_idx on public.er_messages (user_id, applied);
 alter table public.er_messages enable row level security;
 drop policy if exists "messages teacher insert" on public.er_messages;
