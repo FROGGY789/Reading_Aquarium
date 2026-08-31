@@ -56,8 +56,11 @@ function bestDeployedDayIndex(days) {
 /* ---------- 학생 프로필(로그인 없는 이름 선택 — Supabase 미설정 시) ---------- */
 let profile = localStorage.getItem(PROFILE_KEY) || '';
 function roster() { return contentSource().students || []; }
+// 입장 시 이름 고르는 칸에 표시할 고정 목록(선생님)
+const ENTRY_NAMES = ['최유림T', '이준형T', '이솔다은T'];
+function pickerNames() { return ENTRY_NAMES; }
 function needProfile() {
-  return !authMode() && roster().length > 0 && (!profile || !roster().includes(profile));
+  return !authMode() && pickerNames().length > 0 && (!profile || !pickerNames().includes(profile));
 }
 function studentName() {
   if (auth && auth.user) return auth.user.name || auth.user.username;
@@ -1628,7 +1631,7 @@ const actions = {
   },
   switchProfile() {
     if (authMode()) { actions.doLogout(); return; }
-    if (!roster().length) return;
+    if (!pickerNames().length) return;
     profile = '';
     localStorage.removeItem(PROFILE_KEY);
     render();
@@ -2118,7 +2121,7 @@ function pendingHTML() {
 
 /* ---- 학생 이름 선택(로그인 없는 프로필) ---- */
 function profilePickerHTML() {
-  const cards = roster().map(n => `
+  const cards = pickerNames().map(n => `
     <div data-act="pickProfile" data-arg="${esc(n)}" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.95);border-radius:16px;padding:14px 16px;cursor:pointer;box-shadow:0 10px 24px -12px rgba(0,0,0,.5)">
       <div style="width:40px;height:40px;border-radius:13px;background:#2f74e6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;box-shadow:0 3px 0 #1f57c4">${esc(n.slice(0, 2))}</div>
       <div style="flex:1;font-size:15px;font-weight:700;color:#14243f">${esc(n)}</div>
@@ -2540,7 +2543,7 @@ function homeHTML() {
 
   return `<div style="${enter}"><div style="padding:${topPad()} 20px 96px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div ${!authMode() && roster().length ? 'data-act="switchProfile"' : ''} style="display:flex;align-items:center;gap:11px;${!authMode() && roster().length ? 'cursor:pointer' : ''}" ${!authMode() && roster().length ? 'title="탭해서 다른 친구로 바꾸기"' : ''}>
+      <div ${!authMode() && pickerNames().length ? 'data-act="switchProfile"' : ''} style="display:flex;align-items:center;gap:11px;${!authMode() && pickerNames().length ? 'cursor:pointer' : ''}" ${!authMode() && pickerNames().length ? 'title="탭해서 다른 친구로 바꾸기"' : ''}>
         <div style="width:44px;height:44px;border-radius:14px;background:#2f74e6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;box-shadow:0 4px 0 #1f57c4">${esc(studentName().slice(0, 2))}</div>
         <div>
           <div style="font-size:16px;font-weight:700;color:#14243f">안녕하세요, ${esc(studentName())}님 👋</div>
