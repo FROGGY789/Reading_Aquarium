@@ -1599,6 +1599,7 @@ const actions = {
   gramNextConcept() { gramAdvance(); },
 
   buyEgg() { if (state.xp < EGG_PRICE) return; set({ xp: state.xp - EGG_PRICE, eggs: state.eggs + 1 }); },
+  demoXp() { if (!isTeacherUser()) return; set({ xp: (state.xp || 0) + 500 }); },   // 시연용: 교사만 경험치 +500(알 뽑기 시연)
   crackEgg() {
     if (state.eggs <= 0) return;
     const pull = (state.pullCount || 0) + 1;
@@ -3681,6 +3682,8 @@ function hatcheryHTML() {
       <div style="flex:1"><div style="font-size:13px;font-weight:700">보유 알 ${state.eggs}개</div><div style="font-size:11px;opacity:.8;margin-top:1px">보유 XP ${state.xp}</div></div>
       <div data-act="buyEgg" style="${buyBtn}">＋ 알 구매 · ${EGG_PRICE}XP</div>
     </div>
+
+    ${isTeacherUser() ? `<div data-act="demoXp" style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,.14);border:1px dashed rgba(255,255,255,.4);border-radius:14px;padding:11px;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer">🎬 시연용 · 경험치 +500 <span style="opacity:.75;font-weight:500">(선생님만 보임)</span></div>` : ''}
 
     ${body}
 
